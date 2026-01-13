@@ -84,6 +84,7 @@ trueparticlenames = [
     "end_process",
     "pdg",
     "startE",
+    "endE",
     "start.x", "start.y", "start.z",
     "end.x", "end.y", "end.z",
     "genp.x", "genp.y", "genp.z",
@@ -92,12 +93,25 @@ trueparticlenames = [
     "parent",
     "cont_tpc",
     "genE",
-    "interaction_id"
+    "interaction_id",
+    "crosses_tpc",
 ]
 
-trueparticlebranches = ["rec.true_particles.%s" % s for s in trueparticlenames]
+trueparticlebranches = [
+    *["rec.true_particles.%s" % s for s in trueparticlenames],
+    "rec.true_particles.plane.0.2.visE",
+    "rec.true_particles.plane.1.2.visE",
+]
 
-crtspbranches = [
+crtvetobranches = [      
+    "rec.sbnd_crt_veto.V0",
+    "rec.sbnd_crt_veto.V1",
+    "rec.sbnd_crt_veto.V2",
+    "rec.sbnd_crt_veto.V3",
+    "rec.sbnd_crt_veto.V4"            
+]
+
+crtspbranches = [      
     "rec.crt_spacepoints.pe",
     "rec.crt_spacepoints.position.x",
     "rec.crt_spacepoints.position.y",
@@ -176,7 +190,19 @@ trkmcsbranches = [
 ]
 
 shwbranches = [
-  shwbranch + "len"
+    shwbranch + "start.x", shwbranch + "start.y", shwbranch + "start.z",
+    shwbranch + "end.x",   shwbranch + "end.y", shwbranch + "end.z",
+    shwbranch + 'conversion_gap', 
+    shwbranch + "density",
+    shwbranch + "open_angle",
+    shwbranch + 'bestplane',
+    shwbranch + 'bestplane_dEdx', shwbranch + 'bestplane_energy',
+    shwbranch + 'plane.0.dEdx',   shwbranch + 'plane.1.dEdx', shwbranch + 'plane.2.dEdx',
+    shwbranch + 'plane.0.energy', shwbranch + 'plane.1.energy', shwbranch + 'plane.2.energy',
+    shwbranch + 'plane.0.nHits',  shwbranch + 'plane.1.nHits',  shwbranch + 'plane.2.nHits',
+    shwbranch + "len",
+    shwbranch + "truth.eff",
+    shwbranch + "truth.pur",
 ]
 
 trkhitadcbranches = [
@@ -202,16 +228,20 @@ trkhitbranches_perplane = lambda IPLANE : [
     #trkbranch + "calo.%i.points.width"% IPLANE,
     #trkbranch + "calo.%i.points.mult"% IPLANE,
     #trkbranch + "calo.%i.points.tdc0"% IPLANE,
+]
 
-    # trkbranch + "calo.%i.points.truth.h_e"% IPLANE,
-    # trkbranch + "calo.%i.points.truth.h_nelec"% IPLANE,
-    # trkbranch + "calo.%i.points.truth.pitch"% IPLANE,
-    # trkbranch + "calo.%i.points.truth.rr"% IPLANE,
+trktruehitbranches_perplane = lambda IPLANE : [
+    trkbranch + "calo.%i.points.truth.h_e"% IPLANE,
+    trkbranch + "calo.%i.points.truth.h_nelec"% IPLANE,
 ]
 
 trkhitbranches = trkhitbranches_perplane(2)
 trkhitbranches_P1 = trkhitbranches_perplane(1)
 trkhitbranches_P0 = trkhitbranches_perplane(0)
+
+trktruehitbranches = trktruehitbranches_perplane(2)
+trktruehitbranches_P1 = trktruehitbranches_perplane(1)
+trktruehitbranches_P0 = trktruehitbranches_perplane(0)
 
 #### ICARUS flat.caf does not have efield and phi for each hit so far,
 trkhitbranches_perplane_icarus = lambda IPLANE : [
@@ -234,6 +264,7 @@ trkhitbranches_P1_icarus = trkhitbranches_perplane_icarus(1)
 trkhitbranches_P0_icarus = trkhitbranches_perplane_icarus(0)
 
 for n in trueparticlenames: trkbranches.append(trkbranch + "truth.p." + n)
+for n in trueparticlenames: shwbranches.append(shwbranch + "truth.p." + n)
 
 slcbranches = [
     "rec.slc.is_clear_cosmic",
@@ -245,9 +276,19 @@ slcbranches = [
     "rec.slc.producer",
     "rec.slc.nuid.crlongtrkdiry",
     "rec.slc.nu_score",
-    "rec.slc.barycenterFM.flashTime",    
     "rec.slc.opt0.score",
-    "rec.slc.opt0.time"
+    "rec.slc.opt0.time",
+    "rec.slc.opt0.measPE",
+    "rec.slc.opt0.hypoPE",
+]
+
+## making this branches separately to support sbnd flat.caf versions older than v10_10_*
+barycenterFMbranches = [
+    "rec.slc.barycenterFM.chargeTotal",
+    "rec.slc.barycenterFM.flashTime",
+    "rec.slc.barycenterFM.flashPEs",
+    "rec.slc.barycenterFM.chi2",
+    "rec.slc.barycenterFM.score",
 ]
 
 mcbranches = [
@@ -269,6 +310,7 @@ mcbranches = [
     "rec.mc.nu.genie_mode",
     "rec.mc.nu.parent_pdg",
     "rec.mc.nu.parent_dcy_E",
+    "rec.mc.nu.genie_evtrec_idx",
 ]
 
 mcprimbranches = [
@@ -280,6 +322,15 @@ mcprimbranches = [
     "rec.mc.nu.prim.genp.z",
     "rec.mc.nu.prim.start.x", "rec.mc.nu.prim.start.y", "rec.mc.nu.prim.start.z",
     "rec.mc.nu.prim.end.x", "rec.mc.nu.prim.end.y", "rec.mc.nu.prim.end.z",
+    "rec.mc.nu.prim.interaction_id", "rec.mc.nu.prim.crosses_tpc", "rec.mc.nu.prim.contained",
+]
+
+mcprimvisEbranches = [
+    "rec.mc.nu.prim.plane.0.2.visE", "rec.mc.nu.prim.plane.1.2.visE"
+]
+
+mcprimdaughtersbranches = [
+    "rec.mc.nu.prim.daughters",
 ]
 
 slc_mcbranches = ["rec.slc.truth." + ".".join(s.split(".")[3:]) for s in mcbranches]
@@ -352,28 +403,103 @@ eslcmatchovrlpbranches = [
     eslc + "match_overlap",
 ]
 
+inter = "rec.dlp."
+
+interbranches = [
+    inter + "id",
+    inter + "is_cathode_crosser",
+    inter + "is_time_contained",
+    inter + "is_contained",
+    inter + "is_fiducial",
+    inter + "is_flash_matched",
+    inter + "is_truth",
+    inter + "num_particles",
+    inter + "num_primary_particles",
+    inter + "vertex.0",
+    inter + "vertex.1",
+    inter + "vertex.2",
+    inter + "flash_hypo_pe",
+    inter + "flash_total_pe",
+]
+
+flashinterbranches = [
+    inter + "flash_scores",
+    inter + "flash_times",
+]
+
+intermatchedbranches = [
+    inter + "match_ids",
+]
+
+intermatchovrlpbranches = [
+    inter + "match_overlaps",
+]
+
 etruthint = "rec.dlp_true."
 
 etruthintbranches = [
-    etruthint + "id"
+    etruthint + "id",
+    etruthint + "nu_id",
+    etruthint + "current_type",
+    etruthint + "energy_init",
+    etruthint + "energy_transfer",
+    etruthint + "num_particles",
+    etruthint + "num_primary_particles",
+    etruthint + "inelasticity",
+    etruthint + "interaction_mode",
+    etruthint + "interaction_type",
+    etruthint + "is_cathode_crosser",
+    etruthint + "is_time_contained",
+    etruthint + "is_contained",
+    etruthint + "is_fiducial",
+    etruthint + "lepton_p",
+    etruthint + "lepton_pdg_code",
+    etruthint + "mct_index",
 ]
 
 epart = "rec.dlp.particles."
 
 eparticlebranches = [
+    epart + "calo_ke",
+    epart + "cathode_offset",
+    # epart + "chi2_per_pid.0",
+    # epart + "chi2_per_pid.1",
+    # epart + "chi2_per_pid.2",
+    # epart + "chi2_per_pid.3",
+    # epart + "chi2_per_pid.4",
+    # epart + "chi2_per_pid.5",
+    # epart + "chi2_pid",
     epart + "end_point.0",
     epart + "end_point.1",
     epart + "end_point.2",
+    epart + "end_dir.0",
+    epart + "end_dir.1",
+    epart + "end_dir.2",
+    epart + "interaction_id",
+    epart + "id",
     epart + "is_contained",
     epart + "is_primary",
-    epart + "is_principal_match",
     epart + "is_valid",
     epart + "length",
     epart + "csda_ke",
+    epart + "csda_ke_per_pid.0",
+    epart + "csda_ke_per_pid.1",
+    epart + "csda_ke_per_pid.2",
+    epart + "csda_ke_per_pid.3",
+    epart + "csda_ke_per_pid.4",
+    epart + "csda_ke_per_pid.5",
     epart + "ke",
+    epart + "p",
     epart + "momentum.0",
     epart + "momentum.1",
     epart + "momentum.2",
+    epart + "mcs_ke",
+    epart + "mcs_ke_per_pid.0",
+    epart + "mcs_ke_per_pid.1",
+    epart + "mcs_ke_per_pid.2",
+    epart + "mcs_ke_per_pid.3",
+    epart + "mcs_ke_per_pid.4",
+    epart + "mcs_ke_per_pid.5",
     epart + "pid",
     epart + "pid_scores.0",
     epart + "pid_scores.1",
@@ -386,28 +512,15 @@ eparticlebranches = [
     epart + "start_dir.0",
     epart + "start_dir.1",
     epart + "start_dir.2",
-]
-
-eparticlematchedbranches = [
-    epart + "match",
-]
-
-eparticlematchovrlpbranches = [
-    epart + "match_overlap",
+    epart + "start_dedx"
 ]
 
 etruthpart = "rec.dlp_true.particles."
+etrueparticlebranches = [k.replace(epart, etruthpart) for k in eparticlebranches if "pid_scores" not in k and "start_dedx" not in k]
 
-etrueparticlebranches = [
-    etruthpart + "track_id",
-    etruthpart + "id",
-]
-
-etruthint = "rec.dlp_true."
-
-etruthintbranches = [
-    etruthint + "id",
-    etruthint + "nu_id"
+eparticlematchedbranches = [
+    epart + "match_ids",
+    epart + "match_overlaps",
 ]
 
 
