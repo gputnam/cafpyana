@@ -213,13 +213,13 @@ def load_one(fname, idf,
                 s = np.clip(s, 0, 10)
                 wgt_vs.append(s)
             
-            skim["xsec_univ%i" % i] = np.clip(np.prod(wgt_vs, axis=0), 0, 30)
+            skim["xsec_univ%i" % i] = np.clip(np.prod(wgt_vs, axis=0), 0, 30).fillna(1.)
     else:
         for i, s in enumerate(xsec_syst):
             if "ps1" in wgt[s]:
-                skim["%s_univ" % s] = np.clip(wgt[s]["ps1"]/wgt[s]["cv"], 0, 10)
+                skim["%s_univ" % s] = np.clip(wgt[s]["ps1"]/wgt[s]["cv"], 0, 10).fillna(1.)
             elif "morph" in wgt[s]:
-                skim["%s_univ" % s] = np.clip(wgt[s]["morph"], 0, 10)
+                skim["%s_univ" % s] = np.clip(wgt[s]["morph"], 0, 10).fillna(1.)
             else:
                 assert(False)
 
