@@ -155,6 +155,8 @@ def make_pandora_no_cuts_df(f):
     else:
         print("Detector unclear, check rec.hdr.det!")
 
+    ismc = loadbranches(f["recTree"], ["rec.hdr.ismc"]).rec.hdr.ismc.iloc[0]
+
     slcdf = make_slcdf(f)
     StartingRows = len(slcdf)
 
@@ -167,45 +169,65 @@ def make_pandora_no_cuts_df(f):
         trkhitdf = make_trkhitdf(f)
 
         # systematic variations
-        dedx_redo = chi2pid.dedx(trkhitdf, gain="ICARUS", calibrate="ICARUS")
+        dedx_redo = chi2pid.dedx(trkhitdf, gain="ICARUS", calibrate="ICARUS", isMC=ismc)
         trkhitdf["dedx_redo"] = dedx_redo
 
-        dedx_hi = chi2pid.dedx(trkhitdf, gain="ICARUS", calibrate="ICARUS", scale=1.01)
+        dedx_hi = chi2pid.dedx(trkhitdf, gain="ICARUS", calibrate="ICARUS", isMC=ismc, scale=1.01)
         trkhitdf["dedx_hi"] = dedx_hi
-        dedx_lo = chi2pid.dedx(trkhitdf, gain="ICARUS", calibrate="ICARUS", scale=0.99)
+        dedx_lo = chi2pid.dedx(trkhitdf, gain="ICARUS", calibrate="ICARUS", isMC=ismc, scale=0.99)
         trkhitdf["dedx_lo"] = dedx_lo
-        dedx_smear = chi2pid.dedx(trkhitdf, gain="ICARUS", calibrate="ICARUS", smear=0.05)
-        trkhitdf["dedx_smear"] = dedx_smear
 
-        trkdf["chi2u"] = chi2pid.chi2u(trkhitdf, dedxname="dedx_redo")[0]
-        trkdf["chi2p"] = chi2pid.chi2p(trkhitdf, dedxname="dedx_redo")[0]
+        dedx_2hi = chi2pid.dedx(trkhitdf, gain="ICARUS", calibrate="ICARUS", isMC=ismc, scale=1.02)
+        trkhitdf["dedx_2hi"] = dedx_2hi
+        dedx_2lo = chi2pid.dedx(trkhitdf, gain="ICARUS", calibrate="ICARUS", isMC=ismc, scale=0.98)
+        trkhitdf["dedx_2lo"] = dedx_2lo
 
-        trkdf["chi2u_lo"] = chi2pid.chi2u(trkhitdf, dedxname="dedx_lo")[0]
-        trkdf["chi2p_lo"] = chi2pid.chi2p(trkhitdf, dedxname="dedx_lo")[0]
+        dedx_smear5 = chi2pid.dedx(trkhitdf, gain="ICARUS", calibrate="ICARUS", isMC=ismc, smear=0.05)
+        trkhitdf["dedx_smear5"] = dedx_smear5
 
-        trkdf["chi2u_hi"] = chi2pid.chi2u(trkhitdf, dedxname="dedx_hi")[0]
-        trkdf["chi2p_hi"] = chi2pid.chi2p(trkhitdf, dedxname="dedx_hi")[0]
-
-        trkdf["chi2u_smear"] = chi2pid.chi2u(trkhitdf, dedxname="dedx_smear")[0]
-        trkdf["chi2p_smear"] = chi2pid.chi2p(trkhitdf, dedxname="dedx_smear")[0]
+        dedx_smear13 = chi2pid.dedx(trkhitdf, gain="ICARUS", calibrate="ICARUS", isMC=ismc, smear=0.13)
+        trkhitdf["dedx_smear13"] = dedx_smear13
     else:
-        trkdf["chi2u"] = trkdf.pfp.trk.chi2pid.I2.chi2_muon
-        trkdf["chi2p"] = trkdf.pfp.trk.chi2pid.I2.chi2_proton
+        trkhitdf = make_trkhitdf(f)
 
-        # TODO: implement
-        trkdf["chi2u_lo"] = trkdf.chi2u
-        trkdf["chi2u_hi"] = trkdf.chi2u
-        trkdf["chi2u_smear"] = trkdf.chi2u
-        trkdf["chi2p_lo"] = trkdf.chi2p
-        trkdf["chi2p_hi"] = trkdf.chi2p
-        trkdf["chi2p_smear"] = trkdf.chi2p
+        dedx_redo = chi2pid.dedx(trkhitdf, gain="SBND", calibrate="SBND", isMC=ismc)
+        trkhitdf["dedx_redo"] = dedx_redo
+
+        dedx_hi = chi2pid.dedx(trkhitdf, gain="SBND", calibrate="SBND", isMC=ismc, scale=1.02)
+        trkhitdf["dedx_hi"] = dedx_hi
+        dedx_lo = chi2pid.dedx(trkhitdf, gain="SBND", calibrate="SBND", isMC=ismc, scale=0.98)
+        trkhitdf["dedx_lo"] = dedx_lo
+
+        dedx_2hi = chi2pid.dedx(trkhitdf, gain="SBND", calibrate="SBND", isMC=ismc, scale=1.04)
+        trkhitdf["dedx_2hi"] = dedx_2hi
+        dedx_2lo = chi2pid.dedx(trkhitdf, gain="SBND", calibrate="SBND", isMC=ismc, scale=0.96)
+        trkhitdf["dedx_2lo"] = dedx_2lo
+
+        dedx_smear5 = chi2pid.dedx(trkhitdf, gain="SBND", calibrate="SBND", isMC=ismc, smear=0.05)
+        trkhitdf["dedx_smear5"] = dedx_smear5
+
+        dedx_smear13 = chi2pid.dedx(trkhitdf, gain="SBND", calibrate="SBND", isMC=ismc, smear=0.13)
+        trkhitdf["dedx_smear13"] = dedx_smear13
+
+    trkdf["chi2u"] = chi2pid.chi2u(trkhitdf, dedxname="dedx_redo")[0]
+    trkdf["chi2p"] = chi2pid.chi2p(trkhitdf, dedxname="dedx_redo")[0]
+    
+    trkdf["chi2u_lo"] = chi2pid.chi2u(trkhitdf, dedxname="dedx_lo")[0]
+    trkdf["chi2p_lo"] = chi2pid.chi2p(trkhitdf, dedxname="dedx_lo")[0]
+    trkdf["chi2u_hi"] = chi2pid.chi2u(trkhitdf, dedxname="dedx_hi")[0]
+    trkdf["chi2p_hi"] = chi2pid.chi2p(trkhitdf, dedxname="dedx_hi")[0]
+
+    trkdf["chi2u_2lo"] = chi2pid.chi2u(trkhitdf, dedxname="dedx_2lo")[0]
+    trkdf["chi2p_2lo"] = chi2pid.chi2p(trkhitdf, dedxname="dedx_2lo")[0]
+    trkdf["chi2u_2hi"] = chi2pid.chi2u(trkhitdf, dedxname="dedx_2hi")[0]
+    trkdf["chi2p_2hi"] = chi2pid.chi2p(trkhitdf, dedxname="dedx_2hi")[0]
+    
+    trkdf["chi2u_smear5"] = chi2pid.chi2u(trkhitdf, dedxname="dedx_smear5")[0]
+    trkdf["chi2p_smear5"] = chi2pid.chi2p(trkhitdf, dedxname="dedx_smear5")[0]
+    trkdf["chi2u_smear13"] = chi2pid.chi2u(trkhitdf, dedxname="dedx_smear13")[0]
+    trkdf["chi2p_smear13"] = chi2pid.chi2p(trkhitdf, dedxname="dedx_smear13")[0]
 
     trkdf[("pfp", "trk", "chi2pid", "I2", "mu_over_p", "")] = trkdf.chi2u / trkdf.chi2p
-
-    trkdf['Run'] = RUN
-
-    # track containment
-    trkdf[("pfp", "trk", "is_contained", "", "", "")] = trkstartfv_cut(trkdf, DETECTOR) & trkendfv_cut(trkdf, DETECTOR)
 
     # reco momentum -- range-only
     trkdf[("pfp", "trk", "P", "p_muon", "", "")] = trkdf[("pfp", "trk", "rangeP", "p_muon", "", "")]
@@ -255,7 +277,6 @@ def make_pandora_no_cuts_df(f):
         p_E = pd.Series(dtype='float', name='p_E', index=empty_index)
         nu_E_calo = pd.Series(dtype='float', name='nu_E_calo', index=empty_index)
         has_stub = pd.Series(dtype='float', name='has_stub', index=empty_index)
-        is_contained = pd.Series(dtype='float', name='is_contained', index=empty_index)
     else:
         tki = transverse_kinematics(slcdf.mu.pfp.trk.P.p_muon, slcdf.mu.pfp.trk.dir, slcdf.p.pfp.trk.P.p_proton, slcdf.p.pfp.trk.dir)
         nu_E_calo = neutrino_energy(slcdf.mu.pfp.trk.P.p_muon, slcdf.mu.pfp.trk.dir, slcdf.p.pfp.trk.P.p_proton, slcdf.p.pfp.trk.dir)
@@ -266,7 +287,6 @@ def make_pandora_no_cuts_df(f):
         del_alpha = tki['del_alpha']
         mu_E = tki['mu_E']
         p_E = tki['p_E']
-        is_contained = slcdf.p.pfp.trk.is_contained & slcdf.mu.pfp.trk.is_contained
 
     ######## (9) - c: slc.tmatch.idx for truth matching
     bad_tmatch = np.invert(slcdf.slc.tmatch.eff > 0.5) & (slcdf.slc.tmatch.idx >= 0)
@@ -307,9 +327,6 @@ def make_pandora_no_cuts_df(f):
         'slc_vtx_z': slc_vtx.z,
         'is_clear_cosmic': is_clear_cosmic,
         'nu_score': nu_score,
-        'true_pdg': true_pdg,
-        'is_cosmic': (true_pdg == -1),
-        'is_contained': is_contained,
         'crlongtrkdiry': crlongtrkdiry,
 
         'mu_chi2_of_mu_cand': mu_chi2_of_mu_cand,
@@ -319,16 +336,31 @@ def make_pandora_no_cuts_df(f):
 
         'mu_chi2lo_of_mu_cand': slcdf.mu.chi2u_lo,
         'mu_chi2hi_of_mu_cand': slcdf.mu.chi2u_hi,
-        'mu_chi2smear_of_mu_cand': slcdf.mu.chi2u_smear,
+        'mu_chi22lo_of_mu_cand': slcdf.mu.chi2u_2lo,
+        'mu_chi22hi_of_mu_cand': slcdf.mu.chi2u_2hi,
+        'mu_chi2smear5_of_mu_cand': slcdf.mu.chi2u_smear5,
+        'mu_chi2smear13_of_mu_cand': slcdf.mu.chi2u_smear13,
+
         'mu_chi2lo_of_prot_cand': slcdf.p.chi2u_lo,
         'mu_chi2hi_of_prot_cand': slcdf.p.chi2u_hi,
-        'mu_chi2smear_of_prot_cand': slcdf.p.chi2u_smear,
+        'mu_chi22lo_of_prot_cand': slcdf.p.chi2u_2lo,
+        'mu_chi22hi_of_prot_cand': slcdf.p.chi2u_2hi,
+        'mu_chi2smear5_of_prot_cand': slcdf.p.chi2u_smear5,
+        'mu_chi2smear13_of_prot_cand': slcdf.p.chi2u_smear13,
+
         'prot_chi2lo_of_mu_cand': slcdf.mu.chi2p_lo,
         'prot_chi2hi_of_mu_cand': slcdf.mu.chi2p_hi,
-        'prot_chi2smear_of_mu_cand': slcdf.mu.chi2p_smear,
+        'prot_chi22lo_of_mu_cand': slcdf.mu.chi2p_2lo,
+        'prot_chi22hi_of_mu_cand': slcdf.mu.chi2p_2hi,
+        'prot_chi2smear5_of_mu_cand': slcdf.mu.chi2p_smear5,
+        'prot_chi2smear13_of_mu_cand': slcdf.mu.chi2p_smear13,
+
         'prot_chi2lo_of_prot_cand': slcdf.p.chi2p_lo,
         'prot_chi2hi_of_prot_cand': slcdf.p.chi2p_hi,
-        'prot_chi2smear_of_prot_cand': slcdf.p.chi2p_smear,
+        'prot_chi22lo_of_prot_cand': slcdf.p.chi2p_2lo,
+        'prot_chi22hi_of_prot_cand': slcdf.p.chi2p_2hi,
+        'prot_chi2smear5_of_prot_cand': slcdf.p.chi2p_smear5,
+        'prot_chi2smear13_of_prot_cand': slcdf.p.chi2p_smear13,
 
         'p_len': p_len,
         'mu_len': mu_len,
@@ -349,26 +381,81 @@ def make_pandora_no_cuts_df(f):
         'p_dir_x': slcdf.p.pfp.trk.dir.x,
         'p_dir_y': slcdf.p.pfp.trk.dir.y,
         'p_dir_z': slcdf.p.pfp.trk.dir.z,
-        'mu_true_p': magdf(slcdf.mu.pfp.trk.truth.p.genp),
-        'mu_true_pdg': slcdf.mu.pfp.trk.truth.p.pdg,
-        'p_true_p': magdf(slcdf.p.pfp.trk.truth.p.genp),
-        'p_true_pdg': slcdf.p.pfp.trk.truth.p.pdg,
-        'baseline': slcdf.slc.truth.baseline, 
         'parent_dcy_E': slcdf.slc.truth.parent_dcy_E, 
         'parent_dcy_mode': slcdf.slc.truth.parent_dcy_mode, 
         'parent_dcy_mom_x': slcdf.slc.truth.parent_dcy_mom.x, 
         'parent_dcy_mom_y': slcdf.slc.truth.parent_dcy_mom.y, 
         'parent_dcy_mom_z': slcdf.slc.truth.parent_dcy_mom.z, 
         'parent_pdg': slcdf.slc.truth.parent_pdg, 
-        'nu_E_true': slcdf.slc.truth.E,
+
         'del_p': del_p,
         'del_Tp': del_Tp,
         'del_phi': del_phi,
-        # 'tmatch_eff': slcdf.slc.tmatch.eff, 
-        # 'tmatch_pur': slcdf.slc.tmatch.pur, 
+        'has_stub': slc_has_stub_series,
+
         'tmatch_idx': tmatch_idx_series,
-        'has_stub': slc_has_stub_series
+        'tmatch_eff': slcdf.slc.tmatch.eff, 
+        'tmatch_pur': slcdf.slc.tmatch.pur, 
+
+        'baseline': slcdf.slc.truth.baseline, # TODO remove 
+        'true_baseline': slcdf.slc.truth.baseline,
+        'nu_E_true': slcdf.slc.truth.E, # TODO remove
+        'true_nu_E': slcdf.slc.truth.E,
+        'true_pdg': true_pdg, # TODO remove
+        'true_nu_pdg': true_pdg,
+        'is_cosmic': (true_pdg == -1), # TODO remove
+        'true_is_cosmic': (true_pdg == -1),
+
+        'true_nu_vtx_x': slcdf.slc.truth.position.x,
+        'true_nu_vtx_y': slcdf.slc.truth.position.y,
+        'true_nu_vtx_z': slcdf.slc.truth.position.z,
+
+        'p_true_p': magdf(slcdf.p.pfp.trk.truth.p.genp), # TODO remove
+        'true_pcand_p': magdf(slcdf.p.pfp.trk.truth.p.genp),
+        'p_true_pdg': slcdf.p.pfp.trk.truth.p.pdg, # TODO remove
+        'true_pcand_pdg': slcdf.p.pfp.trk.truth.p.pdg,
+
+        'true_pcand_dir_x': slcdf.p.pfp.trk.truth.p.genp.x / magdf(slcdf.p.pfp.trk.truth.p.genp),
+        'true_pcand_dir_y': slcdf.p.pfp.trk.truth.p.genp.y / magdf(slcdf.p.pfp.trk.truth.p.genp),
+        'true_pcand_dir_z': slcdf.p.pfp.trk.truth.p.genp.z / magdf(slcdf.p.pfp.trk.truth.p.genp),
+        'true_pcand_end_x': slcdf.p.pfp.trk.truth.p.end.x,
+        'true_pcand_end_y': slcdf.p.pfp.trk.truth.p.end.y,
+        'true_pcand_end_z': slcdf.p.pfp.trk.truth.p.end.z,
+
+        'mu_true_p': magdf(slcdf.mu.pfp.trk.truth.p.genp), # TODO remove
+        'true_mucand_p': magdf(slcdf.mu.pfp.trk.truth.p.genp),
+        'mu_true_pdg': slcdf.mu.pfp.trk.truth.p.pdg, # TODO remove
+        'true_mucand_pdg': slcdf.mu.pfp.trk.truth.p.pdg,
+
+        'true_mucand_dir_x': slcdf.mu.pfp.trk.truth.p.genp.x /  magdf(slcdf.mu.pfp.trk.truth.p.genp),
+        'true_mucand_dir_y': slcdf.mu.pfp.trk.truth.p.genp.y /  magdf(slcdf.mu.pfp.trk.truth.p.genp),
+        'true_mucand_dir_z': slcdf.mu.pfp.trk.truth.p.genp.z /  magdf(slcdf.mu.pfp.trk.truth.p.genp),
+        'true_mucand_end_x': slcdf.mu.pfp.trk.truth.p.end.x,
+        'true_mucand_end_y': slcdf.mu.pfp.trk.truth.p.end.y,
+        'true_mucand_end_z': slcdf.mu.pfp.trk.truth.p.end.z,
+
+        'true_mu_p': slcdf.slc.truth.mu.totp,
+        'true_mu_dir_x': slcdf.slc.truth.mu.dir.x,
+        'true_mu_dir_y': slcdf.slc.truth.mu.dir.y,
+        'true_mu_dir_z': slcdf.slc.truth.mu.dir.z,
+        'true_mu_end_x': slcdf.slc.truth.mu.end.x,
+        'true_mu_end_y': slcdf.slc.truth.mu.end.y,
+        'true_mu_end_z': slcdf.slc.truth.mu.end.z,
+
+        'true_p_p': slcdf.slc.truth.p.totp,
+        'true_p_dir_x': slcdf.slc.truth.p.dir.x,
+        'true_p_dir_y': slcdf.slc.truth.p.dir.y,
+        'true_p_dir_z': slcdf.slc.truth.p.dir.z,
+        'true_p_end_x': slcdf.slc.truth.p.end.x,
+        'true_p_end_y': slcdf.slc.truth.p.end.y,
+        'true_p_end_z': slcdf.slc.truth.p.end.z,
+
+        'true_nmu_27MeV': slcdf.slc.truth.nmu_27MeV,
+        'true_np_20MeV': slcdf.slc.truth.np_20MeV,
+        'true_np_50MeV': slcdf.slc.truth.np_50MeV,
+        'true_npi_30MeV': slcdf.slc.truth.npi_30MeV,
     })
+
 
     # include some meta-data
     slcdf['detector'] = DETECTOR
@@ -379,6 +466,14 @@ def make_pandora_no_cuts_df(f):
         slcdf = slcdf.join(((crt.time > -1) & (crt.time < 1.8) & (crt.plane != 50)).groupby(level=[0]).any().rename("crthit"))
     else:
         slcdf["crthit"] = False
+
+    # Flash value for trigger emulation. Note: these need to be scaled per-detector, per-Run
+    flashes = make_opflashdf(f)
+    intime = (flashes.firsttime > -5) & (flashes.firsttime < 5)
+    maxpe = (flashes.totalpe*intime).groupby(level=[0]).max().rename("flash_maxpe")
+    slcdf = slcdf.join(maxpe)
+    sumpe = (flashes.totalpe*intime).groupby(level=[0]).sum().rename("flash_sumpe")
+    slcdf = slcdf.join(sumpe)
 
     # add in stub info, per range bin
     stubdf = stubdf[stubdf.plane == 2]
@@ -421,6 +516,8 @@ gump_genie_systematics = [
     "GENIEReWeight_SBN_v1_multisigma_MaNCRES",
     "GENIEReWeight_SBN_v1_multisigma_MvCCRES",
     "GENIEReWeight_SBN_v1_multisigma_MvNCRES",
+    "GENIEReWeight_SBN_v1_multisigma_RDecBR1gamma",
+    "GENIEReWeight_SBN_v1_multisigma_RDecBR1eta",
 
     # Non-Res
 
@@ -456,63 +553,70 @@ gump_genie_systematics = [
 
 # additional (re-weights)
 gump_genie_reknob_systematics = gump_genie_systematics + [
-    'ZExpPCAWeighter_SBNNuSyst_multisigma_D_ZExp_b1',
-    'ZExpPCAWeighter_SBNNuSyst_multisigma_D_ZExp_b3',
-    'ZExpPCAWeighter_SBNNuSyst_multisigma_D_ZExp_b2',
-    'ZExpPCAWeighter_SBNNuSyst_multisigma_D_ZExp_b4',
+    "CCQETemplateReweight_SBN_v3_LFGToSF_q0bin0",
+    "CCQETemplateReweight_SBN_v3_LFGToSF_q0bin1",
+    "CCQETemplateReweight_SBN_v3_LFGToSF_q0bin2",
+    "CCQETemplateReweight_SBN_v3_LFGToSF_q0bin3",
+    "CCQETemplateReweight_SBN_v3_LFGToSF_q0bin4",
 
-    'ZExpPCAWeighter_SBNNuSyst_multisigma_MvA_ZExp_b1',
-    'ZExpPCAWeighter_SBNNuSyst_multisigma_MvA_ZExp_b3',
-    'ZExpPCAWeighter_SBNNuSyst_multisigma_MvA_ZExp_b2',
-    'ZExpPCAWeighter_SBNNuSyst_multisigma_MvA_ZExp_b4',
+    "CCQETemplateReweight_SBN_v3_LFGToHF_q0bin0",
+    "CCQETemplateReweight_SBN_v3_LFGToHF_q0bin1",
+    "CCQETemplateReweight_SBN_v3_LFGToHF_q0bin2",
+    "CCQETemplateReweight_SBN_v3_LFGToHF_q0bin3",
+    "CCQETemplateReweight_SBN_v3_LFGToHF_q0bin4",
 
-    'CCQETemplateReweight_SBNNuSyst_multisigma_SF_q0bin1',
-    'CCQETemplateReweight_SBNNuSyst_multisigma_SF_q0bin2',
-    'CCQETemplateReweight_SBNNuSyst_multisigma_SF_q0bin3',
-    'CCQETemplateReweight_SBNNuSyst_multisigma_SF_q0bin4',
-    'CCQETemplateReweight_SBNNuSyst_multisigma_SF_q0bin5',
+    "CCQETemplateReweight_SBN_v3_HFToCRPA_q0bin0",
+    "CCQETemplateReweight_SBN_v3_HFToCRPA_q0bin1",
+    "CCQETemplateReweight_SBN_v3_HFToCRPA_q0bin2",
+    "CCQETemplateReweight_SBN_v3_HFToCRPA_q0bin3",
+    "CCQETemplateReweight_SBN_v3_HFToCRPA_q0bin4",
 
-    'CCQETemplateReweight_SBNNuSyst_multisigma_CRPA_q0bin1',
-    'CCQETemplateReweight_SBNNuSyst_multisigma_CRPA_q0bin2',
-    'CCQETemplateReweight_SBNNuSyst_multisigma_CRPA_q0bin3',
-    'CCQETemplateReweight_SBNNuSyst_multisigma_CRPA_q0bin4',
-    'CCQETemplateReweight_SBNNuSyst_multisigma_CRPA_q0bin5',
+    "QEInterference_SBN_v3_QEIntf_dial_0",
+    "QEInterference_SBN_v3_QEIntf_dial_1",
+    "QEInterference_SBN_v3_QEIntf_dial_2",
+    "QEInterference_SBN_v3_QEIntf_dial_3",
+    "QEInterference_SBN_v3_QEIntf_dial_4",
+    "QEInterference_SBN_v3_QEIntf_dial_5",
 
-    'QEInterference_SBNNuSyst_multisigma_INT_QEIntf_dial_0',
-    'QEInterference_SBNNuSyst_multisigma_INT_QEIntf_dial_1',
-    'QEInterference_SBNNuSyst_multisigma_INT_QEIntf_dial_2',
-    'QEInterference_SBNNuSyst_multisigma_INT_QEIntf_dial_3',
-    'QEInterference_SBNNuSyst_multisigma_INT_QEIntf_dial_4',
-    'QEInterference_SBNNuSyst_multisigma_INT_QEIntf_dial_5',
+    "GENIEReWeight_SBN_v3_FrG4_N",
+    "GENIEReWeight_SBN_v3_FrINCL_N",
+    "GENIEReWeight_SBN_v3_FrG4LoE_N",
+    "GENIEReWeight_SBN_v3_FrG4M1E_N",
+    "GENIEReWeight_SBN_v3_FrG4M2E_N",
+    "GENIEReWeight_SBN_v3_FrG4HiE_N",
+    "GENIEReWeight_SBN_v3_FrINCLLoE_N",
+    "GENIEReWeight_SBN_v3_FrINCLM1E_N",
+    "GENIEReWeight_SBN_v3_FrINCLM2E_N",
+    "GENIEReWeight_SBN_v3_FrINCLHiE_N",
+    "GENIEReWeight_SBN_v3_MFPLoE_N",
+    "GENIEReWeight_SBN_v3_MFPM1E_N",
+    "GENIEReWeight_SBN_v3_MFPM2E_N",
+    "GENIEReWeight_SBN_v3_MFPHiE_N",
+    "GENIEReWeight_SBN_v3_FrKin_PiProFix_N",
+    "GENIEReWeight_SBN_v3_FrKin_PiProBias_N",
 
-    'GENIEReWeight_SBNNuSyst_multisigma_EDepFSI_FrG4_N',
-    'GENIEReWeight_SBNNuSyst_multisigma_EDepFSI_FrINCL_N',
-    'GENIEReWeight_SBNNuSyst_multisigma_EDepFSI_FrG4LoE_N',
-    'GENIEReWeight_SBNNuSyst_multisigma_EDepFSI_FrINCLLoE_N',
-    'GENIEReWeight_SBNNuSyst_multisigma_EDepFSI_FrG4M1E_N',
-    'GENIEReWeight_SBNNuSyst_multisigma_EDepFSI_FrINCLM1E_N',
-    'GENIEReWeight_SBNNuSyst_multisigma_EDepFSI_FrG4M2E_N',
-    'GENIEReWeight_SBNNuSyst_multisigma_EDepFSI_FrINCLM2E_N',
-    'GENIEReWeight_SBNNuSyst_multisigma_EDepFSI_FrG4HiE_N',
-    'GENIEReWeight_SBNNuSyst_multisigma_EDepFSI_FrINCLHiE_N',
-    'GENIEReWeight_SBNNuSyst_multisigma_EDepFSI_MFPLoE_N',
-    'GENIEReWeight_SBNNuSyst_multisigma_EDepFSI_MFPM1E_N',
-    'GENIEReWeight_SBNNuSyst_multisigma_EDepFSI_MFPM2E_N',
-    'GENIEReWeight_SBNNuSyst_multisigma_EDepFSI_MFPHiE_N',
-    'GENIEReWeight_SBNNuSyst_multisigma_EDepFSI_FrKin_PiProFix_N',
-    'GENIEReWeight_SBNNuSyst_multisigma_EDepFSI_FrKin_PiProBias_N',
+    "PionAbsWeighter_SBN_v3_QuasiDeuteronFraction",
 
-    'MECq0q3InterpWeighting_SBNNuSyst_multisigma_ValQ0Bin0_MECResponse',
-    'MECq0q3InterpWeighting_SBNNuSyst_multisigma_ValQ0Bin1_MECResponse',
-    'MECq0q3InterpWeighting_SBNNuSyst_multisigma_ValQ0Bin2_MECResponse',
-    'MECq0q3InterpWeighting_SBNNuSyst_multisigma_ValQ0Bin3_MECResponse',
-    'MECq0q3InterpWeighting_SBNNuSyst_multisigma_ValQ0Bin4_MECResponse',
+    "ZExpPCAWeighter_SBN_v3_Deut_b1",
+    "ZExpPCAWeighter_SBN_v3_Deut_b2",
+    "ZExpPCAWeighter_SBN_v3_Deut_b3",
+    "ZExpPCAWeighter_SBN_v3_Deut_b4",
 
-    'MECq0q3InterpWeighting_SBNNuSyst_multisigma_MarQ0Bin0_MECResponse',
-    'MECq0q3InterpWeighting_SBNNuSyst_multisigma_MarQ0Bin1_MECResponse',
-    'MECq0q3InterpWeighting_SBNNuSyst_multisigma_MarQ0Bin2_MECResponse',
-    'MECq0q3InterpWeighting_SBNNuSyst_multisigma_MarQ0Bin3_MECResponse',
-    'MECq0q3InterpWeighting_SBNNuSyst_multisigma_MarQ0Bin4_MECResponse',
+    "ZExpPCAWeighter_SBN_v3_MvA_b1",
+    "ZExpPCAWeighter_SBN_v3_MvA_b2",
+    "ZExpPCAWeighter_SBN_v3_MvA_b3",
+    "ZExpPCAWeighter_SBN_v3_MvA_b4",
+
+    "MECq0q3InterpWeighting_SBN_v3_SuSAToVal_MECResponse_q0bin0",
+    "MECq0q3InterpWeighting_SBN_v3_SuSAToVal_MECResponse_q0bin1",
+    "MECq0q3InterpWeighting_SBN_v3_SuSAToVal_MECResponse_q0bin2",
+    "MECq0q3InterpWeighting_SBN_v3_SuSAToVal_MECResponse_q0bin3",
+    "MECq0q3InterpWeighting_SBN_v3_SuSAToMar_MECResponse_q0bin0",
+    "MECq0q3InterpWeighting_SBN_v3_SuSAToMar_MECResponse_q0bin1",
+    "MECq0q3InterpWeighting_SBN_v3_SuSAToMar_MECResponse_q0bin2",
+    "MECq0q3InterpWeighting_SBN_v3_SuSAToMar_MECResponse_q0bin3",
+
+    "CCQEXSecCorr_SBN_v3_CCQEXSecCorr",
 ]
 
 def make_gump_nuslimwgtdf(f):
@@ -556,8 +660,7 @@ def make_gump_nudf(f, is_slc=False):
     is_1p0pi = (nudf.nmu_27MeV == 1) & (nudf.np_50MeV == 1) & (nudf.npi_30MeV == 0) & (nudf.npi0 == 0) 
     is_numu = (nudf.pdg == 14)
     is_other_numucc = (is_numu & is_cc & (is_1p0pi == 0) & is_fv)
-    is_contained = trkfv_cut(nudf.mu.start, DETECTOR) & trkfv_cut(nudf.p.start, DETECTOR)
-    is_sig = is_fv & is_1p0pi & is_numu & is_cc & is_contained
+    is_sig = is_fv & is_1p0pi & is_numu & is_cc
 
     nudf['nuint_categ'] = genie_mode 
 
@@ -574,13 +677,18 @@ def make_gump_nudf(f, is_slc=False):
         'del_p': true_del_p,
         'genie_mode': genie_mode, 
         'is_sig': is_sig, 
-        'is_contained': is_contained,
         'is_nc': is_nc, 
         'is_other_numucc': is_other_numucc, 
         'is_fv': is_fv, 
         'pos_x' : nudf.position.x,
         'pos_y' : nudf.position.y,
         'pos_z' : nudf.position.z,
+        'mu_end_x' : nudf.mu.end.x,
+        'mu_end_y' : nudf.mu.end.y,
+        'mu_end_z' : nudf.mu.end.z,
+        'p_end_x' : nudf.p.end.x,
+        'p_end_y' : nudf.p.end.y,
+        'p_end_z' : nudf.p.end.z,
         'pdg': pdg,
         'nmu': nmu,
         'nn': nn,
