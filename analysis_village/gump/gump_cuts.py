@@ -399,7 +399,7 @@ def all_cuts(recodf, DETECTOR, det_run=False):
     recodf = recodf[cosmic_cut(recodf)]
 
     ### flash cut
-    #recodf = recodf[flash_cut(recodf, DETECTOR)]
+    recodf = recodf[flash_cut(recodf, DETECTOR)]
 
     ### Two prong cut
     recodf = recodf[twoprong_cut(recodf)]
