@@ -5,7 +5,7 @@ import sqlite3
 import uproot
 
 larsoft_data_v = "v1_02_02"
-icarus_data_v = "v10_06_00"
+icarus_data_v = "v10_06_06"
 sbnd_data_v = "v01_35_00"
 
 rr_max_cut_chi2 = 25. ## for resolving MC's hit RR cut, after fixing the issue, put this value to 26.
@@ -15,7 +15,7 @@ ICARUS_CALO_PARAMS = {
     "alpha_emb": 0.904,
     "beta_90": 0.204,
     "R_emb": 1.25,
-    "gains": [0.016751, 0.012755, 0.012513],
+    "gains": [0.016751, 0.012755, 0.012516],
     "c_cal_frac": [1., 1., 1.],
 }
 
@@ -30,6 +30,21 @@ SBND_CALO_PARAMS = {
         [0.0223037, 0.0219534, 0.0215156]], ## Data
     "c_cal_frac": [1., 1., 1.],
     "etau": [100., 35.], ## first value for MC and second value for data
+}
+
+
+# calo variations
+# variations on recombination parameters are taken from the ICARUS measurement uncertainties
+CALO_VARIATIONS = {
+    "cv": SBND_CALO_PARAMS,
+    "ccal_p": {**SBND_CALO_PARAMS, "c_cal_frac": [1.02, 1.02, 1.02]},
+    "ccal_m": {**SBND_CALO_PARAMS, "c_cal_frac": [0.98, 0.98, 0.98]},
+    "alpha_p": {**SBND_CALO_PARAMS, "alpha_emb": [0.904+0.008, 0.904+0.008]},
+    "alpha_m": {**SBND_CALO_PARAMS, "alpha_emb": [0.904-0.008, 0.904-0.008]},
+    "beta_p": {**SBND_CALO_PARAMS, "beta_90": [0.204+0.008, 0.204+0.008]},
+    "beta_m": {**SBND_CALO_PARAMS, "beta_90": [0.204-0.008, 0.204-0.008]},
+    "R_p": {**SBND_CALO_PARAMS, "R_emb": [1.25+0.02, 1.25+0.02]},
+    "R_m": {**SBND_CALO_PARAMS, "R_emb": [1.25-0.02, 1.25-0.02]},
 }
 
 
@@ -165,21 +180,27 @@ def dqdx(dqdxdf, gain=None, calibrate=None, isMC=False):
 
     return dqdx*gain_perhit
 
-def dedx(dqdxdf, gain=None, calibrate=None, plane=2, isMC=False, smear=-1, scale=1):
+def dedx(dqdxdf, gain=None, calibrate=None, plane=2, isMC=False, smear=-1, scale=1, new_calo_params=None):
     dqdx_v = dqdx(dqdxdf, gain=gain, calibrate=calibrate, isMC=isMC)
-    if gain == "ICARUS":
+    if gain == "SBND":
+
+        if new_calo_params is None:
+            calo_params = SBND_CALO_PARAMS
+        else:
+            calo_params = new_calo_params
+
+        scalegain = calo_params['c_cal_frac'][plane]
+        this_alpha_emb = calo_params["alpha_emb"][0] if isMC else calo_params["alpha_emb"][1]
+        this_beta_90 = calo_params["beta_90"][0] if isMC else calo_params["beta_90"][1]
+        this_R_emb = calo_params["R_emb"][0] if isMC else calo_params["R_emb"][1]
+        dedx = calo.recombination_cor(scale*dqdx_v/scalegain, dqdxdf.phi, dqdxdf.efield, dqdxdf.rho, this_alpha_emb, this_beta_90, this_R_emb)
+
+    elif gain == "ICARUS":
         scalegain = ICARUS_CALO_PARAMS['c_cal_frac'][plane]
-    elif gain == "SBND":
-        scalegain = SBND_CALO_PARAMS['c_cal_frac'][plane]
+        dedx = calo.recombination_cor(scale*dqdx_v/scalegain, dqdxdf.phi, dqdxdf.efield, dqdxdf.rho)
+
     else:
         scalegain = 1.
-
-    if gain == "SBND":
-        this_alpha_emb = SBND_CALO_PARAMS["alpha_emb"][0] if isMC else SBND_CALO_PARAMS["alpha_emb"][1]
-        this_beta_90 = SBND_CALO_PARAMS["beta_90"][0] if isMC else SBND_CALO_PARAMS["beta_90"][1]
-        this_R_emb = SBND_CALO_PARAMS["R_emb"][0] if isMC else SBND_CALO_PARAMS["R_emb"][1]
-        dedx = calo.recombination_cor(scale*dqdx_v/scalegain, dqdxdf.phi, dqdxdf.efield, dqdxdf.rho, this_alpha_emb, this_beta_90, this_R_emb)
-    else:
         dedx = calo.recombination_cor(scale*dqdx_v/scalegain, dqdxdf.phi, dqdxdf.efield, dqdxdf.rho)
 
     if smear > 0:
@@ -195,17 +216,17 @@ def _yz_zbin(z, yz_zbin):
 
 def _yz_iov(run): 
     iov = __iov(run, IC_yz_cal_iovdf)
-    iov[run == 1] = 4 # MC default to Run 4
+    iov[run == 1] = 5 # non-Overlay MC default to Run 4
     return iov
 
 def _etau_iov(run):
     iov = __iov(run, IC_etau_cal_iovdf)
-    iov[run == 1] = -1 # MC default to no run
+    iov[run == 1] = -1 # non-Overlay MC default to no run
     return iov
 
 def _tpc_iov(run):
     iov = __iov(run, IC_tpc_cal_iovdf)
-    iov[run == 1] = 3 # MC default to Run 4
+    iov[run == 1] = 4 # non-Overlay MC default to Run 4
     return iov
     
 

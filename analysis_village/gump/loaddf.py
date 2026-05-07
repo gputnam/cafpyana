@@ -31,12 +31,6 @@ def tmatch(reco, mc):
     return df
 
 # Dataframe names
-EVT = "mcnu_%i"
-WGT = "histpotdf_%i"
-HDR = "trig_%i"
-MC  = "stub_%i"
-CRT = "hdr_%i"
-
 EVT = "evt_%i"
 WGT = "wgt_%i"
 HDR = "hdr_%i"
@@ -65,6 +59,10 @@ xsec_syst = [
     "CCQETemplateReweight_SBN_v3_HFToCRPA_q0bin3",
     "CCQETemplateReweight_SBN_v3_HFToCRPA_q0bin4",
 
+<<<<<<< HEAD
+=======
+    # QE-INT
+>>>>>>> 02c7fa1163cf4b6a5787d948c04dc8ea304fa8cc
     "QEInterference_SBN_v3_QEIntf_dial_0",
     "QEInterference_SBN_v3_QEIntf_dial_1",
     "QEInterference_SBN_v3_QEIntf_dial_2",
@@ -72,6 +70,10 @@ xsec_syst = [
     "QEInterference_SBN_v3_QEIntf_dial_4",
     "QEInterference_SBN_v3_QEIntf_dial_5",
 
+<<<<<<< HEAD
+=======
+    # E-Dep FSI
+>>>>>>> 02c7fa1163cf4b6a5787d948c04dc8ea304fa8cc
     "GENIEReWeight_SBN_v3_FrG4_N",
     "GENIEReWeight_SBN_v3_FrINCL_N",
     "GENIEReWeight_SBN_v3_FrG4LoE_N",
@@ -89,13 +91,24 @@ xsec_syst = [
     "GENIEReWeight_SBN_v3_FrKin_PiProFix_N",
     "GENIEReWeight_SBN_v3_FrKin_PiProBias_N",
 
+<<<<<<< HEAD
     "PionAbsWeighter_SBN_v3_QuasiDeuteronFraction",
 
+=======
+    # QD Fraction
+    "PionAbsWeighter_SBN_v3_QuasiDeuteronFraction",
+
+    # Z-expansion
+>>>>>>> 02c7fa1163cf4b6a5787d948c04dc8ea304fa8cc
     "ZExpPCAWeighter_SBN_v3_MvA_b1",
     "ZExpPCAWeighter_SBN_v3_MvA_b2",
     "ZExpPCAWeighter_SBN_v3_MvA_b3",
     "ZExpPCAWeighter_SBN_v3_MvA_b4",
 
+<<<<<<< HEAD
+=======
+    # MEC Shape
+>>>>>>> 02c7fa1163cf4b6a5787d948c04dc8ea304fa8cc
     "MECq0q3InterpWeighting_SBN_v3_SuSAToVal_MECResponse_q0bin0",
     "MECq0q3InterpWeighting_SBN_v3_SuSAToVal_MECResponse_q0bin1",
     "MECq0q3InterpWeighting_SBN_v3_SuSAToVal_MECResponse_q0bin2",
@@ -105,18 +118,28 @@ xsec_syst = [
     "MECq0q3InterpWeighting_SBN_v3_SuSAToMar_MECResponse_q0bin2",
     "MECq0q3InterpWeighting_SBN_v3_SuSAToMar_MECResponse_q0bin3",
 
+<<<<<<< HEAD
     "CCQEXSecCorr_SBN_v3_CCQEXSecCorr",
     "GENIEReWeight_SBN_v1_multisigma_VecFFCCQEshape",
     'GENIEReWeight_SBN_v1_multisigma_CoulombCCQE',
     'GENIEReWeight_SBN_v1_multisigma_NormCCMEC',
     'GENIEReWeight_SBN_v1_multisigma_NormNCMEC',
     "GENIEReWeight_SBN_v1_multisigma_DecayAngMEC",
+=======
+    # RES
+>>>>>>> 02c7fa1163cf4b6a5787d948c04dc8ea304fa8cc
     "GENIEReWeight_SBN_v1_multisigma_Theta_Delta2Npi",
     "GENIEReWeight_SBN_v1_multisigma_ThetaDelta2NRad",
     "GENIEReWeight_SBN_v1_multisigma_MaCCRES",
     "GENIEReWeight_SBN_v1_multisigma_MaNCRES",
     "GENIEReWeight_SBN_v1_multisigma_MvCCRES",
     "GENIEReWeight_SBN_v1_multisigma_MvNCRES",
+<<<<<<< HEAD
+=======
+
+    # DIS
+    # "GENIEReWeight_SBN_v1_multisim_DISBYVariationResponse",
+>>>>>>> 02c7fa1163cf4b6a5787d948c04dc8ea304fa8cc
     'GENIEReWeight_SBN_v1_multisigma_AhtBY',
     'GENIEReWeight_SBN_v1_multisigma_BhtBY',
     'GENIEReWeight_SBN_v1_multisigma_CV1uBY',
@@ -128,12 +151,25 @@ xsec_syst = [
     'GENIEReWeight_SBN_v1_multisigma_FrInel_pi',
     'GENIEReWeight_SBN_v1_multisigma_FrAbs_pi',
     'GENIEReWeight_SBN_v1_multisigma_FrPiProd_pi',
+<<<<<<< HEAD
+=======
+    
+    # 'GENIEReWeight_SBNNuSyst_multisigma_EDepFSI_FrG4_N',
+    # 'GENIEReWeight_SBNNuSyst_multisigma_EDepFSI_FrINCL_N',
+
+    # NCEL
+>>>>>>> 02c7fa1163cf4b6a5787d948c04dc8ea304fa8cc
     'GENIEReWeight_SBN_v1_multisigma_MaNCEL',
     'GENIEReWeight_SBN_v1_multisigma_EtaNCEL'
     ]
 
 xsec_cv_rwgt = [
+<<<<<<< HEAD
     "ZExpPCAWeighter_SBN_v3_MvA_b1", 
+=======
+    "ZExpPCAWeighter_SBN_v3_MvA_b1",
+    "CCQEXSecCorr_SBN_v3_CCQEXSecCorr",
+>>>>>>> 02c7fa1163cf4b6a5787d948c04dc8ea304fa8cc
 ]
 
 flux_syst = [
@@ -163,6 +199,11 @@ truthvars = {
   "true_vtx_x": ("pos_x", ""),
   "true_vtx_y": ("pos_y", ""),
   "true_vtx_z": ("pos_z", ""),
+  "true_nmu": ("nmu", ""),
+  "true_np": ("np", ""),
+  "true_nn": ("nn", ""),
+  "true_npi": ("npi", ""),
+  "true_npi0": ("npi0", ""),
 }
 
 def scale_pot(df, pot, desired_pot):
@@ -212,8 +253,12 @@ def load_one(fname, idf,
             match_Enu=match_Enu, offbeampot=offbeampot, preselection=preselection)
         cache_file = os.path.join(cache_dir, cache_hash + ".h5")
         if os.path.exists(cache_file):
-            df = pd.read_hdf(cache_file, "df")
-            match = pd.read_hdf(cache_file, "match")
+            try:
+                df = pd.read_hdf(cache_file, "df")
+                match = pd.read_hdf(cache_file, "match")
+            except Exception as err:
+                print(fname, cache_file)
+                raise err 
             with h5py.File(cache_file, "r") as cf:
                 pot = float(cf.attrs["pot"])
             return df, match, pot
@@ -274,6 +319,27 @@ def load_one(fname, idf,
 
     df = df.merge(match, on=["__ntuple", "entry"], how="left")
 
+    # DROP DUPLICATED EVENTS
+    # A "duplicate" is the same physical event appearing in more than one
+    # (__ntuple, entry) row of the header — i.e. the same event reconstructed twice.
+    # SBND MC legitimately reuses (run, evt) across distinct MC events, so when
+    # match_Enu is True we include nu_E0 in the dedup key as a tie-breaker.
+    # Drop ALL occurrences (keep=False), not just the extras, from both match and df.
+    # Use a MultiIndex.isin mask on df rather than df.merge, so df's existing
+    # MultiIndex (__ntuple, entry, rec.slc..index) is preserved.
+    dedup_cols = ["run", "evt", "nu_E0"] if match_Enu else ["run", "evt"]
+    dup_mask_match = match.duplicated(subset=dedup_cols, keep=False)
+    n_dup_pairs = int(match.loc[dup_mask_match, dedup_cols].drop_duplicates().shape[0])
+    n_dup_rows  = int(dup_mask_match.sum())
+    if n_dup_rows > 0:
+        bad_pairs = pd.MultiIndex.from_frame(
+            match.loc[dup_mask_match, dedup_cols].drop_duplicates())
+        df_pairs = pd.MultiIndex.from_arrays([df[c] for c in dedup_cols])
+        df = df[~df_pairs.isin(bad_pairs)]
+        match = match[~dup_mask_match]
+    print(f"[{os.path.basename(fname)} idf={idf}] dedup: dropped "
+          f"{n_dup_pairs} duplicated {tuple(dedup_cols)} keys ({n_dup_rows} hdr rows)")
+
     match = match.set_index(match_ind, append=True).droplevel([0,1]).sort_index()
 
     # LOAD POT
@@ -314,7 +380,8 @@ def load_one(fname, idf,
         rewgt = pd.read_hdf(fname, wgtname % idf)[xsec_cv_rwgt]
         rewgt["cvwgt"] = 1.
         for w in xsec_cv_rwgt:
-            rewgt["cvwgt"] = rewgt.cvwgt * rewgt[w]["cv"]
+            cvcol = "cv" if "cv" in rewgt[w].columns else "morph"
+            rewgt["cvwgt"] = rewgt.cvwgt * rewgt[w][cvcol]
         df = df.merge(rewgt.cvwgt.rename("cvwgt"), left_on=["__ntuple", "entry", "tmatch_idx"], right_index=True, how="left")
         df.cvwgt = df.cvwgt.fillna(1.)
     else:
@@ -423,6 +490,33 @@ def load(fname, maxdf=None, **kwargs):
         matches.append(match)
     df = pd.concat(dfs).reset_index(drop=True)
     match = pd.concat(matches)
+
+    # CROSS-IDF DEDUP
+    # `load_one` only sees one idf (split) at a time. The same physical event can
+    # show up in more than one idf — `__ntuple` is a per-idf ordinal, not globally
+    # unique, so the within-idf check can't catch this. Drop every occurrence of
+    # any duplicate after the concat across idfs. Match nu_E0 in the key when it's
+    # present (match_Enu=True), since SBND MC reuses (run, evt) across distinct
+    # MC events and would over-drop on (run, evt) alone.
+    dedup_levels = ["run", "evt"]
+    if "nu_E0" in match.index.names:
+        dedup_levels.append("nu_E0")
+    key = pd.MultiIndex.from_arrays([
+        match.index.get_level_values(name) for name in dedup_levels
+    ])
+    dup_mask = key.duplicated(keep=False)
+    if dup_mask.any():
+        bad_pairs = pd.MultiIndex.from_arrays([
+            key.get_level_values(i)[dup_mask] for i in range(len(dedup_levels))
+        ]).unique()
+        n_dup_pairs = len(bad_pairs)
+        n_dup_rows  = int(dup_mask.sum())
+        match = match[~dup_mask]
+        df_pairs = pd.MultiIndex.from_arrays([df[name] for name in dedup_levels])
+        df = df[~df_pairs.isin(bad_pairs)]
+        print(f"[{os.path.basename(fname)}] cross-idf dedup: dropped "
+              f"{n_dup_pairs} duplicated {tuple(dedup_levels)} keys "
+              f"({n_dup_rows} match rows)")
 
     return df, match, pots
         
