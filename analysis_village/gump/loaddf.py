@@ -59,10 +59,7 @@ xsec_syst = [
     "CCQETemplateReweight_SBN_v3_HFToCRPA_q0bin3",
     "CCQETemplateReweight_SBN_v3_HFToCRPA_q0bin4",
 
-<<<<<<< HEAD
-=======
     # QE-INT
->>>>>>> 02c7fa1163cf4b6a5787d948c04dc8ea304fa8cc
     "QEInterference_SBN_v3_QEIntf_dial_0",
     "QEInterference_SBN_v3_QEIntf_dial_1",
     "QEInterference_SBN_v3_QEIntf_dial_2",
@@ -70,10 +67,7 @@ xsec_syst = [
     "QEInterference_SBN_v3_QEIntf_dial_4",
     "QEInterference_SBN_v3_QEIntf_dial_5",
 
-<<<<<<< HEAD
-=======
     # E-Dep FSI
->>>>>>> 02c7fa1163cf4b6a5787d948c04dc8ea304fa8cc
     "GENIEReWeight_SBN_v3_FrG4_N",
     "GENIEReWeight_SBN_v3_FrINCL_N",
     "GENIEReWeight_SBN_v3_FrG4LoE_N",
@@ -91,24 +85,16 @@ xsec_syst = [
     "GENIEReWeight_SBN_v3_FrKin_PiProFix_N",
     "GENIEReWeight_SBN_v3_FrKin_PiProBias_N",
 
-<<<<<<< HEAD
-    "PionAbsWeighter_SBN_v3_QuasiDeuteronFraction",
-
-=======
     # QD Fraction
     "PionAbsWeighter_SBN_v3_QuasiDeuteronFraction",
 
     # Z-expansion
->>>>>>> 02c7fa1163cf4b6a5787d948c04dc8ea304fa8cc
     "ZExpPCAWeighter_SBN_v3_MvA_b1",
     "ZExpPCAWeighter_SBN_v3_MvA_b2",
     "ZExpPCAWeighter_SBN_v3_MvA_b3",
     "ZExpPCAWeighter_SBN_v3_MvA_b4",
 
-<<<<<<< HEAD
-=======
     # MEC Shape
->>>>>>> 02c7fa1163cf4b6a5787d948c04dc8ea304fa8cc
     "MECq0q3InterpWeighting_SBN_v3_SuSAToVal_MECResponse_q0bin0",
     "MECq0q3InterpWeighting_SBN_v3_SuSAToVal_MECResponse_q0bin1",
     "MECq0q3InterpWeighting_SBN_v3_SuSAToVal_MECResponse_q0bin2",
@@ -118,28 +104,22 @@ xsec_syst = [
     "MECq0q3InterpWeighting_SBN_v3_SuSAToMar_MECResponse_q0bin2",
     "MECq0q3InterpWeighting_SBN_v3_SuSAToMar_MECResponse_q0bin3",
 
-<<<<<<< HEAD
     "CCQEXSecCorr_SBN_v3_CCQEXSecCorr",
     "GENIEReWeight_SBN_v1_multisigma_VecFFCCQEshape",
     'GENIEReWeight_SBN_v1_multisigma_CoulombCCQE',
     'GENIEReWeight_SBN_v1_multisigma_NormCCMEC',
     'GENIEReWeight_SBN_v1_multisigma_NormNCMEC',
     "GENIEReWeight_SBN_v1_multisigma_DecayAngMEC",
-=======
     # RES
->>>>>>> 02c7fa1163cf4b6a5787d948c04dc8ea304fa8cc
     "GENIEReWeight_SBN_v1_multisigma_Theta_Delta2Npi",
     "GENIEReWeight_SBN_v1_multisigma_ThetaDelta2NRad",
     "GENIEReWeight_SBN_v1_multisigma_MaCCRES",
     "GENIEReWeight_SBN_v1_multisigma_MaNCRES",
     "GENIEReWeight_SBN_v1_multisigma_MvCCRES",
     "GENIEReWeight_SBN_v1_multisigma_MvNCRES",
-<<<<<<< HEAD
-=======
 
     # DIS
     # "GENIEReWeight_SBN_v1_multisim_DISBYVariationResponse",
->>>>>>> 02c7fa1163cf4b6a5787d948c04dc8ea304fa8cc
     'GENIEReWeight_SBN_v1_multisigma_AhtBY',
     'GENIEReWeight_SBN_v1_multisigma_BhtBY',
     'GENIEReWeight_SBN_v1_multisigma_CV1uBY',
@@ -151,25 +131,18 @@ xsec_syst = [
     'GENIEReWeight_SBN_v1_multisigma_FrInel_pi',
     'GENIEReWeight_SBN_v1_multisigma_FrAbs_pi',
     'GENIEReWeight_SBN_v1_multisigma_FrPiProd_pi',
-<<<<<<< HEAD
-=======
     
     # 'GENIEReWeight_SBNNuSyst_multisigma_EDepFSI_FrG4_N',
     # 'GENIEReWeight_SBNNuSyst_multisigma_EDepFSI_FrINCL_N',
 
     # NCEL
->>>>>>> 02c7fa1163cf4b6a5787d948c04dc8ea304fa8cc
     'GENIEReWeight_SBN_v1_multisigma_MaNCEL',
     'GENIEReWeight_SBN_v1_multisigma_EtaNCEL'
     ]
 
 xsec_cv_rwgt = [
-<<<<<<< HEAD
     "ZExpPCAWeighter_SBN_v3_MvA_b1", 
-=======
     "ZExpPCAWeighter_SBN_v3_MvA_b1",
-    "CCQEXSecCorr_SBN_v3_CCQEXSecCorr",
->>>>>>> 02c7fa1163cf4b6a5787d948c04dc8ea304fa8cc
 ]
 
 flux_syst = [
