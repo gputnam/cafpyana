@@ -141,8 +141,7 @@ xsec_syst = [
     ]
 
 xsec_cv_rwgt = [
-    "ZExpPCAWeighter_SBN_v3_MvA_b1", 
-    "ZExpPCAWeighter_SBN_v3_MvA_b1",
+    "ZExpPCAWeighter_SBN_v3_MvA_b1" 
 ]
 
 flux_syst = [
