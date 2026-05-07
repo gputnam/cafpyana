@@ -44,107 +44,96 @@ MC  = "mcnu_%i"
 CRT = "crt_%i"
 FLASH = "flash_%i"
 
+pot_syst = {'ms3': 0.982714, 'ms2': 0.9887274, 'ms1': 0.99474195, 'cv': 1.0, 'ps1': 1.005, 'ps2': 1.01, 'ps3': 1.015}
+
 xsec_syst = [
-    # CCQE
+    "CCQETemplateReweight_SBN_v3_LFGToSF_q0bin0",
+    "CCQETemplateReweight_SBN_v3_LFGToSF_q0bin1",
+    "CCQETemplateReweight_SBN_v3_LFGToSF_q0bin2",
+    "CCQETemplateReweight_SBN_v3_LFGToSF_q0bin3",
+    "CCQETemplateReweight_SBN_v3_LFGToSF_q0bin4",
+
+    "CCQETemplateReweight_SBN_v3_LFGToHF_q0bin0",
+    "CCQETemplateReweight_SBN_v3_LFGToHF_q0bin1",
+    "CCQETemplateReweight_SBN_v3_LFGToHF_q0bin2",
+    "CCQETemplateReweight_SBN_v3_LFGToHF_q0bin3",
+    "CCQETemplateReweight_SBN_v3_LFGToHF_q0bin4",
+
+    "CCQETemplateReweight_SBN_v3_HFToCRPA_q0bin0",
+    "CCQETemplateReweight_SBN_v3_HFToCRPA_q0bin1",
+    "CCQETemplateReweight_SBN_v3_HFToCRPA_q0bin2",
+    "CCQETemplateReweight_SBN_v3_HFToCRPA_q0bin3",
+    "CCQETemplateReweight_SBN_v3_HFToCRPA_q0bin4",
+
+    "QEInterference_SBN_v3_QEIntf_dial_0",
+    "QEInterference_SBN_v3_QEIntf_dial_1",
+    "QEInterference_SBN_v3_QEIntf_dial_2",
+    "QEInterference_SBN_v3_QEIntf_dial_3",
+    "QEInterference_SBN_v3_QEIntf_dial_4",
+    "QEInterference_SBN_v3_QEIntf_dial_5",
+
+    "GENIEReWeight_SBN_v3_FrG4_N",
+    "GENIEReWeight_SBN_v3_FrINCL_N",
+    "GENIEReWeight_SBN_v3_FrG4LoE_N",
+    "GENIEReWeight_SBN_v3_FrG4M1E_N",
+    "GENIEReWeight_SBN_v3_FrG4M2E_N",
+    "GENIEReWeight_SBN_v3_FrG4HiE_N",
+    "GENIEReWeight_SBN_v3_FrINCLLoE_N",
+    "GENIEReWeight_SBN_v3_FrINCLM1E_N",
+    "GENIEReWeight_SBN_v3_FrINCLM2E_N",
+    "GENIEReWeight_SBN_v3_FrINCLHiE_N",
+    "GENIEReWeight_SBN_v3_MFPLoE_N",
+    "GENIEReWeight_SBN_v3_MFPM1E_N",
+    "GENIEReWeight_SBN_v3_MFPM2E_N",
+    "GENIEReWeight_SBN_v3_MFPHiE_N",
+    "GENIEReWeight_SBN_v3_FrKin_PiProFix_N",
+    "GENIEReWeight_SBN_v3_FrKin_PiProBias_N",
+
+    "PionAbsWeighter_SBN_v3_QuasiDeuteronFraction",
+
+    "ZExpPCAWeighter_SBN_v3_MvA_b1",
+    "ZExpPCAWeighter_SBN_v3_MvA_b2",
+    "ZExpPCAWeighter_SBN_v3_MvA_b3",
+    "ZExpPCAWeighter_SBN_v3_MvA_b4",
+
+    "MECq0q3InterpWeighting_SBN_v3_SuSAToVal_MECResponse_q0bin0",
+    "MECq0q3InterpWeighting_SBN_v3_SuSAToVal_MECResponse_q0bin1",
+    "MECq0q3InterpWeighting_SBN_v3_SuSAToVal_MECResponse_q0bin2",
+    "MECq0q3InterpWeighting_SBN_v3_SuSAToVal_MECResponse_q0bin3",
+    "MECq0q3InterpWeighting_SBN_v3_SuSAToMar_MECResponse_q0bin0",
+    "MECq0q3InterpWeighting_SBN_v3_SuSAToMar_MECResponse_q0bin1",
+    "MECq0q3InterpWeighting_SBN_v3_SuSAToMar_MECResponse_q0bin2",
+    "MECq0q3InterpWeighting_SBN_v3_SuSAToMar_MECResponse_q0bin3",
+
+    "CCQEXSecCorr_SBN_v3_CCQEXSecCorr",
     "GENIEReWeight_SBN_v1_multisigma_VecFFCCQEshape",
     'GENIEReWeight_SBN_v1_multisigma_CoulombCCQE',
-
-    "ZExpPCAWeighter_SBNNuSyst_multisigma_MvA_ZExp_b1", 
-    "ZExpPCAWeighter_SBNNuSyst_multisigma_MvA_ZExp_b2",
-    "ZExpPCAWeighter_SBNNuSyst_multisigma_MvA_ZExp_b3",
-    "ZExpPCAWeighter_SBNNuSyst_multisigma_MvA_ZExp_b4",
-
-    'CCQETemplateReweight_SBNNuSyst_multisigma_HF_q0bin1',
-    'CCQETemplateReweight_SBNNuSyst_multisigma_HF_q0bin2',
-    'CCQETemplateReweight_SBNNuSyst_multisigma_HF_q0bin3',
-    'CCQETemplateReweight_SBNNuSyst_multisigma_HF_q0bin4',
-    'CCQETemplateReweight_SBNNuSyst_multisigma_HF_q0bin5',
-    
-    'CCQETemplateReweight_SBNNuSyst_multisigma_SF_q0bin1',
-    'CCQETemplateReweight_SBNNuSyst_multisigma_SF_q0bin2',
-    'CCQETemplateReweight_SBNNuSyst_multisigma_SF_q0bin3',
-    'CCQETemplateReweight_SBNNuSyst_multisigma_SF_q0bin4',
-    'CCQETemplateReweight_SBNNuSyst_multisigma_SF_q0bin5',
-
-    'CCQETemplateReweight_SBNNuSyst_multisigma_CRPA_q0bin1',
-    'CCQETemplateReweight_SBNNuSyst_multisigma_CRPA_q0bin2',
-    'CCQETemplateReweight_SBNNuSyst_multisigma_CRPA_q0bin3',
-    'CCQETemplateReweight_SBNNuSyst_multisigma_CRPA_q0bin4',
-    'CCQETemplateReweight_SBNNuSyst_multisigma_CRPA_q0bin5',
-    
-    'QEInterference_SBNNuSyst_multisigma_INT_QEIntf_dial_0',
-    'QEInterference_SBNNuSyst_multisigma_INT_QEIntf_dial_1',
-    'QEInterference_SBNNuSyst_multisigma_INT_QEIntf_dial_2',
-    'QEInterference_SBNNuSyst_multisigma_INT_QEIntf_dial_3',
-    'QEInterference_SBNNuSyst_multisigma_INT_QEIntf_dial_4',
-    'QEInterference_SBNNuSyst_multisigma_INT_QEIntf_dial_5',
-
-    # MEC
     'GENIEReWeight_SBN_v1_multisigma_NormCCMEC',
     'GENIEReWeight_SBN_v1_multisigma_NormNCMEC',
     "GENIEReWeight_SBN_v1_multisigma_DecayAngMEC",
-    
-    'MECq0q3InterpWeighting_SuSAv2ToValenica_q0binned_MECResponse_q0bin0',
-    'MECq0q3InterpWeighting_SuSAv2ToValenica_q0binned_MECResponse_q0bin1',
-    'MECq0q3InterpWeighting_SuSAv2ToValenica_q0binned_MECResponse_q0bin2',
-    'MECq0q3InterpWeighting_SuSAv2ToValenica_q0binned_MECResponse_q0bin3',
-
-    'MECq0q3InterpWeighting_SuSAv2ToMartini_q0binned_MECResponse_q0bin0',
-    'MECq0q3InterpWeighting_SuSAv2ToMartini_q0binned_MECResponse_q0bin1',
-    'MECq0q3InterpWeighting_SuSAv2ToMartini_q0binned_MECResponse_q0bin2',
-    'MECq0q3InterpWeighting_SuSAv2ToMartini_q0binned_MECResponse_q0bin3',
-
-    # RES
     "GENIEReWeight_SBN_v1_multisigma_Theta_Delta2Npi",
     "GENIEReWeight_SBN_v1_multisigma_ThetaDelta2NRad",
     "GENIEReWeight_SBN_v1_multisigma_MaCCRES",
     "GENIEReWeight_SBN_v1_multisigma_MaNCRES",
     "GENIEReWeight_SBN_v1_multisigma_MvCCRES",
     "GENIEReWeight_SBN_v1_multisigma_MvNCRES",
-    # Non-Res
-
-    # DIS
-    # "GENIEReWeight_SBN_v1_multisim_DISBYVariationResponse",
     'GENIEReWeight_SBN_v1_multisigma_AhtBY',
     'GENIEReWeight_SBN_v1_multisigma_BhtBY',
     'GENIEReWeight_SBN_v1_multisigma_CV1uBY',
     'GENIEReWeight_SBN_v1_multisigma_CV2uBY',
-
-    # COH
     "GENIEReWeight_SBN_v1_multisigma_NormCCCOH",
     "GENIEReWeight_SBN_v1_multisigma_NormNCCOH",
-
-    # FSI
-    # "GENIEReWeight_SBN_v1_multisim_FSI_pi_VariationResponse",
-    # "GENIEReWeight_SBN_v1_multisim_FSI_N_VariationResponse",
     'GENIEReWeight_SBN_v1_multisigma_MFP_pi',
     'GENIEReWeight_SBN_v1_multisigma_FrCEx_pi',
     'GENIEReWeight_SBN_v1_multisigma_FrInel_pi',
     'GENIEReWeight_SBN_v1_multisigma_FrAbs_pi',
     'GENIEReWeight_SBN_v1_multisigma_FrPiProd_pi',
-    
-    # 'GENIEReWeight_SBNNuSyst_multisigma_EDepFSI_FrG4_N',
-    # 'GENIEReWeight_SBNNuSyst_multisigma_EDepFSI_FrINCL_N',
-    'GENIEReWeight_SBNNuSyst_multisigma_EDepFSI_FrG4LoE_N',
-    'GENIEReWeight_SBNNuSyst_multisigma_EDepFSI_FrINCLLoE_N',
-    'GENIEReWeight_SBNNuSyst_multisigma_EDepFSI_FrG4M1E_N',
-    'GENIEReWeight_SBNNuSyst_multisigma_EDepFSI_FrINCLM1E_N',
-    'GENIEReWeight_SBNNuSyst_multisigma_EDepFSI_FrG4M2E_N',
-    'GENIEReWeight_SBNNuSyst_multisigma_EDepFSI_FrINCLM2E_N',
-    'GENIEReWeight_SBNNuSyst_multisigma_EDepFSI_FrG4HiE_N',
-    'GENIEReWeight_SBNNuSyst_multisigma_EDepFSI_FrINCLHiE_N',
-    'GENIEReWeight_SBNNuSyst_multisigma_EDepFSI_MFPLoE_N',
-    'GENIEReWeight_SBNNuSyst_multisigma_EDepFSI_MFPM1E_N',
-    'GENIEReWeight_SBNNuSyst_multisigma_EDepFSI_MFPM2E_N',
-    'GENIEReWeight_SBNNuSyst_multisigma_EDepFSI_MFPHiE_N',
-
-    # NCEL
     'GENIEReWeight_SBN_v1_multisigma_MaNCEL',
-    'GENIEReWeight_SBN_v1_multisigma_EtaNCEL',
-]
+    'GENIEReWeight_SBN_v1_multisigma_EtaNCEL'
+    ]
 
 xsec_cv_rwgt = [
-    "ZExpPCAWeighter_SBNNuSyst_multisigma_MvA_ZExp_b1", 
+    "ZExpPCAWeighter_SBN_v3_MvA_b1", 
 ]
 
 flux_syst = [
@@ -206,7 +195,7 @@ def _write_cache(cache_file, df, match, pot):
 def load_one(fname, idf,
     detector=None, # One of SBND, ICARUS, ICARUS Run4
     include_syst=True, nuniv=100, spline=False, xsec_univ=False, # systematic handling
-    reweight_aFF=False,
+    reweight_aFF=False, pot_univ=False,
     load_flashes=True, load_truth=True, load_crt=False, match_Enu=True, # load extra information
     offbeampot=False, # POT handling
     preselection=None, # apply preselection cut
@@ -218,7 +207,7 @@ def load_one(fname, idf,
     # Check cache
     if cache_dir is not None:
         cache_hash = _cache_key(fname, idf, detector=detector, include_syst=include_syst,
-            nuniv=nuniv, spline=spline, xsec_univ=xsec_univ, reweight_aFF=reweight_aFF,
+            nuniv=nuniv, spline=spline, xsec_univ=xsec_univ, reweight_aFF=reweight_aFF, pot_univ=pot_univ,
             load_flashes=load_flashes, load_truth=load_truth, load_crt=load_crt,
             match_Enu=match_Enu, offbeampot=offbeampot, preselection=preselection)
         cache_file = os.path.join(cache_dir, cache_hash + ".h5")
@@ -343,6 +332,33 @@ def load_one(fname, idf,
     for i in range(min(100, nuniv)):
         skim["flux_univ%i" % i] = np.prod([wgt[s]["univ_%i" % i] for s in flux_syst], axis=0)
 
+    if pot_univ:
+        rng = np.random.default_rng(seed=24601) # repeatable random numbers
+        rnd = np.clip(rng.normal(size=nuniv), -3, 3)
+        for i in range(nuniv):
+            wgt_vs = []
+            r = rnd[i]
+        
+            if "ps1" in pot_syst:
+                if spline:
+                    w = pot_syst
+                    spline_ = CubicSpline([-3, -2, -1, 0, 1, 2, 3], 
+                            [w["ms3"]/w["cv"], w["ms2"]/w["cv"], w["ms1"]/w["cv"], pd.Series(1, w.index), w["ps1"]/w["cv"], w["ps2"]/w["cv"], w["ps3"]/w["cv"]])
+                    s = spline_(r)
+                else:
+                    s = 1 + (pot_syst["ps1"]/pot_syst["cv"] - 1)*r
+            else:
+                assert(False)
+
+            wgt_vs.append(s)
+            
+            skim["pot_univ%i" % i] = np.prod(wgt_vs, axis=0)
+    else:
+        if "ps1" in pot_syst:
+            skim["pot_univ"] = pot_syst["ps1"]/pot_syst["cv"]
+        else:
+            assert(False)
+
     if xsec_univ:
         rng = np.random.default_rng(seed=24601) # repeatable random numbers
         rnd = np.clip(rng.normal(size=(len(xsec_syst), nuniv)), -3, 3)
@@ -410,7 +426,7 @@ def load(fname, maxdf=None, **kwargs):
 
     return df, match, pots
         
-def loadl(flist, progress=True, njob=None, **kwargs):
+def loadl(flist, progress=True, njob=None, drops=None, **kwargs):
     if njob is not None:
         pool = Pool(njob)
         m = pool.imap_unordered
@@ -430,7 +446,10 @@ def loadl(flist, progress=True, njob=None, **kwargs):
     pots = 0
     for df, match, pot in it:
         pots += pot
-        dfs.append(df)
+        if drops is not None:
+            dfs.append(df.drop(columns=drops))
+        else:
+            dfs.append(df)
         matches.append(match)
     df = pd.concat(dfs).reset_index(drop=True)
     matches = pd.concat(matches)
@@ -468,4 +487,9 @@ class FluxSystematic(syst.WeightSystematic):
 class XSecSystematic(syst.WeightSystematic):
     def __init__(self, df, scale="glob_scale"):
         super().__init__(df, ["%s_univ" % s for s in xsec_syst], avg=False, scale=scale)
+
+class POTSystematic(syst.WeightSystematic):
+    def __init__(self, df, scale="glob_scale"):
+        super().__init__(df, ["pot_univ"], avg=False, scale=scale)
+
 
