@@ -389,7 +389,7 @@ def plot_2d_hist_from_file(filename, plot_title, output_tag):
     plt.ylabel(r'$\delta p$ [GeV/c]')
     
     mesh.get_cmap().set_bad(color='gray')
-    plt.savefig('rwt_outputs/2d_ratio_'+output_tag+'.png', dpi=300)
+    plt.savefig('/exp/sbnd/app/users/nrowe/cafpyana/analysis_village/gump/rwt_outputs/2d_ratio_'+output_tag+'.png', dpi=300)
     plt.clf() 
 
 def main():
@@ -435,7 +435,7 @@ def plot():
         print(i)
         dfs.append(load_dfs(f"/exp/sbnd/data/users/gputnam/GUMP/sbn-rewgted-6/SBND_SpringMC_rewgt_5_{i}.df", ['evt'])['evt'])
 
-    recodf = all_cuts(pd.concat(dfs), "SBND")
+    recodf = all_cuts(pd.concat(dfs), "SBND", 1)
     SCEdf = apply_double_map(recodf.copy(), 'rwt_outputs/min_SCE.txt', 'rwt_outputs/pls_SCE.txt', 'CAFPYANA_SBN_v1_multisigma_SCE')
     YZdf = apply_map(recodf.copy(), 'rwt_outputs/YZ.txt', 'CAFPYANA_SBN_v1_multisigma_WMYZ')
     XThetaXWdf = apply_map(recodf.copy(), 'rwt_outputs/XThetaXW.txt', 'CAFPYANA_SBN_v1_multisigma_WMXThetaXW')

@@ -20,9 +20,14 @@ def apply_truth(recodf, mcnudf):
     matchdf = tmatch(matchdf, mcnudf)
 
     recodf = recodf.reset_index()
-    recodf = pd.concat([recodf, matchdf['is_nc'].reset_index(), matchdf['genie_mode'].reset_index()], axis = 1)
+    recodf = pd.concat([recodf, matchdf['is_nc'].reset_index(), matchdf['genie_mode'].reset_index(), matchdf['true_mu_p'].reset_index(), 
+                        matchdf['true_mu_dir_x'].reset_index(), matchdf['true_mu_dir_y'].reset_index(), matchdf['true_mu_dir_z'].reset_index()], axis = 1)
     recodf['is_nc'] = recodf['is_nc'].fillna(0)
     recodf['genie_mode'] = recodf['genie_mode'].fillna(0)
+    recodf['true_mu_p'] = recodf['true_mu_p'].fillna(0)
+    recodf['true_mu_dir_x'] = recodf['true_mu_dir_x'].fillna(0)
+    recodf['true_mu_dir_y'] = recodf['true_mu_dir_y'].fillna(0)
+    recodf['true_mu_dir_z'] = recodf['true_mu_dir_z'].fillna(0)
     return recodf
 
 def apply_systs(recodf, mcnuwgtdf, DETECTOR, det_run):
@@ -35,10 +40,10 @@ def apply_systs(recodf, mcnuwgtdf, DETECTOR, det_run):
 
     # 2. Process existing weight columns
     wgt_cols = [c for c in mcnuwgtdf.columns.get_level_values(0).unique()
-                if any(k in c for k in ["GENIE", "Flux", "SBNNuSyst", "InterpWeighting"])]
+                if any(k in c for k in ["GENIE", "Flux", "SBNNuSyst", "InterpWeighting", "SBN_v3"])]
 
     for col in wgt_cols:
-        newcol = f"multisigma{col}" if "MECq0q3InterpWeighting" in col else col
+        newcol = f"multisigma{col}" if "SBN_v3" in col else col
         recodf_wgt_out[newcol] = np.array([matchdf[col][u].values for u in matchdf[col].columns]).T.tolist()
 
     recodf_wgt_out = apply_det_syst(recodf, recodf_wgt_out, DETECTOR)
@@ -113,17 +118,17 @@ def apply_flash(df, detector, det_run, fname, idf, ismc):
     intime = (flashes[time_name] > -5) & (flashes[time_name] < 5)
     maxpe = (flashes.totalpe*intime).groupby(level=[0, 1]).max().rename("flash_maxpe")*pe_scale
     df = df.join(maxpe)
-    print(df.flash_maxpe)
     return df
 
 def make_gump_ttree_mc(dfname, split):
 
     # This should be replaced with reading from df later
-    if 'ICARUSRun4' in dfname:
+    if 'Run4' in dfname or 'run4' in dfname:
         det_run = 4
-    if 'ICARUSRun2' in dfname:
+    elif 'ICARUS' in dfname:
         det_run = 2
-    elif 'SBND' in dfname:
+
+    if 'SBND' in dfname:
         det_run = 1
 
     with pd.HDFStore(dfname, mode='r') as store:

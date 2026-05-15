@@ -13,6 +13,8 @@ from multiprocess import Pool
 from functools import partial
 import syst
 
+
+from memory_profiler import profile
 import gump_cuts as gc
 
 def tmatch(reco, mc):
@@ -205,6 +207,7 @@ def _write_cache(cache_file, df, match, pot):
     with h5py.File(cache_file, "a") as cf:
         cf.attrs["pot"] = pot
 
+#@profile
 def load_one(fname, idf,
     detector=None, # One of SBND, ICARUS, ICARUS Run4
     include_syst=True, nuniv=100, spline=False, xsec_univ=False, # systematic handling
@@ -213,7 +216,7 @@ def load_one(fname, idf,
     offbeampot=False, # POT handling
     preselection=None, # apply preselection cut
     cache_dir=None, # directory to cache output; None disables caching
-    flashname=FLASH, hdrname=HDR, evtname=EVT, wgtname=WGT, mcname=MC, crtname=CRT): # override default table names
+    flashname=FLASH, hdrname=HDR, evtname=EVT, wgtname=WGT, mcname=MC, crtname=CRT, drops=None, lightmem=False): # override default table names
 
     assert(detector == "SBND" or detector == "ICARUS Run2" or detector == "ICARUS Run4")
 
@@ -442,6 +445,16 @@ def load_one(fname, idf,
 
     if cache_dir is not None:
         _write_cache(cache_file, mrg, match, pot)
+    if drops is not None:
+        mrg.drop(columns=drops, inplace=True)
+    if lightmem:
+        mrg['detector'] = mrg['detector'].astype('category')
+        mrg['Run'] = mrg['Run'].astype('category')
+        mrg['true_isfv'] = mrg['true_isfv'].astype('Int8')
+        mrg['true_isothernumucc'] = mrg['true_isothernumucc'].astype('Int8')
+        mrg['true_issig'] = mrg['true_issig'].astype('Int8')
+        mrg['true_isnc'] = mrg['true_isnc'].astype('Int8')
+        mrg[mrg.select_dtypes(include=['float64']).columns] = mrg.select_dtypes(include=['float64']).astype('float32')
     return mrg, match, pot
 
 
@@ -490,9 +503,11 @@ def load(fname, maxdf=None, **kwargs):
               f"{n_dup_pairs} duplicated {tuple(dedup_levels)} keys "
               f"({n_dup_rows} match rows)")
 
+    print("load ret")
     return df, match, pots
-        
-def loadl(flist, progress=True, njob=None, drops=None, **kwargs):
+    
+#@profile
+def loadl(flist, progress=True, njob=None, **kwargs):
     if njob is not None:
         pool = Pool(njob)
         m = pool.imap_unordered
@@ -512,12 +527,12 @@ def loadl(flist, progress=True, njob=None, drops=None, **kwargs):
     pots = 0
     for df, match, pot in it:
         pots += pot
-        if drops is not None:
-            dfs.append(df.drop(columns=drops))
-        else:
-            dfs.append(df)
+        print(pot)
+        dfs.append(df)
         matches.append(match)
-    df = pd.concat(dfs).reset_index(drop=True)
+    print("concat")
+    df = pd.concat(dfs, ignore_index=True)
+    del dfs
     matches = pd.concat(matches)
 
     if njob is not None:
