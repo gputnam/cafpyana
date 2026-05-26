@@ -143,7 +143,8 @@ xsec_syst = [
     ]
 
 xsec_cv_rwgt = [
-    "ZExpPCAWeighter_SBN_v3_MvA_b1" 
+    "ZExpPCAWeighter_SBN_v3_MvA_b1", 
+    "CCQEXSecCorr_SBN_v3_CCQEXSecCorr"
 ]
 
 flux_syst = [
@@ -210,8 +211,8 @@ def _write_cache(cache_file, df, match, pot):
 #@profile
 def load_one(fname, idf,
     detector=None, # One of SBND, ICARUS, ICARUS Run4
-    include_syst=True, nuniv=100, spline=False, xsec_univ=False, # systematic handling
-    reweight_aFF=False, pot_univ=False,
+    include_syst=True, nuniv=100, spline=False, xsec_univ=False, xsec_spline=False,# systematic handling
+    reweight_aFF=False, pot_univ=False, flux_univ=True, sep_flux_univ=False,
     load_flashes=True, load_truth=True, load_crt=False, match_Enu=True, # load extra information
     offbeampot=False, # POT handling
     preselection=None, # apply preselection cut
@@ -223,7 +224,7 @@ def load_one(fname, idf,
     # Check cache
     if cache_dir is not None:
         cache_hash = _cache_key(fname, idf, detector=detector, include_syst=include_syst,
-            nuniv=nuniv, spline=spline, xsec_univ=xsec_univ, reweight_aFF=reweight_aFF, pot_univ=pot_univ,
+            nuniv=nuniv, spline=spline, xsec_univ=xsec_univ, xsec_spline=xsec_spline, reweight_aFF=reweight_aFF, pot_univ=pot_univ,
             load_flashes=load_flashes, load_truth=load_truth, load_crt=load_crt,
             match_Enu=match_Enu, offbeampot=offbeampot, preselection=preselection)
         cache_file = os.path.join(cache_dir, cache_hash + ".h5")
@@ -240,16 +241,18 @@ def load_one(fname, idf,
 
     df =  pd.read_hdf(fname, evtname % idf)
     hdr = pd.read_hdf(fname, hdrname % idf)
-
     ismc = hdr.ismc.iloc[0] == 1
 
     # set run 
     if "SBND" in fname:
         df["Run"] = 1
+        Run = 1
     elif "ICARUS" in fname and "Run4" in fname:
         df["Run"] = 4
+        Run = 4
     elif "ICARUS" in fname:
         df["Run"] = 2
+        Run = 2
     else: assert(False)
 
     # LOAD FLASHES
@@ -285,11 +288,13 @@ def load_one(fname, idf,
 
         # Add in other meta-data to match.
         vtx = pd.DataFrame({
+          "detector": detector,
+          "Run": Run,
           "x": mcdf.pos_x,
           "y": mcdf.pos_y,
           "z": mcdf.pos_z,
         })
-        any_in_AV = gc._fv_cut(vtx, detector, 0, 0, 0, 0).groupby(level=[0,1]).any().rename("AVnu")
+        any_in_AV = gc._fv_cut(vtx, 0, 0, 0, 0).groupby(level=[0,1]).any().rename("AVnu")
         match = match.merge(any_in_AV, on=["__ntuple", "entry"], how="left")
 
     df = df.merge(match, on=["__ntuple", "entry"], how="left")
@@ -315,7 +320,7 @@ def load_one(fname, idf,
     print(f"[{os.path.basename(fname)} idf={idf}] dedup: dropped "
           f"{n_dup_pairs} duplicated {tuple(dedup_cols)} keys ({n_dup_rows} hdr rows)")
 
-    match = match.set_index(match_ind, append=True).droplevel([0,1]).sort_index()
+    match = match.set_index(list(match.columns), append=True).droplevel([0,1]).sort_index()
 
     # LOAD POT
     if offbeampot:
@@ -362,6 +367,24 @@ def load_one(fname, idf,
     else:
         df["cvwgt"] = 1.
 
+    if drops is not None:
+        df.drop(columns=drops, inplace=True, errors='ignore')
+
+    if lightmem:
+        type_map = {
+            'detector': 'category',
+            'Run': 'category',
+            'true_isfv': 'Int8',
+            'true_isothernumucc': 'Int8',
+            'true_issig': 'Int8',
+            'true_isnc': 'Int8'
+        }
+        
+        valid_type_map = {col: dtype for col, dtype in type_map.items() if col in df.columns}
+        
+        df = df.astype(valid_type_map)
+        df[df.select_dtypes(include=['float64']).columns] = df.select_dtypes(include=['float64']).astype('float32')
+
     # EARLY RETURN IF NOT LOADING WEIGHTS
     if not include_syst:
         if cache_dir is not None:
@@ -371,8 +394,9 @@ def load_one(fname, idf,
     # LOAD WEIGHTS
     wgt = pd.read_hdf(fname, wgtname % idf) 
     skim = {}
-    for i in range(min(100, nuniv)):
-        skim["flux_univ%i" % i] = np.prod([wgt[s]["univ_%i" % i] for s in flux_syst], axis=0)
+    if flux_univ:
+        for i in range(min(100, nuniv)):
+            skim["flux_univ%i" % i] = np.prod([wgt[s]["univ_%i" % i] for s in flux_syst], axis=0)
 
     if pot_univ:
         rng = np.random.default_rng(seed=24601) # repeatable random numbers
@@ -401,6 +425,21 @@ def load_one(fname, idf,
         else:
             assert(False)
 
+    multisim_cols = []
+    multisigma_cols = []
+
+    if sep_flux_univ:
+        for j, s in enumerate(flux_syst):
+            multisim_cols.append(s)
+            w = wgt[s]#.fillna(1).replace([np.inf, -np.inf], 1)
+            if lightmem:
+                w[w.select_dtypes(include=["float64"]).columns] = w.select_dtypes(include=["float64"]).astype("float32")
+            stacked_variants = np.vstack([np.nan_to_num(w["univ_%i" % i].to_numpy(), nan=1.0, posinf=1.0, neginf=1.0) for i in range(min(100, nuniv))])
+            skim[s] = stacked_variants.T.tolist()
+            for d in stacked_variants.T.tolist():
+                if len(d) != 100:
+                    print(d)
+
     if xsec_univ:
         rng = np.random.default_rng(seed=24601) # repeatable random numbers
         rnd = np.clip(rng.normal(size=(len(xsec_syst), nuniv)), -3, 3)
@@ -426,6 +465,39 @@ def load_one(fname, idf,
                 wgt_vs.append(s)
             
             skim["xsec_univ%i" % i] = np.clip(np.prod(wgt_vs, axis=0), 0, 30).fillna(1.)
+
+    if xsec_spline:
+        for j, s in enumerate(xsec_syst):
+            multisigma_cols.append(s)
+            if "ps1" in wgt[s]:
+                w = wgt[s].fillna(1).replace([np.inf, -np.inf], 1)
+                stacked_variants = np.vstack([
+                    np.clip((w["ms3"] / w["cv"]).to_numpy(), 0, 10),
+                    np.clip((w["ms2"] / w["cv"]).to_numpy(), 0, 10),
+                    np.clip((w["ms1"] / w["cv"]).to_numpy(), 0, 10),
+                    np.ones(len(w)),  # Central value ratio is exactly 1.0
+                    np.clip((w["ps1"] / w["cv"]).to_numpy(), 0, 10),
+                    np.clip((w["ps2"] / w["cv"]).to_numpy(), 0, 10),
+                    np.clip((w["ps3"] / w["cv"]).to_numpy(), 0, 10)
+                ])
+
+                # 2. Transpose to shape (n_events, 7) so each row represents an event,
+                # then convert to a list of lists for uproot/awkward ingestion later
+                skim[s] = stacked_variants.T.tolist()
+            elif "morph" in wgt[s]:
+                w = wgt[s].fillna(1).replace([np.inf, -np.inf], 1)
+                if lightmem:
+                    w[w.select_dtypes(include=["float64"]).columns] = w.select_dtypes(include=["float64"]).astype("float32")
+
+                stacked_variants = np.vstack([
+                    np.ones(len(w)),  # Central value ratio is exactly 1.0
+                    np.clip((w["morph"]).to_numpy(), 0, 10)
+                ])
+
+                # 2. Transpose to shape (n_events, 7) so each row represents an event,
+                # then convert to a list of lists for uproot/awkward ingestion later
+                skim[s] = stacked_variants.T.tolist()
+
     else:
         for i, s in enumerate(xsec_syst):
             if "ps1" in wgt[s]:
@@ -437,24 +509,31 @@ def load_one(fname, idf,
 
     skim = pd.DataFrame(skim, index=wgt.index)
 
+
     mrg = df.merge(skim,
             left_on=["__ntuple", "entry", "tmatch_idx"],
             right_index=True,
             how="left") ## -- save all sllices
-    mrg.loc[np.isnan(mrg[skim.columns[0]]), skim.columns] = 1
 
+    univ_cols = [col for col in skim.columns if "univ" in col]
+    if len(multisigma_cols) > 0:
+        nan_mask = mrg[multisigma_cols[0]].isna()
+        for col in multisigma_cols:
+            mrg.loc[nan_mask, col] = mrg.loc[nan_mask, col].apply(lambda x: [1.0] * len(mrg.loc[~nan_mask, col].iloc[0]))
+
+    if len(multisim_cols) > 0:
+        nan_mask = mrg[multisim_cols[0]].isna()
+        for col in multisim_cols:
+            mrg.loc[nan_mask, col] = mrg.loc[nan_mask, col].apply(lambda x: [1.0] * 100)
+
+    if len(univ_cols) > 0:
+        mrg.loc[np.isnan(mrg[univ_cols[0]]), univ_cols] = 1.0 
+
+    if drops is not None:
+        mrg.drop(columns=drops, inplace=True, errors='ignore')
     if cache_dir is not None:
         _write_cache(cache_file, mrg, match, pot)
-    if drops is not None:
-        mrg.drop(columns=drops, inplace=True)
-    if lightmem:
-        mrg['detector'] = mrg['detector'].astype('category')
-        mrg['Run'] = mrg['Run'].astype('category')
-        mrg['true_isfv'] = mrg['true_isfv'].astype('Int8')
-        mrg['true_isothernumucc'] = mrg['true_isothernumucc'].astype('Int8')
-        mrg['true_issig'] = mrg['true_issig'].astype('Int8')
-        mrg['true_isnc'] = mrg['true_isnc'].astype('Int8')
-        mrg[mrg.select_dtypes(include=['float64']).columns] = mrg.select_dtypes(include=['float64']).astype('float32')
+
     return mrg, match, pot
 
 
@@ -503,7 +582,6 @@ def load(fname, maxdf=None, **kwargs):
               f"{n_dup_pairs} duplicated {tuple(dedup_levels)} keys "
               f"({n_dup_rows} match rows)")
 
-    print("load ret")
     return df, match, pots
     
 #@profile
@@ -527,10 +605,8 @@ def loadl(flist, progress=True, njob=None, **kwargs):
     pots = 0
     for df, match, pot in it:
         pots += pot
-        print(pot)
         dfs.append(df)
         matches.append(match)
-    print("concat")
     df = pd.concat(dfs, ignore_index=True)
     del dfs
     matches = pd.concat(matches)
