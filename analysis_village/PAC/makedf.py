@@ -445,7 +445,6 @@ def make_PAC_nudf(f, is_slc=False):
     elif 'run4' or 'Run4' in f.file_path:
         RUN = 4
 
-    RUN = 4
     nudf['Run'] = RUN
 
     det = loadbranches(f["recTree"], ["rec.hdr.det"]).rec.hdr.det

@@ -23,6 +23,22 @@ def read_pot(df_hdr):
     pot = sum(df_hdr.pot.tolist())
     return pot
 
+def get_keys(file):
+    with pd.HDFStore(file, mode='r') as store:
+        # Get all keys and filter for those starting with '/trig_'
+        keys = store.keys()
+        return keys
+
+def count_trig_keys(file):
+    with pd.HDFStore(file, mode='r') as store:
+        # Get all keys and filter for those starting with '/trig_'
+        keys = store.keys()
+        trig_keys = [k for k in keys if k.startswith('/trig_')]
+        
+        num_keys = len(trig_keys)
+        print(f"Found {num_keys} '/trig_*' keys in {file}.")
+        return num_keys
+
 def grab_pot(files, mc_bools, sep_bool=True):
     print(f"running: {files}")
     pot = []
@@ -37,10 +53,15 @@ def grab_pot(files, mc_bools, sep_bool=True):
         mc_bools = [mc_bools]*len(files)
 
     for file, mc_bool in zip(files, mc_bools):
+        if 'split' in get_keys(file):
+            n_splits = get_n_split(file)
+        else:
+            n_splits = count_trig_keys(file) 
+
         detector = pd.read_hdf(file, "evt_0").detector.iloc[0]
         if mc_bool:
             tot_pot = 0
-            for n in range(get_n_split(file)):
+            for n in range(n_splits):
                 tot_pot += read_pot(pd.read_hdf(file,"hdr_"+str(n)))
             pot.append(tot_pot)
             print(f"{file} sample pot: {tot_pot}")
@@ -51,7 +72,8 @@ def grab_pot(files, mc_bools, sep_bool=True):
                 N_GATES_ON_PER_5e12POT = 1.05104
 
             ngates_OFF = 0
-            for i in range(get_n_split(file)):
+            print_keys(file)
+            for i in range(n_splits):
                 if detector == "ICARUS": single_ngates_OFF = pd.read_hdf(file, "trig_"+str(i)).gate_delta.sum()*(1-1/20.)
                 elif detector == "SBND": single_ngates_OFF = pd.read_hdf(file, "hdr_"+str(i)).noffbeambnb.sum()
                 print(f"{single_ngates_OFF} gates for {i}'th key")
@@ -123,4 +145,4 @@ if __name__ == "__main__":
     elif args.list:
         with open(args.list, 'r') as file:
                 inputs = file.read().splitlines() 
-        grab_pot(inputs, True, False)
+        grab_pot(inputs, not args.data, False)

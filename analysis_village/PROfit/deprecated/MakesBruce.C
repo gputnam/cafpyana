@@ -102,7 +102,7 @@ void MakesBruce(const char* fileName = "input.root", const char* output_filename
                 TBranch* branch = dynamic_cast<TBranch*>(AllBranches->At(b));
                 const char* branchName = branch->GetName();
                 std::string branchName_str = branchName;
-                std::cout << branchName << std::endl;
+                //std::cout << branchName << std::endl;
                 if(branchName_str.find(multisigma_keyword) == std::string::npos && branchName_str.find(multisim_keyword) == std::string::npos){
                     continue;
                 }
@@ -113,7 +113,7 @@ void MakesBruce(const char* fileName = "input.root", const char* output_filename
                     std::vector<double> temp(3, 0.0);
                     std::vector<double> temp_sigmas = {1, -1, 0};
                     for (size_t j = 0; j < 2; j++) {
-                        std::cout << "Entry[" << i << "]:" << " Element[" << j << "]: " << weights_det_multisigma[j] << std::endl;
+                        //std::cout << "Entry[" << i << "]:" << " Element[" << j << "]: " << weights_det_multisigma[j] << std::endl;
                         temp.at(j) = weights_det_multisigma[j];
                     }
                     temp.at(2) = 1.0;
@@ -125,10 +125,10 @@ void MakesBruce(const char* fileName = "input.root", const char* output_filename
                     branch->GetEntry(i);
                     std::vector<double> temp(2, 0.0);
                     std::vector<double> temp_sigmas = {1, 0};
-                    std::cout << "Entry[" << i << "]:" << " Element[0]: " << weights_WM_multisigma[0] << std::endl;
+                    //std::cout << "Entry[" << i << "]:" << " Element[0]: " << weights_WM_multisigma[0] << std::endl;
                     temp.at(0) = weights_WM_multisigma[0];
                     temp.at(1) = 1.0;
-                    std::cout << "Entry[" << i << "]:" << " Element[1]: " << 1.0 << std::endl;
+                    //std::cout << "Entry[" << i << "]:" << " Element[1]: " << 1.0 << std::endl;
                     filler_map[branchName] = temp;
                     filler_sigmas_map[branchName] = temp_sigmas;
                 }
@@ -138,7 +138,7 @@ void MakesBruce(const char* fileName = "input.root", const char* output_filename
                     std::vector<double> temp(7, 0.0);
                     std::vector<double> temp_sigmas = {1, -1, 2, -2, 3, -3, 0};
                     for (size_t j = 0; j < 7; j++) {
-                        std::cout << "multisigma Entry[" << i << "]:" << " Element[" << j << "]: " << weights_multisigma[j] << std::endl;
+                        //std::cout << "multisigma Entry[" << i << "]:" << " Element[" << j << "]: " << weights_multisigma[j] << std::endl;
                         temp.at(j) = weights_multisigma[j];
 
 			// Carve out for zexp pca systematics, so we don't reweight cv by 4x
@@ -167,7 +167,7 @@ void MakesBruce(const char* fileName = "input.root", const char* output_filename
                     branch->GetEntry(i);
                     std::vector<double> temp(100, 0.0);
                     for (size_t j = 0; j < 100; j++) {
-                        std::cout << "multisim Entry[" << i << "]:" << " Element[" << j << "]: " << weights_multisim[j] << std::endl;
+                        //std::cout << "multisim Entry[" << i << "]:" << " Element[" << j << "]: " << weights_multisim[j] << std::endl;
                         if(isnan(weights_multisim[j])){
                             std::cout << "Found nan!" << std::endl;
                             temp.at(j) = 1.0;
