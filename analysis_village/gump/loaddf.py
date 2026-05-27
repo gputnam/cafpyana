@@ -13,8 +13,6 @@ from multiprocess import Pool
 from functools import partial
 import syst
 
-
-from memory_profiler import profile
 import gump_cuts as gc
 
 def tmatch(reco, mc):
@@ -584,7 +582,6 @@ def load(fname, maxdf=None, **kwargs):
 
     return df, match, pots
     
-#@profile
 def loadl(flist, progress=True, njob=None, **kwargs):
     if njob is not None:
         pool = Pool(njob)
