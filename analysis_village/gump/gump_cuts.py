@@ -14,6 +14,7 @@ sys.path.insert(0, workspace_root + "/../../")
 import analysis_village.gump.kinematics
 from makedf.util import *
 
+
 # Fiducial volume cuts for SBND and ICARUS
 SBNDFVCuts = {
     "lowYZ": {
@@ -250,6 +251,26 @@ def flash_cut(df):
 
     return pd.Series(np_mask, index=df.index) 
 
+
+
+
+def cosmic_cut(df, is_old=False, params=None):
+    if is_old:
+        return df.nu_score > 0.4
+
+    p = dict(DEFAULT_CUT_PARAMS)
+    if params is not None:
+        p.update(params)
+
+    df = add_opening_angle_mu_p(df)
+    return (
+        (df.nu_score > p["nu_score_min"])
+        & (df["mu_p_opening_angle_deg"] < p["mu_p_opening_angle_max_deg"])
+    )
+
+
+
+
 def cosmic_cut(df, is_old=False):
     if is_old:
         return (df.nu_score > 0.4)
@@ -443,3 +464,97 @@ def all_cuts(recodf, DETECTOR=None, det_run=None):
 
     return presel_mask & cosmic_mask & flash_mask & two_prong_mask & pid_mask
 
+
+
+
+
+HANNAH_SOUP_PARAMS = {
+    "p_sel_muscore_th": 0.0,
+
+    "nu_score_min_SBND": 0.5435862803159761,
+    "nu_score_min_ICARUS": 0.3440021828583039,
+
+    "mu_p_opening_angle_max_deg_SBND": 161.42656834906666,
+    "mu_p_opening_angle_max_deg_ICARUS": 158.9072095611619,
+
+    "mu_sel_muscore_th_SBND": 139.0,
+    "mu_sel_muscore_th_ICARUS": 98.0,
+
+    "mu_sel_pscore_th_SBND": 20.74597155841164,
+    "mu_sel_pscore_th_ICARUS": 1.8210577334506866,
+
+    "mu_sel_len_th_SBND": 14.98811433370161,
+    "mu_sel_len_th_ICARUS": 31.83136683606131,
+
+    "p_sel_pscore_th_SBND": 124.74809195604756,
+    "p_sel_pscore_th_ICARUS": 112.49732822339584,
+}
+
+
+def hannah_soup(df, params=HANNAH_SOUP_PARAMS):
+    """
+    Full detector-dependent signal-box selection, optmized for true_nu_E
+
+    Intended for loaddf.py via:
+        preselection=gc.hannah_soup
+    """
+    df = add_opening_angle_mu_p(df.copy())
+
+    presel_mask = presel_cut(df)
+    flash_mask = flash_cut(df)
+    two_prong_mask = twoprong_cut(df)
+
+    mask = pd.Series(False, index=df.index)
+
+    is_sbnd = df["detector"].eq("SBND")
+    is_icarus = df["detector"].isin(["ICARUS", "ICARUS Run2", "ICARUS Run4"])
+
+    if is_sbnd.any():
+        d = df.loc[is_sbnd]
+
+        cosmic_mask = (
+            (d.nu_score > params["nu_score_min_SBND"])
+            & (d["mu_p_opening_angle_deg"] < params["mu_p_opening_angle_max_deg_SBND"])
+        )
+
+        pid_mask = (
+            (d.mu_chi2_of_mu_cand < params["mu_sel_muscore_th_SBND"])
+            & (d.prot_chi2_of_mu_cand > params["mu_sel_pscore_th_SBND"])
+            & (d.mu_len > params["mu_sel_len_th_SBND"])
+            & (d.mu_chi2_of_prot_cand > params["p_sel_muscore_th"])
+            & (d.prot_chi2_of_prot_cand < params["p_sel_pscore_th_SBND"])
+        )
+
+        mask.loc[is_sbnd] = (
+            presel_mask.loc[is_sbnd]
+            & flash_mask.loc[is_sbnd]
+            & two_prong_mask.loc[is_sbnd]
+            & cosmic_mask
+            & pid_mask
+        )
+
+    if is_icarus.any():
+        d = df.loc[is_icarus]
+
+        cosmic_mask = (
+            (d.nu_score > params["nu_score_min_ICARUS"])
+            & (d["mu_p_opening_angle_deg"] < params["mu_p_opening_angle_max_deg_ICARUS"])
+        )
+
+        pid_mask = (
+            (d.mu_chi2_of_mu_cand < params["mu_sel_muscore_th_ICARUS"])
+            & (d.prot_chi2_of_mu_cand > params["mu_sel_pscore_th_ICARUS"])
+            & (d.mu_len > params["mu_sel_len_th_ICARUS"])
+            & (d.mu_chi2_of_prot_cand > params["p_sel_muscore_th"])
+            & (d.prot_chi2_of_prot_cand < params["p_sel_pscore_th_ICARUS"])
+        )
+
+        mask.loc[is_icarus] = (
+            presel_mask.loc[is_icarus]
+            & flash_mask.loc[is_icarus]
+            & two_prong_mask.loc[is_icarus]
+            & cosmic_mask
+            & pid_mask
+        )
+
+    return mask
