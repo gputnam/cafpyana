@@ -1,3 +1,6 @@
+### Note to self: half of this file is just geometry cuts, we should try to consolidate these.
+
+
 # Standard library imports
 import os
 import sys
@@ -63,6 +66,96 @@ ICARUSRun4FVCuts = {
         "z": {"min": -894.950652270838, "max": 894.950652270838}
     }
 }
+
+def TrueAV(df, det):
+    vtx = pd.DataFrame({'x': df.true_vtx_x,
+                       'y': df.true_vtx_y,
+                       'z': df.true_vtx_z}, index=df.index)
+    return _fv_cut(vtx, det, 0, 0, 0, 0)
+
+def TrueAVSBND(df):
+    return TrueAV(df, "SBND")
+
+def TrueAVICARUSRun2(df):
+    return TrueAV(df, "ICARUS Run2")
+
+def TrueAVICARUSRun4(df):
+    return TrueAV(df, "ICARUS Run4")
+
+def OOAVSBND(df):
+    return ~np.isnan(df.true_vtx_x) & ~TrueAVSBND(df)
+
+def OOAVICARUS(df):
+    return ~np.isnan(df.true_vtx_x) & ~TrueAVICARUSRun4(df)
+
+def ICARUS_dirtcut(df):
+    # mbox from CV sample
+    xlo = -378.49
+    ylo = -191.86
+    zlo = -904.950652270838
+
+    xhi = 378.49
+    yhi = 144.96
+    zhi = 904.950652270838
+    vtx = pd.DataFrame({'x': df.true_vtx_x,
+                       'y': df.true_vtx_y,
+                       'z': df.true_vtx_z}, index=df.index)
+
+    return ~((vtx.x > xlo) & (vtx.x < xhi) & (vtx.y > ylo) & (vtx.y < yhi) & (vtx.z > zlo) & (vtx.z < zhi))
+
+def TrueAV(df, det):
+    print(det)
+    if det == "ICARUS Run4":
+        df['Run'] = 4
+    elif det == "ICARUS Run2":
+        df['Run'] = 2    
+    elif det == "SBND":
+        df['Run'] = 1
+    else:
+        print('unclear run!!!')
+        
+    vtx = pd.DataFrame({'detector': df.detector,
+                       'Run': df.Run,
+                       'x': df.true_vtx_x,
+                       'y': df.true_vtx_y,
+                       'z': df.true_vtx_z}, index=df.index)
+    return _fv_cut(vtx, 0, 0, 0, 0)
+
+def OOAV(df):
+    if df['detector'].nunique() == 1:
+        det = df.detector.iloc[0]
+        return ~np.isnan(df.true_vtx_x) & ~TrueAV(df, det)
+    else:
+        print('df contains info from multiple detectors')
+        return
+
+def breakdown_mode(var, df):
+    """Break down variable by interaction mode."""
+    numu_cc = (np.abs(df.true_pdg) == 14) & (df.true_isnc == False)
+    fid = nuFV(df)
+    fid = ~df.dirt
+
+    ret = [
+        var[np.isnan(df.genie_mode)],
+        var[~fid & ~np.isnan(df.genie_mode)],
+        var[(~np.any([df.genie_mode == i for i in mode_list], axis=0) | ~numu_cc) & fid & ~np.isnan(df.genie_mode)]
+    ] +\
+        [var[(df.genie_mode == i) & numu_cc & fid] for i in mode_list]
+        
+    return ret
+
+def get_top_labels():
+    return ['$1\\mu1p$ $\\nu_{\\mu}CC$', 'Other $\\nu_{\\mu}CC$', 'NC', 'Cosmics', 'Other']
+
+def breakdown_top(var, df):
+    is_numu_cc = (df['true_pdg'].fillna(0) == 14) & (df['true_isnc'].fillna(0) == False)
+    c_1mu1p = is_numu_cc & (df['true_nmu'].fillna(0) == 1) & (df['true_np'].fillna(0) == 1) &\
+            (df['true_npi'].fillna(-999) == 0) & (df['true_npi0'].fillna(-999) == 0)
+    c_other_numu_cc = is_numu_cc & ~c_1mu1p
+    c_nc = (df['true_isnc'].fillna(0) == True)
+    c_cosmic = (df['true_is_cosmic'].fillna(0) == True)
+    c_other = ~(c_1mu1p | c_other_numu_cc | c_nc | c_cosmic)
+    return [var[c_1mu1p], var[c_other_numu_cc], var[c_nc], var[c_cosmic], var[c_other]]
 
 def vtxfv_cut(df):
     return _fv_cut(df, inzback=50)
@@ -321,30 +414,15 @@ def contained_cut(df):
 def crthitveto_cut(df):
     return ~df.crthit
 
-mode_list = [0, 10, 1, 2, 3]
-mode_labels = ['QE', 'MEC', 'RES', 'SIS/DIS', 'COH', "other"]
+def get_mode_labels():
+    return mode_labels = ['QE', 'MEC', 'RES', 'SIS/DIS', 'COH', "other"]
 
 def breakdown_mode(var, df):
     """Break down variable by interaction mode."""
+    mode_list = [0, 10, 1, 2, 3]
+
     ret = [var[df.genie_mode == i] for i in mode_list]
     ret.append(var[sum([df.genie_mode == i for i in mode_list]) == 0])
-    return ret
-
-top_labels = ["Signal",
-              "Other numu CC",
-              "NC",
-              "Out of FV",
-              "Cosmic",
-              "Other"]
-
-def breakdown_top(var, df):
-    ret = [var[df.is_sig == True],
-           var[df.is_other_numucc == True],
-           var[df.is_nc == True],
-           var[df.is_fv == False],
-           var[df.is_cosmic == True],
-           var[(df.is_sig != True) & (df.is_other_numucc != True) & (df.is_nc != True) & (df.is_fv != False) & (df.is_cosmic != True)]
-           ]
     return ret
 
 def cathode_cut(df):

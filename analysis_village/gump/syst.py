@@ -1,5 +1,57 @@
 import numpy as np
 
+def v_variation(df, setvars):
+    df = df[[c for c in df.columns if "univ" not in c]].copy()
+    for (new, old) in setvars:
+        df[new] = df[old]
+    return df
+
+def v_chi2smear(df):
+    setvars = [
+        ("mu_chi2_of_mu_cand", "mu_chi2smear13_of_mu_cand"),
+        ("mu_chi2_of_prot_cand",  "mu_chi2smear13_of_prot_cand"),
+        ("prot_chi2_of_mu_cand", "prot_chi2smear13_of_mu_cand"),
+        ("prot_chi2_of_prot_cand",  "prot_chi2smear13_of_prot_cand"),
+    ]
+    return v_variation(df, setvars)
+
+
+def v_chi2hi(df):
+    setvars = [
+        ("mu_chi2_of_mu_cand", "mu_chi2hi_of_mu_cand"),
+        ("mu_chi2_of_prot_cand",  "mu_chi2hi_of_prot_cand"),
+        ("prot_chi2_of_mu_cand", "prot_chi2hi_of_mu_cand"),
+        ("prot_chi2_of_prot_cand",  "prot_chi2hi_of_prot_cand"),
+    ]
+    return v_variation(df, setvars)
+
+def v_chi2lo(df):
+    setvars = [
+        ("mu_chi2_of_mu_cand", "mu_chi2lo_of_mu_cand"),
+        ("mu_chi2_of_prot_cand",  "mu_chi2lo_of_prot_cand"),
+        ("prot_chi2_of_mu_cand", "prot_chi2lo_of_mu_cand"),
+        ("prot_chi2_of_prot_cand",  "prot_chi2lo_of_prot_cand"),
+    ]
+    return v_variation(df, setvars)
+
+def v_chi22hi(df):
+    setvars = [
+        ("mu_chi2_of_mu_cand", "mu_chi22hi_of_mu_cand"),
+        ("mu_chi2_of_prot_cand",  "mu_chi22hi_of_prot_cand"),
+        ("prot_chi2_of_mu_cand", "prot_chi22hi_of_mu_cand"),
+        ("prot_chi2_of_prot_cand",  "prot_chi22hi_of_prot_cand"),
+    ]
+    return v_variation(df, setvars)
+
+def v_chi22lo(df):
+    setvars = [
+        ("mu_chi2_of_mu_cand", "mu_chi22lo_of_mu_cand"),
+        ("mu_chi2_of_prot_cand",  "mu_chi22lo_of_prot_cand"),
+        ("prot_chi2_of_mu_cand", "prot_chi22lo_of_mu_cand"),
+        ("prot_chi2_of_prot_cand",  "prot_chi22lo_of_prot_cand"),
+    ]
+    return v_variation(df, setvars)
+
 class SystematicList(object):
     def __init__(self, systs):
         self.systs = systs
