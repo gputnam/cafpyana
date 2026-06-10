@@ -67,11 +67,11 @@ ICARUSRun4FVCuts = {
     }
 }
 
-def TrueAV(df, det):
-    vtx = pd.DataFrame({'x': df.true_vtx_x,
-                       'y': df.true_vtx_y,
-                       'z': df.true_vtx_z}, index=df.index)
-    return _fv_cut(vtx, det, 0, 0, 0, 0)
+#def TrueAV(df, det):
+#    vtx = pd.DataFrame({'x': df.true_vtx_x,
+#                       'y': df.true_vtx_y,
+#                       'z': df.true_vtx_z}, index=df.index)
+#    return _fv_cut(vtx, det, 0, 0, 0, 0)
 
 def TrueAVSBND(df):
     return TrueAV(df, "SBND")
@@ -104,13 +104,15 @@ def ICARUS_dirtcut(df):
     return ~((vtx.x > xlo) & (vtx.x < xhi) & (vtx.y > ylo) & (vtx.y < yhi) & (vtx.z > zlo) & (vtx.z < zhi))
 
 def TrueAV(df, det):
-    print(det)
     if det == "ICARUS Run4":
         df['Run'] = 4
+        df['detector'] = "ICARUS"
     elif det == "ICARUS Run2":
         df['Run'] = 2    
+        df['detector'] = "ICARUS"
     elif det == "SBND":
         df['Run'] = 1
+        df['detector'] = "SBND"
     else:
         print('unclear run!!!')
         
@@ -251,7 +253,16 @@ def pfv_cut(df):
                            'z': df.p_end_z}, index=df.index)
     return trkfv_cut(vtx)
 
-def _fv_cut(df, inx=10, iny=10, inzfront=10, inzback=50):
+def fv_cut(df, inx=10, iny=10, inzfront=10, inzback=50, detector=None, Run=None):
+    return _fv_cut(df, inx=inx, iny=iny, inzfront=inzfront, inzback=inzback, detector=detector, Run=Run)
+
+def _fv_cut(df, inx=10, iny=10, inzfront=10, inzback=50, detector=None, Run=None):
+    if detector is not None:
+        df['detector'] = detector
+
+    if Run is not None:
+        print('test')
+        df['Run'] = Run
 
     det_col = "detector"
     if det_col not in df.columns:

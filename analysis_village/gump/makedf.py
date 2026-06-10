@@ -9,7 +9,6 @@ from makedf import chi2pid
 from analysis_village.gump.kinematics import *
 from analysis_village.gump.gump_cuts import *
 
-
 def make_spine_no_cuts_df(f):
     det = loadbranches(f["recTree"], ["rec.hdr.det"]).rec.hdr.det
     if det.empty:
@@ -640,6 +639,13 @@ def make_gump_nudf(f, is_slc=False):
     if det.empty:
         return pd.DataFrame()
 
+    if 'run2' or 'Run2' in f.file_path:
+        RUN = 2
+    elif 'run4' or 'Run4' in f.file_path:
+        RUN = 4
+    elif 'SBND' or 'sbnd' in f.file_path:
+        RUN = 1
+
     if (1 == det.unique()):
         DETECTOR = "SBND"
     elif (2 == det.unique()):
@@ -647,7 +653,7 @@ def make_gump_nudf(f, is_slc=False):
     else:
         print("Detector unclear, check rec.hdr.det!")
 
-    is_fv = TrueAV(nudf.position)
+    is_fv = fv_cut(nudf.position, 0,0,0,0,detector=DETECTOR, Run=RUN)
     is_cc = nudf.iscc
     is_nc = (nudf.iscc == 0)
     genie_mode = nudf.genie_mode
