@@ -343,9 +343,10 @@ def flash_cut(df):
 
     return pd.Series(np_mask, index=df.index) 
 
-def cosmic_cut(df, is_old=False):
-    if is_old:
-        return (df.nu_score > 0.4)
+def cosmic_cut(df, is_opt=False):
+    if is_opt:
+        df = add_opening_angle_mu_p(df)
+        return (df.nu_score > 0.48) & (df["mu_p_opening_angle_deg"] < 140)
     else:
         df = add_opening_angle_mu_p(df)
         return (df.nu_score > 0.4) & (df["mu_p_opening_angle_deg"] < 155)
@@ -382,17 +383,16 @@ def pid_cut(df):
         df.prot_chi2_of_mu_cand, df.prot_chi2_of_prot_cand, df.mu_len)
 
 def pid_cut_df(mu_chi2_mu_cand, mu_chi2_prot_cand, prot_chi2_mu_cand,
-            prot_chi2_prot_cand, mu_len, is_old=False):
-    if is_old:
-        MUSEL_MUSCORE_TH, MUSEL_PSCORE_TH, MUSEL_LEN_TH = 15, 90, 50
+            prot_chi2_prot_cand, mu_len, is_opt=False):
+    if is_opt:
+        MUSEL_MUSCORE_TH, MUSEL_PSCORE_TH, MUSEL_LEN_TH, PSEL_MUSCORE_TH, PSEL_PSCORE_TH  = 80, 70, 26, 0, 123
     else:
-        MUSEL_MUSCORE_TH, MUSEL_PSCORE_TH, MUSEL_LEN_TH = 30, 80, 25
+        MUSEL_MUSCORE_TH, MUSEL_PSCORE_TH, MUSEL_LEN_TH, PSEL_MUSCORE_TH, PSEL_PSCORE_TH = 30, 80, 25, 0, 90
 
     mu_cut = (mu_chi2_mu_cand < MUSEL_MUSCORE_TH) & \
              (prot_chi2_mu_cand > MUSEL_PSCORE_TH) & \
              (mu_len > MUSEL_LEN_TH)
 
-    PSEL_MUSCORE_TH, PSEL_PSCORE_TH = 0, 90
     p_cut = (mu_chi2_prot_cand > PSEL_MUSCORE_TH) & \
             (prot_chi2_prot_cand < PSEL_PSCORE_TH)
 
@@ -415,7 +415,7 @@ def crthitveto_cut(df):
     return ~df.crthit
 
 def get_mode_labels():
-    return mode_labels = ['QE', 'MEC', 'RES', 'SIS/DIS', 'COH', "other"]
+    return ['QE', 'MEC', 'RES', 'SIS/DIS', 'COH', "other"]
 
 def breakdown_mode(var, df):
     """Break down variable by interaction mode."""
@@ -493,6 +493,34 @@ def containment_cut(df):
 
 def presel_cut(df):
     return slcfv_cut(df) & containment_cut(df) & cathode_cut(df)
+
+def all_cuts_opt(recodf, DETECTOR=None, det_run=None):
+    print("RUNNING OPTIMIZED CUTS")
+    if DETECTOR:
+        print(f"manual detector: {DETECTOR}")
+        recodf['detector'] = DETECTOR
+    if det_run:
+        print(f"manual run: {det_run}")
+        recodf['Run'] = det_run
+
+    ## presel cut
+    presel_mask = presel_cut(recodf)
+
+    ### cosmic cut
+    cosmic_mask = cosmic_cut(recodf, is_opt=True)
+
+    ### flash cut
+    flash_mask = flash_cut(recodf)
+
+    ### Two prong cut
+    two_prong_mask = twoprong_cut(recodf)
+
+    ### PID cut
+    pid_mask = pid_cut_df(recodf.mu_chi2_of_mu_cand, recodf.mu_chi2_of_prot_cand,
+                            recodf.prot_chi2_of_mu_cand, recodf.prot_chi2_of_prot_cand,
+                            recodf.mu_len, is_opt=True)
+
+    return presel_mask & cosmic_mask & flash_mask & two_prong_mask & pid_mask
 
 def all_cuts(recodf, DETECTOR=None, det_run=None):
     if DETECTOR:
