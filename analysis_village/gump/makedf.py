@@ -56,7 +56,7 @@ def make_spine_no_cuts_df(f):
     df = df[~np.isnan(df.mu.pid) & ~np.isnan(df.p.pid)]
 
     # require fiducial verex
-    df = df[vtxfv_cut(df.vertex, DETECTOR)]
+    df = df[slcfv_cut(df.vertex)]
 
     # lookup stuff
     true_pdg = df.truth.pdg
@@ -647,7 +647,7 @@ def make_gump_nudf(f, is_slc=False):
     else:
         print("Detector unclear, check rec.hdr.det!")
 
-    is_fv = vtxfv_cut(nudf.position, DETECTOR)
+    is_fv = TrueAV(nudf.position)
     is_cc = nudf.iscc
     is_nc = (nudf.iscc == 0)
     genie_mode = nudf.genie_mode
