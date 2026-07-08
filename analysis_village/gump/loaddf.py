@@ -43,6 +43,7 @@ FLASH = "flash_%i"
 pot_syst = {'ms3': 0.982714, 'ms2': 0.9887274, 'ms1': 0.99474195, 'cv': 1.0, 'ps1': 1.005, 'ps2': 1.01, 'ps3': 1.015}
 
 xsec_syst = [
+
     "CCQETemplateReweight_SBN_v3_LFGToSF_q0bin0",
     "CCQETemplateReweight_SBN_v3_LFGToSF_q0bin1",
     "CCQETemplateReweight_SBN_v3_LFGToSF_q0bin2",
@@ -112,6 +113,7 @@ xsec_syst = [
     'GENIEReWeight_SBN_v1_multisigma_NormCCMEC',
     'GENIEReWeight_SBN_v1_multisigma_NormNCMEC',
     "GENIEReWeight_SBN_v1_multisigma_DecayAngMEC",
+
     # RES
     "GENIEReWeight_SBN_v1_multisigma_Theta_Delta2Npi",
     "GENIEReWeight_SBN_v1_multisigma_ThetaDelta2NRad",
@@ -182,15 +184,16 @@ truthvars = {
 }
 
 detvar_rwt_files = [
-  'SBND_WMXThetaXW.txt', 
-  'SBND_WMYZ.txt', 
-  ['SBND_0xSCE.txt', 'SBND_2xSCE.txt'],
-  'SBND_SmeareddEdx.txt', 
-  'ICARUSRun2_SmeareddEdx.txt', 
-  'ICARUSRun4_SmeareddEdx.txt', 
-  'SBND_GainHi.txt',
-  'ICARUSRun2_GainHi.txt',
-  'ICARUSRun4_GainHi.txt',
+  'rwt_outputs/SBND_WMXThetaXW.txt', 
+  'rwt_outputs/SBND_WMYZ.txt', 
+  ['rwt_outputs/SBND_0xSCE.txt', 'rwt_outputs/SBND_2xSCE.txt'],
+  'rwt_outputs/SBND_SmeareddEdx.txt', 
+  'rwt_outputs/ICARUSRun2_SmeareddEdx.txt', 
+  'rwt_outputs/ICARUSRun2_WMXThetaXW.txt', 
+  'rwt_outputs/ICARUSRun4_SmeareddEdx.txt', 
+  'rwt_outputs/SBND_GainHi.txt',
+  'rwt_outputs/ICARUSRun2_GainHi.txt',
+  'rwt_outputs/ICARUSRun4_GainHi.txt',
 ]
 
 detvar_rwt_lbls = [
@@ -199,6 +202,7 @@ detvar_rwt_lbls = [
   'SCE_SBND_multisigma_SCE', 
   'SBND_PID_Smear',
   'ICARUSRun2_PID_Smear',
+  'WireMod_ICARUSRun2_multisigma_WMXThetaXW', 
   'ICARUSRun4_PID_Smear',
   'SBND_PID_Gain',
   'ICARUSRun2_PID_Gain',
@@ -237,6 +241,7 @@ def get_std_drops():
 def scale_pot(df, pot, desired_pot):
     """Scale DataFrame by desired POT."""
     scale = desired_pot / pot
+    print(scale)
     df['glob_scale'] = scale * df.cvwgt
     return pot, scale
 
@@ -454,8 +459,23 @@ def load_one(fname, idf,
     # APPLY WEIGHTS
     skim = {}
     if flux_univ:
-        for i in range(min(100, nuniv)):
-            skim["flux_univ%i" % i] = np.prod([wgt[s]["univ_%i" % i] for s in flux_syst], axis=0)
+        num_to_process = min(100, nuniv)
+        
+        # Pre-cache the system lookups to avoid doing it inside the inner loops
+        system_data = [wgt[s] for s in flux_syst]
+        
+        new_columns_dict = {}
+        for i in range(num_to_process):
+            univ_key = "univ_%i" % i
+            # np.prod over the pre-cached systems list
+            new_columns_dict["flux_univ%i" % i] = np.prod([sys[univ_key] for sys in system_data], axis=0)
+            
+        # --- FIX HERE: Merging two dictionaries ---
+        skim.update(new_columns_dict)
+
+    #if flux_univ:
+    #    for i in range(min(100, nuniv)):
+    #        skim["flux_univ%i" % i] = np.prod([wgt[s]["univ_%i" % i] for s in flux_syst], axis=0)
 
     if pot_univ:
         rng = np.random.default_rng(seed=24601) # repeatable random numbers
@@ -503,9 +523,6 @@ def load_one(fname, idf,
                 w[w.select_dtypes(include=["float64"]).columns] = w.select_dtypes(include=["float64"]).astype("float32")
             stacked_variants = np.vstack([np.nan_to_num(w["univ_%i" % i].to_numpy(), nan=1.0, posinf=1.0, neginf=1.0) for i in range(min(100, nuniv))])
             skim[s] = stacked_variants.T.tolist()
-            for d in stacked_variants.T.tolist():
-                if len(d) != 100:
-                    print(d)
 
     if xsec_univ:
         rng = np.random.default_rng(seed=24601) # repeatable random numbers
@@ -603,7 +620,7 @@ def load_one(fname, idf,
 
             # allow for f 
             if det.replace(' ', '') in fs[0]:
-                s_df = rw.new_apply_map(mrg, fs, s)
+                s_df = rw.apply_map(mrg, fs, s)
                 mrg[col_str] = s_df
             else:
                 mrg[col_str] = [[1.0]*(len(fs)+1) for _ in range(len(mrg))]
@@ -615,7 +632,6 @@ def load_one(fname, idf,
         nan_mask = mrg[multisigma_cols[0]].isna()
         n_missing = nan_mask.sum()
         for col in multisigma_cols:
-            print(col)
             valid_rows = mrg.loc[~nan_mask, col]
             if len(valid_rows) > 0:
                 col_len = len(valid_rows.iloc[0])
@@ -631,7 +647,6 @@ def load_one(fname, idf,
         nan_mask = mrg[multisim_cols[0]].isna()
         n_missing = nan_mask.sum()
         for col in multisim_cols:
-            print(col)
             valid_rows = mrg.loc[~nan_mask, col]
             col_len = 100 
 
@@ -727,13 +742,29 @@ def loadl(flist, progress=True, njob=None, **kwargs):
     if njob is not None:
         pool.close()
 
-    return df, matches, pots
+    ###################################
+    # ADDED BY NATE Jun 16th '26
+    # CROSS-FILE DEDUP
+    # `load` only sees one file at a time. The same physical event can
+    # show up in more than one file — `__ntuple` is a per-idf ordinal, not globally
+    # unique, so the within-file check can't catch this. Drop every occurrence of
+    # any duplicate after the concat across idfs. Match nu_E0 in the key when it's
+    # present (match_Enu=True), since SBND MC reuses (run, evt) across distinct
+    # MC events and would over-drop on (run, evt) alone.
+
+    remaining_columns = ['nu_E_calo', 'slc_vtx_x', 'slc_vtx_y', 'slc_vtx_z']
+    dup_mask = df.duplicated(subset=remaining_columns)
+    df = df[~dup_mask]
+    frac = len(df)/len(dup_mask)
+    frac = 1.0
+    print(f"dedup: dropped {len(df)} duplicated rows {frac} of the POT remaining. Before POT: {pots}, after POT {pots*frac}.")
+    ###################################
+    return df, matches, pots*frac
 
 def match_common_evts(mrgs, dfs, pots):
     common_ind = mrgs[0].index
     for m in mrgs[1:]:
         common_ind = common_ind.intersection(m.index)
-
     common_df = pd.DataFrame({"common": 1}, index=common_ind)
 
     outdfs = []

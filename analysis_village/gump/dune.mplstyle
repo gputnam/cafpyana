@@ -10,7 +10,7 @@ ytick.labelsize     : 18
 # --- COLORS (Professional, high-contrast cycle) ---
 # This replaces the generic 'patch.facecolor: blue'
 # It automatically cycles these colors for your bar charts
-axes.prop_cycle     : cycler('color', ['cc4d00', 'e69900', '009980', 'a87fff', 'ffb3d9', 'f2e640', '66ffcc'])
+axes.prop_cycle     : cycler('color', ['cc4d00', 'e69900', '009980', 'a87fff', 'ffb3d9', 'f2e640', '66ffcc', 'adb5bd', '1a3a5f'])
 
 # --- AXES & GRIDS ---
 axes.grid           : False

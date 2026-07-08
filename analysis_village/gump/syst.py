@@ -2,8 +2,16 @@ import numpy as np
 
 def v_variation(df, setvars):
     df = df[[c for c in df.columns if "univ" not in c]].copy()
+    
     for (new, old) in setvars:
-        df[new] = df[old]
+        # Raise an error immediately if the 'new' column doesn't exist
+        if new not in df.columns:
+            raise KeyError(f"Column '{new}' does not exist in the DataFrame.")
+            
+        # Only overwrite rows where 'old' is NOT NaN
+        is_not_nan = df[old].notna()
+        df.loc[is_not_nan, new] = df.loc[is_not_nan, old]
+            
     return df
 
 def v_chi2smear(df):
@@ -96,12 +104,12 @@ class Systematic(object):
         N_univ = []
         for i_univ in range(self.nuniv()):
             N = self.univ(var, cut, bins, i_univ, fillna=fillna)
+
             if shapeonly:
                 diff = outern([b[1:] - b[:-1] for b in bins])
                 norm = np.sum(N*diff)
                 if norm > 1e-5:
                     N = N / norm
-                
             N_univ.append(N)
     
         cov =  np.sum([np.outer(N - NCV, N - NCV) for N in N_univ], axis=0)
@@ -166,6 +174,16 @@ class CorrelatedSystematic(Systematic):
     def __init__(self, a, b):        
         self.systa = a
         self.systb = b
+
+        assert(self.systa.avg() == self.systb.avg())
+
+        if (self.systa.avg() == True and self.systb.avg() == True):
+            self._avg = True
+        elif (self.systa.avg() == False and self.systb.avg() == False):
+            self._avg = False
+
+    def avg(self):
+        return self._avg
 
     def nuniv(self):
         return self.systa.nuniv()

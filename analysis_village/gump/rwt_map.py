@@ -16,6 +16,7 @@ from makedf.util import *
 from analysis_village.gump.gump_cuts import *
 import analysis_village.gump.PID as PID 
 import loaddf
+import syst 
 import gump_cuts as gc
 
 class FileHistogramFunction:
@@ -113,17 +114,27 @@ def remake_detvar_maps(detector, DF_DIR="/exp/sbnd/data/users/gputnam/GUMP/sbn-r
     
     if detector == "ICARUS Run2":
         GOAL_POT = 2e20
-        DETVAR_FILES = [DF_DIR + "ICARUS_SpringMCOverlay_rewgt.df"]
-        DETVAR_NAMES = ["Nominal"]
+        DETVAR_FILES = [[DF_DIR + "ICARUS_SpringMCOverlay_rewgt.df"], [DF_DIR + "ICARUS_Spring_WMLooseXTHXW.df"], [DF_DIR + "ICARUS_Spring_SCE.df"]]
+        DETVAR_NAMES = ["Nominal", "WMXThetaXW", "SCE"]
     elif detector == "ICARUS Run4":
         GOAL_POT = 3e20
-        DETVAR_FILES = [DF_DIR + "ICARUSRun4_SpringMCOverlay_rewgt_0.df"]
+        DETVAR_FILES = [[DF_DIR + "ICARUSRun4_SpringMCOverlay_rewgt_%i.df" % i for i in range(10)]]
         DETVAR_NAMES = ["Nominal"]
     elif detector == "SBND": 
         GOAL_POT = 1e20
-        DETVAR_FILES = [DF_DIR + "SBND_SpringMC_Nom.df", DF_DIR + "SBND_SpringMC_WMXThetaXW.df", DF_DIR + "SBND_SpringMC_WMYZ.df", DF_DIR + "SBND_SpringMC_2xSCE.df", DF_DIR + "SBND_SpringMC_0xSCE.df"]
-        DETVAR_NAMES = ["Nominal", "WMXThetaXW", "WMYZ", "2xSCE", "0xSCE"]
-    
+        DETVAR_FILES = [[DF_DIR + "SBND_SpringMC_rewgt_E_%i.df" % i for i in range(20)], 
+                        [DF_DIR + "SBND_SpringMC_BigWMXThetaXW_%i.df" % i for i in range(10)], 
+                        [DF_DIR + "SBND_SpringMC_BigWMYZ_%i.df" % i for i in range(2)], 
+                       ]
+
+        DETVAR_NAMES = ["Nominal", "WMXThetaXW", "WMYZ"]
+
+        DETVAR_FILES_SMALL = [DF_DIR + "SBND_SpringMC_Nom.df", 
+                              DF_DIR + "SBND_SpringMC_2xSCE.df", 
+                              DF_DIR + "SBND_SpringMC_0xSCE.df"]
+
+        DETVAR_NAMES_SMALL = ["Nominal", "2xSCE", "0xSCE"]
+   
     cols_to_drop = ['is_clear_cosmic', 'crlongtrkdiry', 'p_len', 'mu_E', 'mu_T', 'p_E', 'p_T', 'del_Tp', 'del_phi', 'has_stub',
                     'true_pcand_pdg', 'true_p_dir_x', 'true_p_dir_y', 'true_p_dir_z', 'true_pcand_dir_x', 'true_pcand_dir_y', 
                     'true_pcand_dir_z', 'true_pcand_end_x', 'true_pcand_end_y', 'true_pcand_end_z', 'true_mucand_pdg', 'true_mu_dir_x', 
@@ -139,16 +150,15 @@ def remake_detvar_maps(detector, DF_DIR="/exp/sbnd/data/users/gputnam/GUMP/sbn-r
                     'prot_chi22lo_of_mu_cand', 'prot_chi22hi_of_mu_cand', 'mu_chi22lo_of_prot_cand', 'mu_chi22hi_of_prot_cand', 
                     'prot_chi22lo_of_prot_cand', 'prot_chi22hi_of_prot_cand', 'true_mu_p', 'true_p_p', 'pot_univ']
 
-    detvars, detvarsmatch, detvar_pots = zip(*tqdm([loaddf.load(f, preselection=gc.slcfv_cut, include_syst=False, detector=detector) for f in DETVAR_FILES]))
+    detvars, detvarsmatch, detvar_pots = zip(*tqdm([loaddf.loadl(f, preselection=gc.slcfv_cut, include_syst=False, detector=detector, lightmem=True, drops=cols_to_drop) for f in DETVAR_FILES]))
     detvars, detvar_pots = loaddf.match_common_evts(detvarsmatch, detvars, detvar_pots)
 
     for i in range(len(detvars)):
         loaddf.scale_pot(detvars[i], detvar_pots[i], GOAL_POT)
     
     df = detvars[0]
-    detvars.extend([v_chi2smear(df), v_chi2hi(df)])
+    detvars.extend([syst.v_chi2smear(df), syst.v_chi2hi(df)])
     DETVAR_NAMES.extend(["Smeared dE/dx", "Gain Hi"]) 
-
 
     b = [np.array([0.3, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.25, 1.5]), [0.0, 0.2, 0.4, 0.6]]
     hists = []
@@ -158,6 +168,23 @@ def remake_detvar_maps(detector, DF_DIR="/exp/sbnd/data/users/gputnam/GUMP/sbn-r
 
     for name, h in zip(DETVAR_NAMES[1:], hists[1:]):
         save_histogram(f"{detector.replace(' ','')}_{name.replace('/', '').replace(' ','')}.txt", h/hists[0], b[0], b[1])
+
+    ### SBND SCE now uses a different CV file than the WM samples, this is really cool and not annoying at all
+    if detector == "SBND":
+        detvars, detvarsmatch, detvar_pots = zip(*tqdm([loaddf.load(f, preselection=gc.slcfv_cut, include_syst=False, detector=detector) for f in DETVAR_FILES_SMALL]))
+        detvars, detvar_pots = loaddf.match_common_evts(detvarsmatch, detvars, detvar_pots)
+
+        for i in range(len(detvars)):
+            loaddf.scale_pot(detvars[i], detvar_pots[i], GOAL_POT)
+        
+        b = [np.array([0.3, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.25, 1.5]), [0.0, 0.2, 0.4, 0.6]]
+        hists = []
+        for d in detvars:
+            d['selected'] = gc.all_cuts(d)
+            hists.append(np.histogram2d(*d.loc[d['selected'], ['nu_E_calo', 'del_p']].to_numpy().T, bins=b)[0])
+
+        for name, h in zip(DETVAR_NAMES[1:], hists[1:]):
+            save_histogram(f"rwt_outputs/{detector.replace(' ','')}_{name.replace('/', '').replace(' ','')}.txt", h/hists[0], b[0], b[1])
 
 if __name__ == "__main__":
     remake_detvar_maps("SBND")
