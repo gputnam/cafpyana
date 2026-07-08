@@ -111,9 +111,19 @@ class StatSampleSystematic(object):
         return np.diag(var)
 
 class CorrelatedSystematic(Systematic):
-    def __init__(self, a, b):        
+    def __init__(self, a, b):
         self.systa = a
         self.systb = b
+
+        assert(self.systa.avg() == self.systb.avg())
+
+        if (self.systa.avg() == True and self.systb.avg() == True):
+            self._avg = True
+        elif (self.systa.avg() == False and self.systb.avg() == False):
+            self._avg = False
+
+    def avg(self):
+        return self._avg
 
     def nuniv(self):
         return self.systa.nuniv()
