@@ -68,8 +68,8 @@ xsec_syst = [
     "QEInterference_SBN_v3_QEIntf_dial_5",
 
     # E-Dep FSI
-    "GENIEReWeight_SBN_v3_FrG4_N",
-    "GENIEReWeight_SBN_v3_FrINCL_N",
+    # "GENIEReWeight_SBN_v3_FrG4_N",
+    # "GENIEReWeight_SBN_v3_FrINCL_N",
     "GENIEReWeight_SBN_v3_FrG4LoE_N",
     "GENIEReWeight_SBN_v3_FrG4M1E_N",
     "GENIEReWeight_SBN_v3_FrG4M2E_N",
@@ -82,11 +82,10 @@ xsec_syst = [
     "GENIEReWeight_SBN_v3_MFPM1E_N",
     "GENIEReWeight_SBN_v3_MFPM2E_N",
     "GENIEReWeight_SBN_v3_MFPHiE_N",
-    "GENIEReWeight_SBN_v3_FrKin_PiProFix_N",
-    "GENIEReWeight_SBN_v3_FrKin_PiProBias_N",
+    # "GENIEReWeight_SBN_v3_FrKin_PiProBias_N",
 
     # QD Fraction
-    "PionAbsWeighter_SBN_v3_QuasiDeuteronFraction",
+    # "PionAbsWeighter_SBN_v3_QuasiDeuteronFraction",
 
     # Z-expansion
     "ZExpPCAWeighter_SBN_v3_MvA_b1",
@@ -141,8 +140,9 @@ xsec_syst = [
     ]
 
 xsec_cv_rwgt = [
-    "ZExpPCAWeighter_SBN_v3_MvA_b1", 
-    "CCQEXSecCorr_SBN_v3_CCQEXSecCorr"
+    "ZExpPCAWeighter_SBN_v3_MvA_b1",
+    "CCQEXSecCorr_SBN_v3_CCQEXSecCorr",
+    "GENIEReWeight_SBN_v3_FrKin_PiProFix_N",
 ]
 
 flux_syst = [
