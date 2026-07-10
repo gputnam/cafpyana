@@ -387,15 +387,15 @@ def load_one(fname, idf,
     if offbeampot:
         if detector == "SBND":
             N_GATES_ON_PER_5e12POT = 1.05104
-            pot = hdr.noffbeambnb.sum()*N_GATES_ON_PER_5e12POT*5e12
+            pot = hdr.noffbeambnb.sum()/N_GATES_ON_PER_5e12POT*5e12
         elif detector == "ICARUS Run4":
             trig = pd.read_hdf(fname, "trig_%i" % idf)
             N_GATES_ON_PER_5e12POT = 1.0631936867739828
-            pot = trig.gate_delta.sum()*(1-1/20.)*N_GATES_ON_PER_5e12POT*5e12
+            pot = trig.gate_delta.sum()*(1-1/20.)/N_GATES_ON_PER_5e12POT*5e12
         elif detector == "ICARUS Run2":
             trig = pd.read_hdf(fname, "trig_%i" % idf)
             N_GATES_ON_PER_5e12POT = 1.3886218026202426
-            pot = trig.gate_delta.sum()*(1-1/20.)*N_GATES_ON_PER_5e12POT*5e12
+            pot = trig.gate_delta.sum()*(1-1/20.)/N_GATES_ON_PER_5e12POT*5e12
     else:
         pot = hdr.pot.sum()
     # LOAD TRUTH
