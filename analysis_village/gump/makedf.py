@@ -478,19 +478,12 @@ def make_pandora_no_cuts_df(f):
 
     return slcdf
 
-gump_genie_systematics = [
+gump_ar23_weights = [
     # CCQE
     "GENIEReWeight_SBN_v1_multisigma_VecFFCCQEshape",
-    'GENIEReWeight_SBN_v1_multisigma_RPA_CCQE',
     'GENIEReWeight_SBN_v1_multisigma_CoulombCCQE',
 
-    'GENIEReWeight_SBN_v1_multisigma_ZExpA1CCQE',
-    'GENIEReWeight_SBN_v1_multisigma_ZExpA2CCQE',
-    'GENIEReWeight_SBN_v1_multisigma_ZExpA3CCQE',
-    'GENIEReWeight_SBN_v1_multisigma_ZExpA4CCQE',
-
     # MEC
-    # "GENIEReWeight_SBN_v1_multisigma_NormNCMEC",
     'GENIEReWeight_SBN_v1_multisigma_NormCCMEC',
     'GENIEReWeight_SBN_v1_multisigma_NormNCMEC',
     "GENIEReWeight_SBN_v1_multisigma_DecayAngMEC",
@@ -506,6 +499,22 @@ gump_genie_systematics = [
     "GENIEReWeight_SBN_v1_multisigma_RDecBR1eta",
 
     # Non-Res
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvpCC1pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvpCC2pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvpNC1pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvpNC2pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvnCC1pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvnCC2pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvnNC1pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvnNC2pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvbarpCC1pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvbarpCC2pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvbarpNC1pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvbarpNC2pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvbarnCC1pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvbarnCC2pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvbarnNC1pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvbarnNC2pi',
 
     # DIS
     # "GENIEReWeight_SBN_v1_multisim_DISBYVariationResponse",
@@ -526,19 +535,14 @@ gump_genie_systematics = [
     'GENIEReWeight_SBN_v1_multisigma_FrInel_pi',
     'GENIEReWeight_SBN_v1_multisigma_FrAbs_pi',
     'GENIEReWeight_SBN_v1_multisigma_FrPiProd_pi',
-    'GENIEReWeight_SBN_v1_multisigma_MFP_N',
-    'GENIEReWeight_SBN_v1_multisigma_FrCEx_N',
-    'GENIEReWeight_SBN_v1_multisigma_FrInel_N',
-    'GENIEReWeight_SBN_v1_multisigma_FrAbs_N',
-    'GENIEReWeight_SBN_v1_multisigma_FrPiProd_N',
 
     # NCEL
     'GENIEReWeight_SBN_v1_multisigma_MaNCEL',
     'GENIEReWeight_SBN_v1_multisigma_EtaNCEL',
 ]
 
-# additional (re-weights)
-gump_genie_reknob_systematics = gump_genie_systematics + [
+# Systematics introduced by Ar23+
+gump_ar23p_weights = [
     "CCQETemplateReweight_SBN_v3_LFGToSF_q0bin0",
     "CCQETemplateReweight_SBN_v3_LFGToSF_q0bin1",
     "CCQETemplateReweight_SBN_v3_LFGToSF_q0bin2",
@@ -564,8 +568,6 @@ gump_genie_reknob_systematics = gump_genie_systematics + [
     "QEInterference_SBN_v3_QEIntf_dial_4",
     "QEInterference_SBN_v3_QEIntf_dial_5",
 
-    "GENIEReWeight_SBN_v3_FrG4_N",
-    "GENIEReWeight_SBN_v3_FrINCL_N",
     "GENIEReWeight_SBN_v3_FrG4LoE_N",
     "GENIEReWeight_SBN_v3_FrG4M1E_N",
     "GENIEReWeight_SBN_v3_FrG4M2E_N",
@@ -580,13 +582,6 @@ gump_genie_reknob_systematics = gump_genie_systematics + [
     "GENIEReWeight_SBN_v3_MFPHiE_N",
     "GENIEReWeight_SBN_v3_FrKin_PiProFix_N",
     "GENIEReWeight_SBN_v3_FrKin_PiProBias_N",
-
-    "PionAbsWeighter_SBN_v3_QuasiDeuteronFraction",
-
-    "ZExpPCAWeighter_SBN_v3_Deut_b1",
-    "ZExpPCAWeighter_SBN_v3_Deut_b2",
-    "ZExpPCAWeighter_SBN_v3_Deut_b3",
-    "ZExpPCAWeighter_SBN_v3_Deut_b4",
 
     "ZExpPCAWeighter_SBN_v3_MvA_b1",
     "ZExpPCAWeighter_SBN_v3_MvA_b2",
@@ -604,6 +599,31 @@ gump_genie_reknob_systematics = gump_genie_systematics + [
 
     "CCQEXSecCorr_SBN_v3_CCQEXSecCorr",
 ]
+
+# Other systematics we keep for extra info
+extra_weights = [
+    'GENIEReWeight_SBN_v1_multisigma_RPA_CCQE',
+    'GENIEReWeight_SBN_v1_multisigma_ZExpA1CCQE',
+    'GENIEReWeight_SBN_v1_multisigma_ZExpA2CCQE',
+    'GENIEReWeight_SBN_v1_multisigma_ZExpA3CCQE',
+    'GENIEReWeight_SBN_v1_multisigma_ZExpA4CCQE',
+    'GENIEReWeight_SBN_v1_multisigma_MFP_N',
+    'GENIEReWeight_SBN_v1_multisigma_FrCEx_N',
+    'GENIEReWeight_SBN_v1_multisigma_FrInel_N',
+    'GENIEReWeight_SBN_v1_multisigma_FrAbs_N',
+    'GENIEReWeight_SBN_v1_multisigma_FrPiProd_N',
+
+    "PionAbsWeighter_SBN_v3_QuasiDeuteronFraction",
+    "GENIEReWeight_SBN_v3_FrG4_N",
+    "GENIEReWeight_SBN_v3_FrINCL_N",
+
+    "ZExpPCAWeighter_SBN_v3_Deut_b1",
+    "ZExpPCAWeighter_SBN_v3_Deut_b2",
+    "ZExpPCAWeighter_SBN_v3_Deut_b3",
+    "ZExpPCAWeighter_SBN_v3_Deut_b4",
+]
+
+gump_genie_reknob_systematics = gump_ar23_weights + gump_ar23p_weights + extra_weights
 
 def make_gump_nuslimwgtdf(f):
     return make_mcnudf(f, include_weights=True, slim=True, genie_systematics=gump_genie_systematics)
