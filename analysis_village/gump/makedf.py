@@ -594,8 +594,6 @@ gump_ar23p_weights = [
     "GENIEReWeight_SBN_v3_MFPM1E_N",
     "GENIEReWeight_SBN_v3_MFPM2E_N",
     "GENIEReWeight_SBN_v3_MFPHiE_N",
-    "GENIEReWeight_SBN_v3_FrKin_PiProFix_N",
-    "GENIEReWeight_SBN_v3_FrKin_PiProBias_N",
 
     "ZExpPCAWeighter_SBN_v3_MvA_b1",
     "ZExpPCAWeighter_SBN_v3_MvA_b2",
@@ -612,6 +610,7 @@ gump_ar23p_weights = [
     "MECq0q3InterpWeighting_SBN_v3_SuSAToMar_MECResponse_q0bin3",
 
     "CCQEXSecCorr_SBN_v3_CCQEXSecCorr",
+    "GENIEReWeight_SBN_v3_FrKin_PiProFix_N",
 ]
 
 # Other systematics we keep for extra info
@@ -635,6 +634,7 @@ extra_weights = [
     "ZExpPCAWeighter_SBN_v3_Deut_b2",
     "ZExpPCAWeighter_SBN_v3_Deut_b3",
     "ZExpPCAWeighter_SBN_v3_Deut_b4",
+    "GENIEReWeight_SBN_v3_FrKin_PiProBias_N",
 ]
 
 gump_genie_reknob_systematics = gump_ar23_weights + gump_ar23p_weights + extra_weights
