@@ -152,12 +152,15 @@ def run_grid(inputfiles):
         out.write('#!/bin/bash\n')
         cmd = 'python run_df_maker.py -c ' + args.config + ' -o ' + args.output + '_%d'%i_flist + '.df -ncpu 2 -i'
         for i_f in range(0,len(flist)):
-            out.write('echo "[run_%s.sh] input %d : %s"\n'%(i_flist, i_f, flist[i_f]))
+            fname = flist[i_f]
+            if fname.startswith("/pnfs"):
+                fname = fname.replace("/pnfs", "root://fndcadoor.fnal.gov:1094/pnfs/fnal.gov/usr")
+            out.write('echo "[run_%s.sh] input %d : %s"\n'%(i_flist, i_f, fname))
             if i_f == 0:
-                cmd += ' ' + flist[i_f].split('/')[-1]
+                cmd += ' ' + fname.split('/')[-1]
             else: 
-                cmd += ',' + flist[i_f].split('/')[-1]
-            out.write('xrdcp ' + flist[i_f] + ' .\n') ## -- for checking auth
+                cmd += ',' + fname.split('/')[-1]
+            out.write('xrdcp ' + fname + ' .\n') ## -- for checking auth
         out.write('ls -alh\n')
         out.write(cmd)
         out.close()
