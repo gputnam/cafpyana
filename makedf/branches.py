@@ -41,6 +41,7 @@ trigger_info_branches = [
 
 opflashbranches = [
     "rec.opflashes.firsttime",
+    "rec.opflashes.cryo",
     "rec.opflashes.time",
     "rec.opflashes.totalpe",
 ]
