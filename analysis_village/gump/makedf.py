@@ -9,7 +9,6 @@ from makedf import chi2pid
 from analysis_village.gump.kinematics import *
 from analysis_village.gump.gump_cuts import *
 
-
 def make_spine_no_cuts_df(f):
     det = loadbranches(f["recTree"], ["rec.hdr.det"]).rec.hdr.det
     if det.empty:
@@ -136,22 +135,21 @@ def make_spine_no_cuts_df(f):
 # to do: make_pandora_with_cuts using correct formatting 
 # and can be turned into ttree for PROfit
 
-def make_pandora_no_cuts_df(f):
-    if 'run2' or 'Run2' in f.file_path:
-        RUN = 2
-    elif 'run4' or 'Run4' in f.file_path:
-        RUN = 4
-    elif 'SBND' or 'sbnd' in f.file_path:
-        RUN = 1
+def make_pandora_no_cuts_calosyst_df(f):
+    return make_pandora_no_cuts_df(f, True)
 
+def make_pandora_no_cuts_df(f, do_calo_syst=False):
     det = loadbranches(f["recTree"], ["rec.hdr.det"]).rec.hdr.det
+    run = loadbranches(f["recTree"], ["rec.hdr.run"]).rec.hdr.run
     if det.empty:
         return pd.DataFrame()
 
     if (1 == det.unique()):
         DETECTOR = "SBND"
+        RUN = 1
     elif (2 == det.unique()):
         DETECTOR = "ICARUS"
+        RUN = 2 if run.iloc[0] < 12960 else 4
     else:
         print("Detector unclear, check rec.hdr.det!")
 
@@ -164,14 +162,19 @@ def make_pandora_no_cuts_df(f):
     trkdf = multicol_add(trkdf, dmagdf(slcdf.slc.vertex, trkdf.pfp.trk.start).rename(("pfp", "dist_to_vertex")))
     trkdf = trkdf[trkdf.pfp.dist_to_vertex < 10]
 
-    # redo chi2 for ICARUS
-    if DETECTOR == "ICARUS":
-        trkhitdf = make_trkhitdf(f)
+    calo_variations = ["alpha_p", "alpha_m", "beta_p", "beta_m", "R_p", "R_m"]
 
+    trkhitdf = make_trkhitdf(f)
+    if DETECTOR == "ICARUS":
         # systematic variations
         dedx_redo = chi2pid.dedx(trkhitdf, gain="ICARUS", calibrate="ICARUS", isMC=ismc)
         trkhitdf["dedx_redo"] = dedx_redo
-
+    else:
+        dedx_redo = chi2pid.dedx(trkhitdf, gain="SBND", calibrate="SBND", isMC=ismc)
+        trkhitdf["dedx_redo"] = dedx_redo
+    
+    # systematic variations
+    if DETECTOR == "ICARUS" and do_calo_syst:
         dedx_hi = chi2pid.dedx(trkhitdf, gain="ICARUS", calibrate="ICARUS", isMC=ismc, scale=1.01)
         trkhitdf["dedx_hi"] = dedx_hi
         dedx_lo = chi2pid.dedx(trkhitdf, gain="ICARUS", calibrate="ICARUS", isMC=ismc, scale=0.99)
@@ -187,12 +190,10 @@ def make_pandora_no_cuts_df(f):
 
         dedx_smear13 = chi2pid.dedx(trkhitdf, gain="ICARUS", calibrate="ICARUS", isMC=ismc, smear=0.13)
         trkhitdf["dedx_smear13"] = dedx_smear13
-    else:
-        trkhitdf = make_trkhitdf(f)
 
-        dedx_redo = chi2pid.dedx(trkhitdf, gain="SBND", calibrate="SBND", isMC=ismc)
-        trkhitdf["dedx_redo"] = dedx_redo
-
+        for c_var in calo_variations:
+            trkhitdf["dedx_%s" % c_var] = chi2pid.dedx(trkhitdf, gain="ICARUS", calibrate="ICARUS", isMC=ismc, new_calo_params=chi2pid.CALO_VARIATIONS[c_var])
+    elif do_calo_syst:
         dedx_hi = chi2pid.dedx(trkhitdf, gain="SBND", calibrate="SBND", isMC=ismc, scale=1.02)
         trkhitdf["dedx_hi"] = dedx_hi
         dedx_lo = chi2pid.dedx(trkhitdf, gain="SBND", calibrate="SBND", isMC=ismc, scale=0.98)
@@ -208,24 +209,39 @@ def make_pandora_no_cuts_df(f):
 
         dedx_smear13 = chi2pid.dedx(trkhitdf, gain="SBND", calibrate="SBND", isMC=ismc, smear=0.13)
         trkhitdf["dedx_smear13"] = dedx_smear13
+        for c_var in calo_variations:
+            trkhitdf["dedx_%s" % c_var] = chi2pid.dedx(trkhitdf, gain="SBND", calibrate="SBND", isMC=ismc, new_calo_params=chi2pid.CALO_VARIATIONS[c_var])
 
     trkdf["chi2u"] = chi2pid.chi2u(trkhitdf, dedxname="dedx_redo")[0]
     trkdf["chi2p"] = chi2pid.chi2p(trkhitdf, dedxname="dedx_redo")[0]
     
-    trkdf["chi2u_lo"] = chi2pid.chi2u(trkhitdf, dedxname="dedx_lo")[0]
-    trkdf["chi2p_lo"] = chi2pid.chi2p(trkhitdf, dedxname="dedx_lo")[0]
-    trkdf["chi2u_hi"] = chi2pid.chi2u(trkhitdf, dedxname="dedx_hi")[0]
-    trkdf["chi2p_hi"] = chi2pid.chi2p(trkhitdf, dedxname="dedx_hi")[0]
+    if do_calo_syst:
+        trkdf["chi2u_lo"] = chi2pid.chi2u(trkhitdf, dedxname="dedx_lo")[0]
+        trkdf["chi2p_lo"] = chi2pid.chi2p(trkhitdf, dedxname="dedx_lo")[0]
+        trkdf["chi2u_hi"] = chi2pid.chi2u(trkhitdf, dedxname="dedx_hi")[0]
+        trkdf["chi2p_hi"] = chi2pid.chi2p(trkhitdf, dedxname="dedx_hi")[0]
+        
+        trkdf["chi2u_2lo"] = chi2pid.chi2u(trkhitdf, dedxname="dedx_2lo")[0]
+        trkdf["chi2p_2lo"] = chi2pid.chi2p(trkhitdf, dedxname="dedx_2lo")[0]
+        trkdf["chi2u_2hi"] = chi2pid.chi2u(trkhitdf, dedxname="dedx_2hi")[0]
+        trkdf["chi2p_2hi"] = chi2pid.chi2p(trkhitdf, dedxname="dedx_2hi")[0]
+        
+        trkdf["chi2u_smear5"] = chi2pid.chi2u(trkhitdf, dedxname="dedx_smear5")[0]
+        trkdf["chi2p_smear5"] = chi2pid.chi2p(trkhitdf, dedxname="dedx_smear5")[0]
+        trkdf["chi2u_smear13"] = chi2pid.chi2u(trkhitdf, dedxname="dedx_smear13")[0]
+        trkdf["chi2p_smear13"] = chi2pid.chi2p(trkhitdf, dedxname="dedx_smear13")[0]
+        
+        for c_var in calo_variations:
+            trkdf["chi2u_%s" % c_var] = chi2pid.chi2u(trkhitdf, dedxname="dedx_%s" % c_var)[0]
+            trkdf["chi2p_%s" % c_var] = chi2pid.chi2p(trkhitdf, dedxname="dedx_%s" % c_var)[0]
 
-    trkdf["chi2u_2lo"] = chi2pid.chi2u(trkhitdf, dedxname="dedx_2lo")[0]
-    trkdf["chi2p_2lo"] = chi2pid.chi2p(trkhitdf, dedxname="dedx_2lo")[0]
-    trkdf["chi2u_2hi"] = chi2pid.chi2u(trkhitdf, dedxname="dedx_2hi")[0]
-    trkdf["chi2p_2hi"] = chi2pid.chi2p(trkhitdf, dedxname="dedx_2hi")[0]
-    
-    trkdf["chi2u_smear5"] = chi2pid.chi2u(trkhitdf, dedxname="dedx_smear5")[0]
-    trkdf["chi2p_smear5"] = chi2pid.chi2p(trkhitdf, dedxname="dedx_smear5")[0]
-    trkdf["chi2u_smear13"] = chi2pid.chi2u(trkhitdf, dedxname="dedx_smear13")[0]
-    trkdf["chi2p_smear13"] = chi2pid.chi2p(trkhitdf, dedxname="dedx_smear13")[0]
+        # Don't apply variations to (Overlay) cosmics
+        if DETECTOR == "ICARUS":
+            trkdf.loc[np.isnan(trkdf.pfp.trk.truth.p.genp.x), ["chi2u_lo", "chi2u_hi", "chi2u_2lo", "chi2u_2hi", "chi2u_smear5", "chi2u_smear13"] + ["chi2u_%s" % c_var for c_var in calo_variations]] = \
+                trkdf.loc[np.isnan(trkdf.pfp.trk.truth.p.genp.x), "chi2u"]
+
+            trkdf.loc[np.isnan(trkdf.pfp.trk.truth.p.genp.x), ["chi2p_lo", "chi2p_hi", "chi2p_2lo", "chi2p_2hi", "chi2p_smear5", "chi2p_smear13"] + ["chi2p_%s" % c_var for c_var in calo_variations]] = \
+                trkdf.loc[np.isnan(trkdf.pfp.trk.truth.p.genp.x), "chi2p"]
 
     trkdf[("pfp", "trk", "chi2pid", "I2", "mu_over_p", "")] = trkdf.chi2u / trkdf.chi2p
 
@@ -318,6 +334,16 @@ def make_pandora_no_cuts_df(f):
         except KeyError:
             slc_has_stub_series[k] = False
 
+    if DETECTOR == "SBND":
+        # PRISM center at -74cm in X
+        true_prism_angle = np.sqrt((slcdf.slc.truth.position.y)**2 + (slcdf.slc.truth.position.x + 74)**2) / (110.e2 + slcdf.slc.truth.position.z)
+    elif DETECTOR == "ICARUS":
+        # PRISM center at middle in ICARUS X/Y
+        x_mean = (ICARUSRun2FVCuts["C0"]["x"]["min"] + ICARUSRun2FVCuts["C1"]["x"]["max"]) / 2.
+        y_mean = (ICARUSRun2FVCuts["C0"]["y"]["min"] + ICARUSRun2FVCuts["C0"]["y"]["max"]) / 2.
+        z_0 = ICARUSRun2FVCuts["C0"]["z"]["min"]
+        true_prism_angle = np.sqrt((slcdf.slc.truth.position.y - y_mean)**2 + (slcdf.slc.truth.position.x - x_mean)**2) / (600.e2 + slcdf.slc.truth.position.z - z_0)
+
     ## (10) create a slice-based reco df
     slcdf = pd.DataFrame({
         'other_shw_length': other_shw_length,
@@ -333,34 +359,6 @@ def make_pandora_no_cuts_df(f):
         'mu_chi2_of_prot_cand': mu_chi2_of_prot_cand,
         'prot_chi2_of_mu_cand': prot_chi2_of_mu_cand,
         'prot_chi2_of_prot_cand': prot_chi2_of_prot_cand,
-
-        'mu_chi2lo_of_mu_cand': slcdf.mu.chi2u_lo,
-        'mu_chi2hi_of_mu_cand': slcdf.mu.chi2u_hi,
-        'mu_chi22lo_of_mu_cand': slcdf.mu.chi2u_2lo,
-        'mu_chi22hi_of_mu_cand': slcdf.mu.chi2u_2hi,
-        'mu_chi2smear5_of_mu_cand': slcdf.mu.chi2u_smear5,
-        'mu_chi2smear13_of_mu_cand': slcdf.mu.chi2u_smear13,
-
-        'mu_chi2lo_of_prot_cand': slcdf.p.chi2u_lo,
-        'mu_chi2hi_of_prot_cand': slcdf.p.chi2u_hi,
-        'mu_chi22lo_of_prot_cand': slcdf.p.chi2u_2lo,
-        'mu_chi22hi_of_prot_cand': slcdf.p.chi2u_2hi,
-        'mu_chi2smear5_of_prot_cand': slcdf.p.chi2u_smear5,
-        'mu_chi2smear13_of_prot_cand': slcdf.p.chi2u_smear13,
-
-        'prot_chi2lo_of_mu_cand': slcdf.mu.chi2p_lo,
-        'prot_chi2hi_of_mu_cand': slcdf.mu.chi2p_hi,
-        'prot_chi22lo_of_mu_cand': slcdf.mu.chi2p_2lo,
-        'prot_chi22hi_of_mu_cand': slcdf.mu.chi2p_2hi,
-        'prot_chi2smear5_of_mu_cand': slcdf.mu.chi2p_smear5,
-        'prot_chi2smear13_of_mu_cand': slcdf.mu.chi2p_smear13,
-
-        'prot_chi2lo_of_prot_cand': slcdf.p.chi2p_lo,
-        'prot_chi2hi_of_prot_cand': slcdf.p.chi2p_hi,
-        'prot_chi22lo_of_prot_cand': slcdf.p.chi2p_2lo,
-        'prot_chi22hi_of_prot_cand': slcdf.p.chi2p_2hi,
-        'prot_chi2smear5_of_prot_cand': slcdf.p.chi2p_smear5,
-        'prot_chi2smear13_of_prot_cand': slcdf.p.chi2p_smear13,
 
         'p_len': p_len,
         'mu_len': mu_len,
@@ -397,6 +395,8 @@ def make_pandora_no_cuts_df(f):
         'tmatch_eff': slcdf.slc.tmatch.eff, 
         'tmatch_pur': slcdf.slc.tmatch.pur, 
 
+        'true_prism_angle': true_prism_angle,
+        'true_nu_costh': slcdf.slc.truth.momentum.z / magdf(slcdf.slc.truth.momentum),
         'baseline': slcdf.slc.truth.baseline, # TODO remove 
         'true_baseline': slcdf.slc.truth.baseline,
         'nu_E_true': slcdf.slc.truth.E, # TODO remove
@@ -450,20 +450,73 @@ def make_pandora_no_cuts_df(f):
         'true_p_end_y': slcdf.slc.truth.p.end.y,
         'true_p_end_z': slcdf.slc.truth.p.end.z,
 
+        'true_p2_p': slcdf.slc.truth.p2.totp,
+        'true_p2_dir_x': slcdf.slc.truth.p2.dir.x,
+        'true_p2_dir_y': slcdf.slc.truth.p2.dir.y,
+        'true_p2_dir_z': slcdf.slc.truth.p2.dir.z,
+        'true_p2_end_x': slcdf.slc.truth.p2.end.x,
+        'true_p2_end_y': slcdf.slc.truth.p2.end.y,
+        'true_p2_end_z': slcdf.slc.truth.p2.end.z,
+
+        'true_cpi_p': slcdf.slc.truth.cpi.totp,
+        'true_cpi_dir_x': slcdf.slc.truth.cpi.dir.x,
+        'true_cpi_dir_y': slcdf.slc.truth.cpi.dir.y,
+        'true_cpi_dir_z': slcdf.slc.truth.cpi.dir.z,
+        'true_cpi_end_x': slcdf.slc.truth.cpi.end.x,
+        'true_cpi_end_y': slcdf.slc.truth.cpi.end.y,
+        'true_cpi_end_z': slcdf.slc.truth.cpi.end.z,
+
         'true_nmu_27MeV': slcdf.slc.truth.nmu_27MeV,
         'true_np_20MeV': slcdf.slc.truth.np_20MeV,
         'true_np_50MeV': slcdf.slc.truth.np_50MeV,
         'true_npi_30MeV': slcdf.slc.truth.npi_30MeV,
-    })
+    } | ({} if not do_calo_syst else {
+        'mu_chi2lo_of_mu_cand': slcdf.mu.chi2u_lo,
+        'mu_chi2hi_of_mu_cand': slcdf.mu.chi2u_hi,
+        'mu_chi22lo_of_mu_cand': slcdf.mu.chi2u_2lo,
+        'mu_chi22hi_of_mu_cand': slcdf.mu.chi2u_2hi,
+        'mu_chi2smear5_of_mu_cand': slcdf.mu.chi2u_smear5,
+        'mu_chi2smear13_of_mu_cand': slcdf.mu.chi2u_smear13,
 
+        'mu_chi2lo_of_prot_cand': slcdf.p.chi2u_lo,
+        'mu_chi2hi_of_prot_cand': slcdf.p.chi2u_hi,
+        'mu_chi22lo_of_prot_cand': slcdf.p.chi2u_2lo,
+        'mu_chi22hi_of_prot_cand': slcdf.p.chi2u_2hi,
+        'mu_chi2smear5_of_prot_cand': slcdf.p.chi2u_smear5,
+        'mu_chi2smear13_of_prot_cand': slcdf.p.chi2u_smear13,
+
+        'prot_chi2lo_of_mu_cand': slcdf.mu.chi2p_lo,
+        'prot_chi2hi_of_mu_cand': slcdf.mu.chi2p_hi,
+        'prot_chi22lo_of_mu_cand': slcdf.mu.chi2p_2lo,
+        'prot_chi22hi_of_mu_cand': slcdf.mu.chi2p_2hi,
+        'prot_chi2smear5_of_mu_cand': slcdf.mu.chi2p_smear5,
+        'prot_chi2smear13_of_mu_cand': slcdf.mu.chi2p_smear13,
+
+        'prot_chi2lo_of_prot_cand': slcdf.p.chi2p_lo,
+        'prot_chi2hi_of_prot_cand': slcdf.p.chi2p_hi,
+        'prot_chi22lo_of_prot_cand': slcdf.p.chi2p_2lo,
+        'prot_chi22hi_of_prot_cand': slcdf.p.chi2p_2hi,
+        'prot_chi2smear5_of_prot_cand': slcdf.p.chi2p_smear5,
+        'prot_chi2smear13_of_prot_cand': slcdf.p.chi2p_smear13,
+    } | {
+      "mu_chi2%s_of_prot_cand" % c_var: slcdf.p["chi2u_%s" % c_var] for c_var in calo_variations
+    } | {
+      "prot_chi2%s_of_prot_cand" % c_var: slcdf.p["chi2p_%s" % c_var] for c_var in calo_variations
+    } | {
+      "mu_chi2%s_of_mu_cand" % c_var: slcdf.mu["chi2u_%s" % c_var] for c_var in calo_variations
+    } | {
+      "prot_chi2%s_of_mu_cand" % c_var: slcdf.mu["chi2p_%s" % c_var] for c_var in calo_variations
+    }))
 
     # include some meta-data
     slcdf['detector'] = DETECTOR
+    slcdf['Run'] = RUN
 
     # Add in crt hit matching for ICARUS
     if DETECTOR == "ICARUS":
         crt = make_crthitdf(f)
         slcdf = slcdf.join(((crt.time > -1) & (crt.time < 1.8) & (crt.plane != 50)).groupby(level=[0]).any().rename("crthit"))
+        slcdf = slcdf.join(((crt.time > -1) & (crt.time < 1.8) & (crt.plane != 50) & (crt.truth.bestmatch_id != -1)).groupby(level=[0]).any().rename("crthit_ismc"))
     else:
         slcdf["crthit"] = False
 
@@ -474,6 +527,11 @@ def make_pandora_no_cuts_df(f):
     slcdf = slcdf.join(maxpe)
     sumpe = (flashes.totalpe*intime).groupby(level=[0]).sum().rename("flash_sumpe")
     slcdf = slcdf.join(sumpe)
+
+    flash_cryo0 = (flashes.totalpe * intime * (flashes.cryo == 0)).groupby(level=[0]).max().rename("flash_maxpe_cryo0")
+    flash_cryo1 = (flashes.totalpe * intime * (flashes.cryo == 1)).groupby(level=[0]).max().rename("flash_maxpe_cryo1")
+    slcdf = slcdf.join(flash_cryo0)
+    slcdf = slcdf.join(flash_cryo1)
 
     # add in stub info, per range bin
     stubdf = stubdf[stubdf.plane == 2]
@@ -654,20 +712,25 @@ def make_gump_nudf(f, is_slc=False):
     nudf = make_mcdf(f, slc_mcbranches, slc_mcprimbranches) if is_slc else make_mcdf(f)
     nudf["ind"] = nudf.index.get_level_values(1)
 
-    # wgtdf = pd.concat([bnbsyst.bnbsyst(f, nudf.ind), geniesyst.geniesyst_sbnd(f, nudf.ind)], axis=1)
+    # lookup detector and run
     det = loadbranches(f["recTree"], ["rec.hdr.det"]).rec.hdr.det
-
+    run = loadbranches(f["recTree"], ["rec.hdr.run"]).rec.hdr.run
     if det.empty:
         return pd.DataFrame()
 
     if (1 == det.unique()):
         DETECTOR = "SBND"
+        RUN = 1
     elif (2 == det.unique()):
         DETECTOR = "ICARUS"
+        RUN = 2 if run.iloc[0] < 12960 else 4
     else:
         print("Detector unclear, check rec.hdr.det!")
 
-    is_fv = vtxfv_cut(nudf.position, DETECTOR)
+    nudf["detector"] = DETECTOR
+    nudf["Run"] = RUN
+
+    is_fv = true_fv_cut(nudf)
     is_cc = nudf.iscc
     is_nc = (nudf.iscc == 0)
     genie_mode = nudf.genie_mode
