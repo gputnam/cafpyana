@@ -353,6 +353,8 @@ def load_one(fname, idf,
         crthit.name = "crthit"
         df = df.join(crthit, on=["__ntuple", "entry"])
 
+    df["crthit"] = df.crthit.fillna(False).astype(bool) 
+
     # LOAD AXIAL FORM FACTOR REWEIGHT
     if reweight_aFF:
         rewgt = pd.read_hdf(fname, wgtname % idf)[xsec_cv_rwgt]
