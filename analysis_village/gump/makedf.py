@@ -191,6 +191,9 @@ def make_pandora_no_cuts_df(f, do_calo_syst=False):
         dedx_smear13 = chi2pid.dedx(trkhitdf, gain="ICARUS", calibrate="ICARUS", isMC=ismc, smear=0.13)
         trkhitdf["dedx_smear13"] = dedx_smear13
 
+        dedx_sqsmear15 = chi2pid.dedx(trkhitdf, gain="ICARUS", calibrate="ICARUS", isMC=ismc, sqrt_smear=0.15)
+        trkhitdf["dedx_sqsmear15"] = dedx_sqsmear15
+
         for c_var in calo_variations:
             trkhitdf["dedx_%s" % c_var] = chi2pid.dedx(trkhitdf, gain="ICARUS", calibrate="ICARUS", isMC=ismc, new_calo_params=chi2pid.ICARUS_CALO_VARIATIONS[c_var])
     elif do_calo_syst:
@@ -209,6 +212,10 @@ def make_pandora_no_cuts_df(f, do_calo_syst=False):
 
         dedx_smear13 = chi2pid.dedx(trkhitdf, gain="SBND", calibrate="SBND", isMC=ismc, smear=0.13)
         trkhitdf["dedx_smear13"] = dedx_smear13
+
+        dedx_sqsmear15 = chi2pid.dedx(trkhitdf, gain="SBND", calibrate="SBND", isMC=ismc, sqrt_smear=0.15)
+        trkhitdf["dedx_sqsmear15"] = dedx_sqsmear15
+
         for c_var in calo_variations:
             trkhitdf["dedx_%s" % c_var] = chi2pid.dedx(trkhitdf, gain="SBND", calibrate="SBND", isMC=ismc, new_calo_params=chi2pid.SBND_CALO_VARIATIONS[c_var])
 
@@ -230,6 +237,8 @@ def make_pandora_no_cuts_df(f, do_calo_syst=False):
         trkdf["chi2p_smear5"] = chi2pid.chi2p(trkhitdf, dedxname="dedx_smear5")[0]
         trkdf["chi2u_smear13"] = chi2pid.chi2u(trkhitdf, dedxname="dedx_smear13")[0]
         trkdf["chi2p_smear13"] = chi2pid.chi2p(trkhitdf, dedxname="dedx_smear13")[0]
+        trkdf["chi2u_sqsmear15"] = chi2pid.chi2u(trkhitdf, dedxname="dedx_sqsmear15")[0]
+        trkdf["chi2p_sqsmear15"] = chi2pid.chi2p(trkhitdf, dedxname="dedx_sqsmear15")[0]
         
         for c_var in calo_variations:
             trkdf["chi2u_%s" % c_var] = chi2pid.chi2u(trkhitdf, dedxname="dedx_%s" % c_var)[0]
@@ -237,10 +246,10 @@ def make_pandora_no_cuts_df(f, do_calo_syst=False):
 
         # Don't apply variations to (Overlay) cosmics
         if DETECTOR == "ICARUS":
-            trkdf.loc[np.isnan(trkdf.pfp.trk.truth.p.genp.x), ["chi2u_lo", "chi2u_hi", "chi2u_2lo", "chi2u_2hi", "chi2u_smear5", "chi2u_smear13"] + ["chi2u_%s" % c_var for c_var in calo_variations]] = \
+            trkdf.loc[np.isnan(trkdf.pfp.trk.truth.p.genp.x), ["chi2u_lo", "chi2u_hi", "chi2u_2lo", "chi2u_2hi", "chi2u_smear5", "chi2u_smear13", "chi2u_sqsmear15"] + ["chi2u_%s" % c_var for c_var in calo_variations]] = \
                 trkdf.loc[np.isnan(trkdf.pfp.trk.truth.p.genp.x), "chi2u"]
 
-            trkdf.loc[np.isnan(trkdf.pfp.trk.truth.p.genp.x), ["chi2p_lo", "chi2p_hi", "chi2p_2lo", "chi2p_2hi", "chi2p_smear5", "chi2p_smear13"] + ["chi2p_%s" % c_var for c_var in calo_variations]] = \
+            trkdf.loc[np.isnan(trkdf.pfp.trk.truth.p.genp.x), ["chi2p_lo", "chi2p_hi", "chi2p_2lo", "chi2p_2hi", "chi2p_smear5", "chi2p_smear13", "chi2p_sqsmear15"] + ["chi2p_%s" % c_var for c_var in calo_variations]] = \
                 trkdf.loc[np.isnan(trkdf.pfp.trk.truth.p.genp.x), "chi2p"]
 
     trkdf[("pfp", "trk", "chi2pid", "I2", "mu_over_p", "")] = trkdf.chi2u / trkdf.chi2p
@@ -477,6 +486,7 @@ def make_pandora_no_cuts_df(f, do_calo_syst=False):
         'mu_chi22hi_of_mu_cand': slcdf.mu.chi2u_2hi,
         'mu_chi2smear5_of_mu_cand': slcdf.mu.chi2u_smear5,
         'mu_chi2smear13_of_mu_cand': slcdf.mu.chi2u_smear13,
+        'mu_chi2sqsmear15_of_mu_cand': slcdf.mu.chi2u_sqsmear15,
 
         'mu_chi2lo_of_prot_cand': slcdf.p.chi2u_lo,
         'mu_chi2hi_of_prot_cand': slcdf.p.chi2u_hi,
@@ -484,6 +494,7 @@ def make_pandora_no_cuts_df(f, do_calo_syst=False):
         'mu_chi22hi_of_prot_cand': slcdf.p.chi2u_2hi,
         'mu_chi2smear5_of_prot_cand': slcdf.p.chi2u_smear5,
         'mu_chi2smear13_of_prot_cand': slcdf.p.chi2u_smear13,
+        'mu_chi2sqsmear15_of_prot_cand': slcdf.p.chi2u_sqsmear15,
 
         'prot_chi2lo_of_mu_cand': slcdf.mu.chi2p_lo,
         'prot_chi2hi_of_mu_cand': slcdf.mu.chi2p_hi,
@@ -491,6 +502,7 @@ def make_pandora_no_cuts_df(f, do_calo_syst=False):
         'prot_chi22hi_of_mu_cand': slcdf.mu.chi2p_2hi,
         'prot_chi2smear5_of_mu_cand': slcdf.mu.chi2p_smear5,
         'prot_chi2smear13_of_mu_cand': slcdf.mu.chi2p_smear13,
+        'prot_chi2sqsmear15_of_mu_cand': slcdf.mu.chi2p_sqsmear15,
 
         'prot_chi2lo_of_prot_cand': slcdf.p.chi2p_lo,
         'prot_chi2hi_of_prot_cand': slcdf.p.chi2p_hi,
@@ -498,6 +510,7 @@ def make_pandora_no_cuts_df(f, do_calo_syst=False):
         'prot_chi22hi_of_prot_cand': slcdf.p.chi2p_2hi,
         'prot_chi2smear5_of_prot_cand': slcdf.p.chi2p_smear5,
         'prot_chi2smear13_of_prot_cand': slcdf.p.chi2p_smear13,
+        'prot_chi2sqsmear15_of_prot_cand': slcdf.p.chi2p_sqsmear15,
     } | {
       "mu_chi2%s_of_prot_cand" % c_var: slcdf.p["chi2u_%s" % c_var] for c_var in calo_variations
     } | {
