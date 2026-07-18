@@ -530,8 +530,11 @@ def make_pandora_no_cuts_df(f, do_calo_syst=False):
         crt = make_crthitdf(f)
         slcdf = slcdf.join(((crt.time > -1) & (crt.time < 1.8) & (crt.plane != 50)).groupby(level=[0]).any().rename("crthit"))
         slcdf = slcdf.join(((crt.time > -1) & (crt.time < 1.8) & (crt.plane != 50) & (crt.truth.bestmatch_id != -1)).groupby(level=[0]).any().rename("crthit_ismc"))
+        slcdf["crthit"] = slcdf.crthit.fillna(False).astype(bool)
+        slcdf["crthit_ismc"] = slcdf.crthit_ismc.fillna(False).astype(bool)
     else:
         slcdf["crthit"] = False
+        slcdf["crthit_ismc"] = False
 
     # Flash value for trigger emulation. Note: these need to be scaled per-detector, per-Run
     flashes = make_opflashdf(f)
