@@ -162,7 +162,7 @@ def make_pandora_no_cuts_df(f, do_calo_syst=False):
     trkdf = multicol_add(trkdf, dmagdf(slcdf.slc.vertex, trkdf.pfp.trk.start).rename(("pfp", "dist_to_vertex")))
     trkdf = trkdf[trkdf.pfp.dist_to_vertex < 10]
 
-    calo_variations = ["alpha_p", "alpha_m", "beta_p", "beta_m", "R_p", "R_m"]
+    calo_variations = ["cv", "alpha_p", "alpha_m", "beta_p", "beta_m", "R_p", "R_m"]
 
     trkhitdf = make_trkhitdf(f)
     if DETECTOR == "ICARUS":
@@ -192,7 +192,7 @@ def make_pandora_no_cuts_df(f, do_calo_syst=False):
         trkhitdf["dedx_smear13"] = dedx_smear13
 
         for c_var in calo_variations:
-            trkhitdf["dedx_%s" % c_var] = chi2pid.dedx(trkhitdf, gain="ICARUS", calibrate="ICARUS", isMC=ismc, new_calo_params=chi2pid.CALO_VARIATIONS[c_var])
+            trkhitdf["dedx_%s" % c_var] = chi2pid.dedx(trkhitdf, gain="ICARUS", calibrate="ICARUS", isMC=ismc, new_calo_params=chi2pid.ICARUS_CALO_VARIATIONS[c_var])
     elif do_calo_syst:
         dedx_hi = chi2pid.dedx(trkhitdf, gain="SBND", calibrate="SBND", isMC=ismc, scale=1.02)
         trkhitdf["dedx_hi"] = dedx_hi
@@ -210,7 +210,7 @@ def make_pandora_no_cuts_df(f, do_calo_syst=False):
         dedx_smear13 = chi2pid.dedx(trkhitdf, gain="SBND", calibrate="SBND", isMC=ismc, smear=0.13)
         trkhitdf["dedx_smear13"] = dedx_smear13
         for c_var in calo_variations:
-            trkhitdf["dedx_%s" % c_var] = chi2pid.dedx(trkhitdf, gain="SBND", calibrate="SBND", isMC=ismc, new_calo_params=chi2pid.CALO_VARIATIONS[c_var])
+            trkhitdf["dedx_%s" % c_var] = chi2pid.dedx(trkhitdf, gain="SBND", calibrate="SBND", isMC=ismc, new_calo_params=chi2pid.SBND_CALO_VARIATIONS[c_var])
 
     trkdf["chi2u"] = chi2pid.chi2u(trkhitdf, dedxname="dedx_redo")[0]
     trkdf["chi2p"] = chi2pid.chi2p(trkhitdf, dedxname="dedx_redo")[0]
