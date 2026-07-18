@@ -522,7 +522,11 @@ def make_pandora_no_cuts_df(f, do_calo_syst=False):
 
     # Flash value for trigger emulation. Note: these need to be scaled per-detector, per-Run
     flashes = make_opflashdf(f)
-    intime = (flashes.firsttime > -5) & (flashes.firsttime < 5)
+    if DETECTOR == "ICARUS":
+        timename = "firsttime"
+    elif DETECTOR == "SBND":
+        timename = "time"
+    intime = (flashes[timename] > -5) & (flashes[timename] < 5)
     maxpe = (flashes.totalpe*intime).groupby(level=[0]).max().rename("flash_maxpe")
     slcdf = slcdf.join(maxpe)
     sumpe = (flashes.totalpe*intime).groupby(level=[0]).sum().rename("flash_sumpe")
