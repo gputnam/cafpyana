@@ -192,7 +192,7 @@ def dqdx(dqdxdf, gain=None, calibrate=None, isMC=False):
 
     return dqdx*gain_perhit
 
-def dedx(dqdxdf, gain=None, calibrate=None, plane=2, isMC=False, smear=-1, scale=1, new_calo_params=None):
+def dedx(dqdxdf, gain=None, calibrate=None, plane=2, isMC=False, smear=-1, sqrt_smear=-1, scale=1, new_calo_params=None):
     dqdx_v = dqdx(dqdxdf, gain=gain, calibrate=calibrate, isMC=isMC)
     if gain == "SBND":
 
@@ -225,7 +225,9 @@ def dedx(dqdxdf, gain=None, calibrate=None, plane=2, isMC=False, smear=-1, scale
         dedx = calo.recombination_cor(scale*dqdx_v/scalegain, dqdxdf.phi, dqdxdf.efield, dqdxdf.rho)
 
     if smear > 0:
-        dedx = dedx*np.random.normal(loc=1., scale=smear, size=dedx.size)
+        dedx = dedx*np.clip(np.random.normal(loc=1., scale=smear, size=dedx.size), 0, 2)
+    elif sqrt_smear > 0:
+        dedx = dedx*np.clip(np.random.normal(loc=1., scale=sqrt_smear/np.sqrt(dedx/5.), size=dedx.size), 0, 2)
 
     return dedx
 
