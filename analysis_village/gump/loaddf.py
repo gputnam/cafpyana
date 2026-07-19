@@ -226,7 +226,7 @@ def load_one(fname, idf,
     detector=None, # One of SBND, ICARUS, ICARUS Run4
     include_syst=True, nuniv=100, spline=False, xsec_univ=False, xsec_spline=False,# systematic handling
     reweight_aFF=False, pot_univ=False, flux_univ=True, sep_flux_univ=False,
-    load_flashes=True, load_truth=True, load_crt=False, match_Enu=True, # load extra information
+    load_truth=True, load_crt=False, match_Enu=True, # load extra information
     offbeampot=False, # POT handling
     preselection=None, # apply preselection cut
     cache_dir=None, # directory to cache output; None disables caching
@@ -238,7 +238,7 @@ def load_one(fname, idf,
     if cache_dir is not None:
         cache_hash = _cache_key(fname, idf, detector=detector, include_syst=include_syst,
             nuniv=nuniv, spline=spline, xsec_univ=xsec_univ, xsec_spline=xsec_spline, reweight_aFF=reweight_aFF, pot_univ=pot_univ,
-            load_flashes=load_flashes, load_truth=load_truth, load_crt=load_crt,
+            load_truth=load_truth, load_crt=load_crt,
             match_Enu=match_Enu, offbeampot=offbeampot, preselection=preselection)
         cache_file = os.path.join(cache_dir, cache_hash + ".h5")
         if os.path.exists(cache_file):
@@ -268,24 +268,21 @@ def load_one(fname, idf,
         Run = 2
     else: assert(False)
 
-    # LOAD FLASHES
-    if load_flashes:
-        if "flash_maxpe" in df.columns:
-          del df["flash_maxpe"]
+    # apply the scaled pe flash
+    if ismc: # Scale PE for MC-only
+        # Best-fit MC PE scale factors from the data/MC fits in FlashMCDataComparison.ipynb
+        if detector == "SBND": pe_scale = 0.642
+        elif detector == "ICARUS Run2": pe_scale = 0.632
+        elif detector == "ICARUS Run4": pe_scale = 0.358
+    else:
+        pe_scale = 1.0
 
-        flashes = pd.read_hdf(fname, flashname % idf)
-
-        time_name = "firsttime" if detector == "SBND" else "time"
-        if ismc: # Scale PE for MC-only
-            if detector == "SBND": pe_scale = 0.66
-            elif detector == "ICARUS Run2": pe_scale = 0.6
-            elif detector == "ICARUS Run4": pe_scale = 0.4
-        else:
-            pe_scale = 1.0
-
-        intime = (flashes[time_name] > -5) & (flashes[time_name] < 5)
-        maxpe = (flashes.totalpe*intime).groupby(level=[0, 1]).max().rename("flash_maxpe")*pe_scale
-        df = df.join(maxpe)
+    if "ICARUS" in detector:
+        df["flash_maxpe"] = df["flash_maxpe_cryo0"] * pe_scale
+        df.loc[df.slc_vtx_x > 0, "flash_maxpe"] = df["flash_maxpe_cryo1"] * pe_scale
+    else:
+        df["flash_maxpe"] = df["flash_maxpe"] * pe_scale
+    df["flash_maxpe"] = df["flash_maxpe"].fillna(0.).astype(float)
 
     # Apply preselection
     if preselection is not None:
