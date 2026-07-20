@@ -41,6 +41,7 @@ trigger_info_branches = [
 
 opflashbranches = [
     "rec.opflashes.firsttime",
+    "rec.opflashes.cryo",
     "rec.opflashes.time",
     "rec.opflashes.totalpe",
 ]
@@ -129,6 +130,7 @@ crthitbranches = [
   "rec.crt_hits.t0",
   "rec.crt_hits.pe",
   "rec.crt_hits.plane",
+  "rec.crt_hits.truth.bestmatch_id",
 ]
 
 

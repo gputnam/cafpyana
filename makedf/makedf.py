@@ -93,7 +93,6 @@ def make_mcnuwgtdf_slim(f):
 
 # TODO: zip the nuniv configs
 def make_mcnudf(f, include_weights=False, multisim_nuniv=100, genie_multisim_nuniv=100, wgt_types=["bnb","genie"], slim=False, genie_systematics=None):
-    print(wgt_types)
     # ----- sbnd or icarus? -----
     det = loadbranches(f["recTree"], ["rec.hdr.det"]).rec.hdr.det
     if (1 == det.unique()):
@@ -109,21 +108,12 @@ def make_mcnudf(f, include_weights=False, multisim_nuniv=100, genie_multisim_nun
         else:
             df_list = []
             if "bnb" in wgt_types:
-                print(f"file: {f}")
-                print("bnb in wgt_types")
                 bnbwgtdf = bnbsyst.bnbsyst(f, mcdf.ind, multisim_nuniv=multisim_nuniv, slim=slim)
-                print("bnbwgtdf:", bnbwgtdf)
                 df_list.append(bnbwgtdf)
             if "genie" in wgt_types:
-                print(f"file: {f}")
-                print("genie in wgt_types")
                 geniewgtdf = geniesyst.geniesyst(f, mcdf.ind, multisim_nuniv=genie_multisim_nuniv, slim=slim, systematics=genie_systematics)
-                print("geniewgtdf:", geniewgtdf)
                 df_list.append(geniewgtdf)
-            print(df_list)
             wgtdf = pd.concat(df_list, axis=1)
-            print(mcdf)
-            print(wgtdf)
             mcdf = multicol_concat(mcdf, wgtdf)
 
     return mcdf
@@ -381,6 +371,11 @@ def make_mcdf(f, branches=mcbranches, primbranches=mcprimbranches):
     pdf = mcprimdf[mcprimdf.pdg==2212].sort_values(mcprimdf.index.names[:2] + [("genE", "")]).groupby(level=[0,1]).last()
     pdf.columns = pd.MultiIndex.from_tuples([tuple(["p"] + list(c)) for c in pdf.columns])
 
+    # sub-leading proton
+    p2df = mcprimdf[mcprimdf.pdg==2212].sort_values(mcprimdf.index.names[:2] + [("genE", "")]).groupby(level=[0,1]).tail(2).groupby(level=[0,1]).first()
+    p2df.columns = pd.MultiIndex.from_tuples([tuple(["p2"] + list(c)) for c in p2df.columns])
+    p2df = p2df[p2df.p2.length != pdf.p.length] # remove single-proton slices
+
     # electron info
     edf = mcprimdf[np.abs(mcprimdf.pdg)==11].sort_values(mcprimdf.index.names[:2] + [("genE", "")]).groupby(level=[0,1]).last()
     edf.columns = pd.MultiIndex.from_tuples([tuple(["e"] + list(c)) for c in edf.columns])
@@ -388,19 +383,32 @@ def make_mcdf(f, branches=mcbranches, primbranches=mcprimbranches):
     mcdf = multicol_merge(mcdf, mudf, left_index=True, right_index=True, how="left", validate="one_to_one")
     mcdf = multicol_merge(mcdf, cpidf, left_index=True, right_index=True, how="left", validate="one_to_one")
     mcdf = multicol_merge(mcdf, pdf, left_index=True, right_index=True, how="left", validate="one_to_one")
+    mcdf = multicol_merge(mcdf, p2df, left_index=True, right_index=True, how="left", validate="one_to_one")
     mcdf = multicol_merge(mcdf, edf, left_index=True, right_index=True, how="left", validate="one_to_one")
 
     # primary track variables
     mcdf.loc[:, ('mu','totp','')] = np.sqrt(mcdf.mu.genp.x**2 + mcdf.mu.genp.y**2 + mcdf.mu.genp.z**2)
+    mcdf.loc[:, ('e','totp','')] = np.sqrt(mcdf.e.genp.x**2 + mcdf.e.genp.y**2 + mcdf.e.genp.z**2)
+    mcdf.loc[:, ('cpi','totp','')] = np.sqrt(mcdf.cpi.genp.x**2 + mcdf.cpi.genp.y**2 + mcdf.cpi.genp.z**2)
     mcdf.loc[:, ('p','totp','')] = np.sqrt(mcdf.p.genp.x**2 + mcdf.p.genp.y**2 + mcdf.p.genp.z**2)
+    mcdf.loc[:, ('p2','totp','')] = np.sqrt(mcdf.p2.genp.x**2 + mcdf.p2.genp.y**2 + mcdf.p2.genp.z**2)
 
     # opening angles
     mcdf.loc[:, ('mu','dir','x')] = mcdf.mu.genp.x/mcdf.mu.totp
     mcdf.loc[:, ('mu','dir','y')] = mcdf.mu.genp.y/mcdf.mu.totp
     mcdf.loc[:, ('mu','dir','z')] = mcdf.mu.genp.z/mcdf.mu.totp
+    mcdf.loc[:, ('e','dir','x')] = mcdf.e.genp.x/mcdf.e.totp
+    mcdf.loc[:, ('e','dir','y')] = mcdf.e.genp.y/mcdf.e.totp
+    mcdf.loc[:, ('e','dir','z')] = mcdf.e.genp.z/mcdf.e.totp
+    mcdf.loc[:, ('cpi','dir','x')] = mcdf.cpi.genp.x/mcdf.cpi.totp
+    mcdf.loc[:, ('cpi','dir','y')] = mcdf.cpi.genp.y/mcdf.cpi.totp
+    mcdf.loc[:, ('cpi','dir','z')] = mcdf.cpi.genp.z/mcdf.cpi.totp
     mcdf.loc[:, ('p','dir','x')] = mcdf.p.genp.x/mcdf.p.totp
     mcdf.loc[:, ('p','dir','y')] = mcdf.p.genp.y/mcdf.p.totp
     mcdf.loc[:, ('p','dir','z')] = mcdf.p.genp.z/mcdf.p.totp
+    mcdf.loc[:, ('p2','dir','x')] = mcdf.p2.genp.x/mcdf.p2.totp
+    mcdf.loc[:, ('p2','dir','y')] = mcdf.p2.genp.y/mcdf.p2.totp
+    mcdf.loc[:, ('p2','dir','z')] = mcdf.p2.genp.z/mcdf.p2.totp
 
     # endpoints
     mcdf.loc[:, ('mu','end','x')] = mcdf.mu.end.x

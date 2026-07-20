@@ -171,7 +171,7 @@ class StatSampleSystematic(object):
         return np.diag(var)
 
 class CorrelatedSystematic(Systematic):
-    def __init__(self, a, b):        
+    def __init__(self, a, b):
         self.systa = a
         self.systb = b
 
@@ -251,6 +251,38 @@ class SampleSystematic(Systematic):
             bins = [bins]
 
         return np.histogramdd([self.dfs[i_univ].loc[self.dfs[i_univ][cut], v].fillna(fillna) for v in var], bins=bins, weights=self.dfs[i_univ].loc[self.dfs[i_univ][cut], self.scale])[0].flatten()
+
+class SelectionSystematic(Systematic):
+    """Systematic evaluated by re-histogramming the SAME dataframe with
+    alternate boolean selection columns (one universe per column).
+
+    With avg=True (default), an [up, dn] pair of one-sided universes is
+    averaged; a single one-sided universe is treated as a symmetrized
+    1-sigma variation.
+    """
+    def __init__(self, df, cuts, scale="glob_scale", avg=True):
+        if not isinstance(cuts, list):
+            cuts = [cuts]
+        self.df = df
+        self.cuts = cuts
+        self.scale = scale
+        self._avg = avg
+
+    def nuniv(self):
+        return len(self.cuts)
+
+    def avg(self):
+        return self._avg
+
+    def univ(self, var, cut, bins, i_univ, fillna=np.nan):
+        # ignores the CV cut name passed in; uses this universe's own cut column
+        if not isinstance(var, list):
+            var = [var]
+            bins = [bins]
+        c = self.cuts[i_univ]
+        return np.histogramdd([self.df.loc[self.df[c], v].fillna(fillna) for v in var],
+                              bins=bins,
+                              weights=self.df.loc[self.df[c], self.scale])[0].flatten()
 
 class WeightSystematic(Systematic):
     def __init__(self, df, wgts, avg=True, scale="glob_scale"):
