@@ -226,6 +226,7 @@ def load_one(fname, idf,
     detector=None, # One of SBND, ICARUS, ICARUS Run4
     include_syst=True, nuniv=100, spline=False, xsec_univ=False, xsec_spline=False,# systematic handling
     reweight_aFF=False, pot_univ=False, flux_univ=True, sep_flux_univ=False,
+    pot_spline=False, detvar_spline=False,
     load_truth=True, load_crt=False, match_Enu=True, # load extra information
     offbeampot=False, # POT handling
     preselection=None, # apply preselection cut
