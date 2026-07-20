@@ -653,7 +653,10 @@ def make_gump_nudf(f, is_slc=False):
     else:
         print("Detector unclear, check rec.hdr.det!")
 
-    is_fv = fv_cut(nudf.position, 0,0,0,0,detector=DETECTOR, Run=RUN)
+    nudf["detector"] = DETECTOR
+    nudf["Run"] = RUN
+
+    is_fv = true_fv_cut(nudf)
     is_cc = nudf.iscc
     is_nc = (nudf.iscc == 0)
     genie_mode = nudf.genie_mode
