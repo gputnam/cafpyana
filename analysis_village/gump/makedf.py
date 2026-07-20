@@ -55,7 +55,7 @@ def make_spine_no_cuts_df(f):
     df = df[~np.isnan(df.mu.pid) & ~np.isnan(df.p.pid)]
 
     # require fiducial verex
-    df = df[slcfv_cut(df.vertex)]
+    df = df[vtxfv_cut(df.vertex, DETECTOR)]
 
     # lookup stuff
     true_pdg = df.truth.pdg
@@ -737,13 +737,6 @@ def make_gump_nudf(f, is_slc=False):
     run = loadbranches(f["recTree"], ["rec.hdr.run"]).rec.hdr.run
     if det.empty:
         return pd.DataFrame()
-
-    if 'run2' or 'Run2' in f.file_path:
-        RUN = 2
-    elif 'run4' or 'Run4' in f.file_path:
-        RUN = 4
-    elif 'SBND' or 'sbnd' in f.file_path:
-        RUN = 1
 
     if (1 == det.unique()):
         DETECTOR = "SBND"

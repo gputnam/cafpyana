@@ -104,7 +104,7 @@ void MakesBruceNew(const char* fileName = "input.root", const char* output_filen
                     if (arraySize == 7) {
                         current_sigma = {-3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0}; //
                     } else if (arraySize == 3) {
-                        current_sigma = {0.0, -1.0, 1.0}; //
+                        current_sigma = {0.0, 1.0, -1.0}; //
                     } else if (arraySize == 2) {
                         current_sigma = {0.0, 1.0}; //
                     } else {

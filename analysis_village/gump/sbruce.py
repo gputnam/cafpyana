@@ -31,15 +31,14 @@ def export_dataframe_to_uproot(df, output_filename, tree_name="SelectedEvents"):
 
         else:
             print(f"  -> Column '{col}': Detected flat scalar structure.")
+
             if df[col].dtype == object:
                 print(
                     f"     [!] Warning: Column '{col}' has object dtype. Forcing numeric conversion."
                 )
-                uproot_payload[col] = pd.to_numeric(df[col], errors="coerce").fillna(-999).to_numpy()
-            elif df[col].dtypes != 'category' and df[col].dtypes != 'Int8':
-                uproot_payload[col] = df[col].fillna(-999).to_numpy()
-            elif df[col].dtypes == 'Int8':
-                uproot_payload[col] = df[col].fillna(-128).to_numpy()
+                uproot_payload[col] = pd.to_numeric(df[col], errors="coerce").to_numpy()
+            else:
+                uproot_payload[col] = df[col].to_numpy()
 
     # Write out the sanitized payload
     print(f"Writing staged columns to {output_filename} [{tree_name}]...")

@@ -23,6 +23,7 @@ class PlotObj:
     self.label = label
 
 # Colors for plots
+HAWKS_COLORS = ["#315031", "#d54c28", "#1e3f54", "#c89648", "#43140b", "#95af8b"]
 FONTSIZE = 14
 plt.style.use('/exp/sbnd/app/users/nrowe/cafpyana/analysis_village/gump/dune.mplstyle')
 
@@ -167,7 +168,7 @@ def plot_top(df, var, title, outfile, label, mode_labels, det, eff_bool=False):
     plt.ylabel('Events')
 
     n, bins, _ = plt.hist(tvar, bins=np.linspace(0,2.5,21), stacked=True, label=top_labels, 
-                        weights=[glob_scale*np.ones_like(t) for t in tvar])
+                        color=HAWKS_COLORS, weights=[glob_scale*np.ones_like(t) for t in tvar])
 
     plt.title(f"$\\bf{{{det}}}$  {title}")
     plt.legend()
@@ -194,7 +195,7 @@ def plot_int(df, var, title, outfile, label, mode_labels, det):
     plt.ylabel('Events')
 
     n, bins, _ = plt.hist(pvar, bins=np.linspace(0,2,21), stacked=True, label=mode_labels, 
-                      weights=[glob_scale*np.ones_like(p) for p in pvar])
+                      color=HAWKS_COLORS, weights=[glob_scale*np.ones_like(p) for p in pvar])
 
     plt.title(f"$\\bf{{{det}}}$  {title}")
     plt.legend()
@@ -221,7 +222,7 @@ def plot_fs(df, title, outfile, det):
 
     df_fs = [df[p] for p in prim_v]
     ax.set_xticks(bin_centers, [str(i) for i in bin_numbers])
-    plt.hist(df_fs, bins=b, stacked=True, label=prim_v_labels, 
+    plt.hist(df_fs, bins=b, stacked=True, label=prim_v_labels, color=HAWKS_COLORS[:-1], 
             weights=[glob_scale*np.ones_like(p) for p in df_fs])
 
     plt.title(f"$\\bf{{{det}}}$  {title}")
@@ -243,13 +244,13 @@ def plot_PID_cut(var, cut_vals, title, outfile, xlims=[0, 100],
     ax1.set_title(title+" Cut")
     plt.subplots_adjust(hspace=0)
 
-    n1, bins, _ = ax1.hist(var_nd[0], bins=b, histtype='step', 
+    n1, bins, _ = ax1.hist(var_nd[0], bins=b, histtype='step', color=HAWKS_COLORS[0], 
                            label=labels[0], stacked=False, weights=[1/len(var_nd[0])]*len(var_nd[0]), linestyle='-')
-    n2, bins, _ = ax1.hist(var_nd[1], bins=b, histtype='step', 
+    n2, bins, _ = ax1.hist(var_nd[1], bins=b, histtype='step', color=HAWKS_COLORS[0], 
                            label=labels[1], stacked=False, weights=[1/len(var_nd[1])]*len(var_nd[1]), linestyle='--')
-    n3, bins, _ = ax2.hist(var_fd[0], bins=b, histtype='step', 
+    n3, bins, _ = ax2.hist(var_fd[0], bins=b, histtype='step', color=HAWKS_COLORS[1], 
                            label=labels[2], stacked=False, weights=[1/len(var_fd[0])]*len(var_fd[0]), linestyle='-')
-    n4, bins, _ = ax2.hist(var_fd[1], bins=b, histtype='step', 
+    n4, bins, _ = ax2.hist(var_fd[1], bins=b, histtype='step', color=HAWKS_COLORS[1], 
                            label=labels[3], stacked=False, weights=[1/len(var_fd[1])]*len(var_fd[1]), linestyle='--')
 
     for ax in [ax1, ax2]:
@@ -292,14 +293,14 @@ def plot_nuscore_cut(var_nd, cut_vals_nd, var_fd, cut_vals_fd, title, outfile, x
     plt.subplots_adjust(hspace=0)
     
     b = np.linspace(xlims[0], xlims[1], 40)
-    n1, bins, _ = ax1.hist(var_nd[0], bins=b, histtype='step', 
+    n1, bins, _ = ax1.hist(var_nd[0], bins=b, histtype='step', color=HAWKS_COLORS[0], 
                            label=labels[0], stacked=False, weights=[1/len(var_nd[0])]*len(var_nd[0]), linestyle='-')
-    n2, bins, _ = ax1.hist(var_nd[1], bins=b, histtype='step', 
+    n2, bins, _ = ax1.hist(var_nd[1], bins=b, histtype='step', color=HAWKS_COLORS[0], 
                            label=labels[1], stacked=False, weights=[1/len(var_nd[1])]*len(var_nd[1]), linestyle='--')
-    n3, bins, _ = ax2.hist(var_fd[0], bins=b, histtype='step', 
+    n3, bins, _ = ax2.hist(var_fd[0], bins=b, histtype='step', color=HAWKS_COLORS[1], 
                            label=labels[2], stacked=False, weights=[1/len(var_fd[0])]*len(var_fd[0]), linestyle='-')
 
-    n4, bins, _ = ax2.hist(var_fd[1], bins=b, histtype='step', 
+    n4, bins, _ = ax2.hist(var_fd[1], bins=b, histtype='step', color=HAWKS_COLORS[1], 
                            label=labels[3], stacked=False, weights=[1/len(var_fd[1])]*len(var_fd[1]), linestyle='--')
 
     # Style
