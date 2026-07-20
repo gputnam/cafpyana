@@ -197,29 +197,54 @@ truthvars = {
 }
 
 detvar_rwt_files = [
-  'rwt_outputs/SBND_WMXThetaXW.txt', 
-  'rwt_outputs/SBND_WMYZ.txt', 
+  'rwt_outputs/SBND_WMXThetaXW.txt',
+  'rwt_outputs/SBND_WMYZ.txt',
   ['rwt_outputs/SBND_0xSCE.txt', 'rwt_outputs/SBND_2xSCE.txt'],
-  'rwt_outputs/SBND_SmeareddEdx.txt', 
-  'rwt_outputs/ICARUSRun2_SmeareddEdx.txt', 
-  'rwt_outputs/ICARUSRun2_WMXThetaXW.txt', 
-  'rwt_outputs/ICARUSRun4_SmeareddEdx.txt', 
+  'rwt_outputs/SBND_SmeareddEdx.txt',
+  'rwt_outputs/ICARUSRun2_SmeareddEdx.txt',
+  'rwt_outputs/ICARUSRun2_WMXThetaXW.txt',
+  'rwt_outputs/ICARUSRun4_SmeareddEdx.txt',
   'rwt_outputs/SBND_GainHi.txt',
   'rwt_outputs/ICARUSRun2_GainHi.txt',
   'rwt_outputs/ICARUSRun4_GainHi.txt',
+  'rwt_outputs/SBND_EMBAlpha.txt',
+  'rwt_outputs/ICARUSRun2_EMBAlpha.txt',
+  'rwt_outputs/ICARUSRun4_EMBAlpha.txt',
+  'rwt_outputs/SBND_EMBBeta.txt',
+  'rwt_outputs/ICARUSRun2_EMBBeta.txt',
+  'rwt_outputs/ICARUSRun4_EMBBeta.txt',
+  'rwt_outputs/SBND_EMBR.txt',
+  'rwt_outputs/ICARUSRun2_EMBR.txt',
+  'rwt_outputs/ICARUSRun4_EMBR.txt',
+  'rwt_outputs/SBND_TrigEff.txt',
+  'rwt_outputs/ICARUSRun2_TrigEff.txt',
+  'rwt_outputs/ICARUSRun4_TrigEff.txt',
+
 ]
 
 detvar_rwt_lbls = [
-  'WireMod_SBND_multisigma_WMXThetaXW', 
-  'WireMod_SBND_multisigma_WMYZ', 
-  'SCE_SBND_multisigma_SCE', 
+  'WireMod_SBND_multisigma_WMXThetaXW',
+  'WireMod_SBND_multisigma_WMYZ',
+  'SCE_SBND_multisigma_SCE',
   'SBND_PID_Smear',
   'ICARUSRun2_PID_Smear',
-  'WireMod_ICARUSRun2_multisigma_WMXThetaXW', 
+  'WireMod_ICARUSRun2_multisigma_WMXThetaXW',
   'ICARUSRun4_PID_Smear',
   'SBND_PID_Gain',
   'ICARUSRun2_PID_Gain',
   'ICARUSRun4_PID_Gain'
+  'SBND_PID_Alpha',
+  'ICARUSRun2_PID_Alpha',
+  'ICARUSRun4_PID_Alpha'
+  'SBND_PID_Beta',
+  'ICARUSRun2_PID_Beta',
+  'ICARUSRun4_PID_Beta'
+  'SBND_PID_R',
+  'ICARUSRun2_PID_R',
+  'ICARUSRun4_PID_R'
+  'SBND_TrigEff',
+  'ICARUSRun2_TrigEff',
+  'ICARUSRun4_TrigEff'
 ]
 
 std_drops = ['is_clear_cosmic', 'crlongtrkdiry', 'p_len', 'mu_E', 'mu_T', 
@@ -254,7 +279,6 @@ def get_std_drops():
 def scale_pot(df, pot, desired_pot):
     """Scale DataFrame by desired POT."""
     scale = desired_pot / pot
-    print(scale)
     df['glob_scale'] = scale * df.cvwgt
     return pot, scale
 

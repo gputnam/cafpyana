@@ -133,9 +133,6 @@ def main():
         #drops=get_cols_to_drop(),
         lightmem=True,
     )
-    for c in df.columns:
-        if 'SBND' in c:
-            print(df[c])
     # Step 2: Export to intermediate uproot template structure
     print("\n--- Step 2: Exporting to Staging Uproot Structure ---")
     export_dataframe_to_uproot(df, temp_stage1_root)

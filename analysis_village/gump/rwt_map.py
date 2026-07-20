@@ -110,21 +110,21 @@ def plot_2d_hist_from_file(filename, plot_title, output_tag):
     plt.savefig('/exp/sbnd/app/users/nrowe/cafpyana/analysis_village/gump/rwt_outputs/2d_ratio_'+output_tag+'.png', dpi=300)
     plt.clf() 
 
-def remake_detvar_maps(detector, DF_DIR="/exp/sbnd/data/users/gputnam/GUMP/sbn-rewgted-7/"):
+def remake_detvar_maps(detector, DF_DIR="/exp/sbnd/data/users/gputnam/GUMP/sbn-rewgted-9/"):
     
     if detector == "ICARUS Run2":
         GOAL_POT = 2e20
-        DETVAR_FILES = [[DF_DIR + "ICARUS_SpringMCOverlay_rewgt.df"], [DF_DIR + "ICARUS_Spring_WMLooseXTHXW.df"], [DF_DIR + "ICARUS_Spring_SCE.df"]]
+        DETVAR_FILES = [[DF_DIR + "ICARUSRun2_SpringMCOverlay_rewgt.df"], [DF_DIR + "ICARUSRun2_Spring_Overlay_WMXThXW.df"], [DF_DIR + "ICARUSRun2_Spring_Overlay_SCE.df"]]
         DETVAR_NAMES = ["Nominal", "WMXThetaXW", "SCE"]
     elif detector == "ICARUS Run4":
         GOAL_POT = 3e20
-        DETVAR_FILES = [[DF_DIR + "ICARUSRun4_SpringMCOverlay_rewgt_%i.df" % i for i in range(10)]]
-        DETVAR_NAMES = ["Nominal"]
+        DETVAR_FILES = [[DF_DIR + "ICARUSRun4_SpringMCOverlay_rewgt_%i.df" % i for i in range(2)], [DF_DIR + "ICARUSRun4_Spring_Overlay_SCE.df"]]
+        DETVAR_NAMES = ["Nominal", "SCE"]
     elif detector == "SBND": 
         GOAL_POT = 1e20
-        DETVAR_FILES = [[DF_DIR + "SBND_SpringMC_rewgt_E_%i.df" % i for i in range(20)], 
-                        [DF_DIR + "SBND_SpringMC_BigWMXThetaXW_%i.df" % i for i in range(10)], 
-                        [DF_DIR + "SBND_SpringMC_BigWMYZ_%i.df" % i for i in range(2)], 
+        DETVAR_FILES = [[DF_DIR + "SBNDMCCV_%i.df" % i for i in range(3)], 
+                        [DF_DIR + "SBND_SpringMC_WMXThetaXW.df"], 
+                        [DF_DIR + "SBND_SpringMC_WMYZ.df"], 
                        ]
 
         DETVAR_NAMES = ["Nominal", "WMXThetaXW", "WMYZ"]
@@ -157,8 +157,8 @@ def remake_detvar_maps(detector, DF_DIR="/exp/sbnd/data/users/gputnam/GUMP/sbn-r
         loaddf.scale_pot(detvars[i], detvar_pots[i], GOAL_POT)
     
     df = detvars[0]
-    detvars.extend([syst.v_chi2smear(df), syst.v_chi2hi(df)])
-    DETVAR_NAMES.extend(["Smeared dE/dx", "Gain Hi"]) 
+    detvars.extend([syst.v_chi2smear(df), syst.v_chi2hi(df), syst.v_chi2alpha(df), syst.v_chi2beta(df), syst.v_chi2R(df), syst.v_flashscale(df, 1), syst.v_flashscale(df, -1)])
+    DETVAR_NAMES.extend(["Smeared dE/dx", "Gain Hi", "EMB Alpha", "EMB Beta", "EMB R", "TrigEffPls", "TrigEffMin"]) 
 
     b = [np.array([0.3, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.25, 1.5]), [0.0, 0.2, 0.4, 0.6]]
     hists = []
@@ -167,10 +167,11 @@ def remake_detvar_maps(detector, DF_DIR="/exp/sbnd/data/users/gputnam/GUMP/sbn-r
         hists.append(np.histogram2d(*d.loc[d['selected'], ['nu_E_calo', 'del_p']].to_numpy().T, bins=b)[0])
 
     for name, h in zip(DETVAR_NAMES[1:], hists[1:]):
-        save_histogram(f"{detector.replace(' ','')}_{name.replace('/', '').replace(' ','')}.txt", h/hists[0], b[0], b[1])
+        save_histogram(f"rwt_outputs/{detector.replace(' ','')}_{name.replace('/', '').replace(' ','')}.txt", h/hists[0], b[0], b[1])
 
-    ### SBND SCE now uses a different CV file than the WM samples, this is really cool and not annoying at all
+    ## SBND SCE now uses a different CV file than the WM samples, this is really cool and not annoying at all
     if detector == "SBND":
+        print("test")
         detvars, detvarsmatch, detvar_pots = zip(*tqdm([loaddf.load(f, preselection=gc.slcfv_cut, include_syst=False, detector=detector) for f in DETVAR_FILES_SMALL]))
         detvars, detvar_pots = loaddf.match_common_evts(detvarsmatch, detvars, detvar_pots)
 
@@ -183,7 +184,7 @@ def remake_detvar_maps(detector, DF_DIR="/exp/sbnd/data/users/gputnam/GUMP/sbn-r
             d['selected'] = gc.all_cuts(d)
             hists.append(np.histogram2d(*d.loc[d['selected'], ['nu_E_calo', 'del_p']].to_numpy().T, bins=b)[0])
 
-        for name, h in zip(DETVAR_NAMES[1:], hists[1:]):
+        for name, h in zip(DETVAR_NAMES_SMALL[1:], hists[1:]):
             save_histogram(f"rwt_outputs/{detector.replace(' ','')}_{name.replace('/', '').replace(' ','')}.txt", h/hists[0], b[0], b[1])
 
 if __name__ == "__main__":
