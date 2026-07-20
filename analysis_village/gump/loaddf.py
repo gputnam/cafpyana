@@ -427,7 +427,8 @@ def load_one(fname, idf,
         crthit = ((crt.time > -1) & (crt.time < 1.8) & (crt.plane != 50)).groupby(level=[0, 1]).any()
         crthit.name = "crthit"
         df = df.join(crthit, on=["__ntuple", "entry"])
-
+        
+    df["crthit"] = df.crthit.fillna(False).astype(bool)
     # LOAD WEIGHTS
     if reweight_aFF or include_syst:
         wgt = pd.read_hdf(fname, wgtname % idf) 
