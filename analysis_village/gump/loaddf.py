@@ -41,6 +41,66 @@ FLASH = "flash_%i"
 pot_syst = {'ms3': 0.982714, 'ms2': 0.9887274, 'ms1': 0.99474195, 'cv': 1.0, 'ps1': 1.005, 'ps2': 1.01, 'ps3': 1.015}
 
 xsec_syst = [
+    # CCQE
+    "GENIEReWeight_SBN_v1_multisigma_VecFFCCQEshape",
+    'GENIEReWeight_SBN_v1_multisigma_CoulombCCQE',
+
+    # MEC
+    'GENIEReWeight_SBN_v1_multisigma_NormCCMEC',
+    'GENIEReWeight_SBN_v1_multisigma_NormNCMEC',
+    "GENIEReWeight_SBN_v1_multisigma_DecayAngMEC",
+
+    # RES
+    "GENIEReWeight_SBN_v1_multisigma_Theta_Delta2Npi",
+    "GENIEReWeight_SBN_v1_multisigma_ThetaDelta2NRad",
+    "GENIEReWeight_SBN_v1_multisigma_MaCCRES",
+    "GENIEReWeight_SBN_v1_multisigma_MaNCRES",
+    "GENIEReWeight_SBN_v1_multisigma_MvCCRES",
+    "GENIEReWeight_SBN_v1_multisigma_MvNCRES",
+    "GENIEReWeight_SBN_v1_multisigma_RDecBR1gamma",
+    "GENIEReWeight_SBN_v1_multisigma_RDecBR1eta",
+
+    # Non-Res
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvpCC1pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvpCC2pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvpNC1pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvpNC2pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvnCC1pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvnCC2pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvnNC1pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvnNC2pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvbarpCC1pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvbarpCC2pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvbarpNC1pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvbarpNC2pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvbarnCC1pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvbarnCC2pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvbarnNC1pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvbarnNC2pi',
+
+    # DIS
+    # "GENIEReWeight_SBN_v1_multisim_DISBYVariationResponse",
+    'GENIEReWeight_SBN_v1_multisigma_AhtBY',
+    'GENIEReWeight_SBN_v1_multisigma_BhtBY',
+    'GENIEReWeight_SBN_v1_multisigma_CV1uBY',
+    'GENIEReWeight_SBN_v1_multisigma_CV2uBY',
+
+    # COH
+    "GENIEReWeight_SBN_v1_multisigma_NormCCCOH",
+    "GENIEReWeight_SBN_v1_multisigma_NormNCCOH",
+
+    # FSI
+    'GENIEReWeight_SBN_v1_multisigma_MFP_pi',
+    'GENIEReWeight_SBN_v1_multisigma_FrCEx_pi',
+    'GENIEReWeight_SBN_v1_multisigma_FrInel_pi',
+    'GENIEReWeight_SBN_v1_multisigma_FrAbs_pi',
+    'GENIEReWeight_SBN_v1_multisigma_FrPiProd_pi',
+
+    # NCEL
+    'GENIEReWeight_SBN_v1_multisigma_MaNCEL',
+    'GENIEReWeight_SBN_v1_multisigma_EtaNCEL',
+
+    # Systematics introduced by Ar23+
     "CCQETemplateReweight_SBN_v3_LFGToSF_q0bin0",
     "CCQETemplateReweight_SBN_v3_LFGToSF_q0bin1",
     "CCQETemplateReweight_SBN_v3_LFGToSF_q0bin2",
@@ -59,7 +119,6 @@ xsec_syst = [
     "CCQETemplateReweight_SBN_v3_HFToCRPA_q0bin3",
     "CCQETemplateReweight_SBN_v3_HFToCRPA_q0bin4",
 
-    # QE-INT
     "QEInterference_SBN_v3_QEIntf_dial_0",
     "QEInterference_SBN_v3_QEIntf_dial_1",
     "QEInterference_SBN_v3_QEIntf_dial_2",
@@ -67,9 +126,6 @@ xsec_syst = [
     "QEInterference_SBN_v3_QEIntf_dial_4",
     "QEInterference_SBN_v3_QEIntf_dial_5",
 
-    # E-Dep FSI
-    # "GENIEReWeight_SBN_v3_FrG4_N",
-    # "GENIEReWeight_SBN_v3_FrINCL_N",
     "GENIEReWeight_SBN_v3_FrG4LoE_N",
     "GENIEReWeight_SBN_v3_FrG4M1E_N",
     "GENIEReWeight_SBN_v3_FrG4M2E_N",
@@ -82,18 +138,12 @@ xsec_syst = [
     "GENIEReWeight_SBN_v3_MFPM1E_N",
     "GENIEReWeight_SBN_v3_MFPM2E_N",
     "GENIEReWeight_SBN_v3_MFPHiE_N",
-    # "GENIEReWeight_SBN_v3_FrKin_PiProBias_N",
 
-    # QD Fraction
-    # "PionAbsWeighter_SBN_v3_QuasiDeuteronFraction",
-
-    # Z-expansion
     "ZExpPCAWeighter_SBN_v3_MvA_b1",
     "ZExpPCAWeighter_SBN_v3_MvA_b2",
     "ZExpPCAWeighter_SBN_v3_MvA_b3",
     "ZExpPCAWeighter_SBN_v3_MvA_b4",
 
-    # MEC Shape
     "MECq0q3InterpWeighting_SBN_v3_SuSAToVal_MECResponse_q0bin0",
     "MECq0q3InterpWeighting_SBN_v3_SuSAToVal_MECResponse_q0bin1",
     "MECq0q3InterpWeighting_SBN_v3_SuSAToVal_MECResponse_q0bin2",
@@ -102,42 +152,7 @@ xsec_syst = [
     "MECq0q3InterpWeighting_SBN_v3_SuSAToMar_MECResponse_q0bin1",
     "MECq0q3InterpWeighting_SBN_v3_SuSAToMar_MECResponse_q0bin2",
     "MECq0q3InterpWeighting_SBN_v3_SuSAToMar_MECResponse_q0bin3",
-
-    "CCQEXSecCorr_SBN_v3_CCQEXSecCorr",
-    "GENIEReWeight_SBN_v1_multisigma_VecFFCCQEshape",
-    'GENIEReWeight_SBN_v1_multisigma_CoulombCCQE',
-    'GENIEReWeight_SBN_v1_multisigma_NormCCMEC',
-    'GENIEReWeight_SBN_v1_multisigma_NormNCMEC',
-    "GENIEReWeight_SBN_v1_multisigma_DecayAngMEC",
-    # RES
-    "GENIEReWeight_SBN_v1_multisigma_Theta_Delta2Npi",
-    "GENIEReWeight_SBN_v1_multisigma_ThetaDelta2NRad",
-    "GENIEReWeight_SBN_v1_multisigma_MaCCRES",
-    "GENIEReWeight_SBN_v1_multisigma_MaNCRES",
-    "GENIEReWeight_SBN_v1_multisigma_MvCCRES",
-    "GENIEReWeight_SBN_v1_multisigma_MvNCRES",
-
-    # DIS
-    # "GENIEReWeight_SBN_v1_multisim_DISBYVariationResponse",
-    'GENIEReWeight_SBN_v1_multisigma_AhtBY',
-    'GENIEReWeight_SBN_v1_multisigma_BhtBY',
-    'GENIEReWeight_SBN_v1_multisigma_CV1uBY',
-    'GENIEReWeight_SBN_v1_multisigma_CV2uBY',
-    "GENIEReWeight_SBN_v1_multisigma_NormCCCOH",
-    "GENIEReWeight_SBN_v1_multisigma_NormNCCOH",
-    'GENIEReWeight_SBN_v1_multisigma_MFP_pi',
-    'GENIEReWeight_SBN_v1_multisigma_FrCEx_pi',
-    'GENIEReWeight_SBN_v1_multisigma_FrInel_pi',
-    'GENIEReWeight_SBN_v1_multisigma_FrAbs_pi',
-    'GENIEReWeight_SBN_v1_multisigma_FrPiProd_pi',
-    
-    # 'GENIEReWeight_SBNNuSyst_multisigma_EDepFSI_FrG4_N',
-    # 'GENIEReWeight_SBNNuSyst_multisigma_EDepFSI_FrINCL_N',
-
-    # NCEL
-    'GENIEReWeight_SBN_v1_multisigma_MaNCEL',
-    'GENIEReWeight_SBN_v1_multisigma_EtaNCEL'
-    ]
+]
 
 xsec_cv_rwgt = [
     "ZExpPCAWeighter_SBN_v3_MvA_b1",
@@ -211,7 +226,8 @@ def load_one(fname, idf,
     detector=None, # One of SBND, ICARUS, ICARUS Run4
     include_syst=True, nuniv=100, spline=False, xsec_univ=False, xsec_spline=False,# systematic handling
     reweight_aFF=False, pot_univ=False, flux_univ=True, sep_flux_univ=False,
-    load_flashes=True, load_truth=True, load_crt=False, match_Enu=True, # load extra information
+    pot_spline=False, detvar_spline=False,
+    load_truth=True, load_crt=False, match_Enu=True, # load extra information
     offbeampot=False, # POT handling
     preselection=None, # apply preselection cut
     cache_dir=None, # directory to cache output; None disables caching
@@ -223,7 +239,7 @@ def load_one(fname, idf,
     if cache_dir is not None:
         cache_hash = _cache_key(fname, idf, detector=detector, include_syst=include_syst,
             nuniv=nuniv, spline=spline, xsec_univ=xsec_univ, xsec_spline=xsec_spline, reweight_aFF=reweight_aFF, pot_univ=pot_univ,
-            load_flashes=load_flashes, load_truth=load_truth, load_crt=load_crt,
+            load_truth=load_truth, load_crt=load_crt,
             match_Enu=match_Enu, offbeampot=offbeampot, preselection=preselection)
         cache_file = os.path.join(cache_dir, cache_hash + ".h5")
         if os.path.exists(cache_file):
@@ -253,24 +269,21 @@ def load_one(fname, idf,
         Run = 2
     else: assert(False)
 
-    # LOAD FLASHES
-    if load_flashes:
-        if "flash_maxpe" in df.columns:
-          del df["flash_maxpe"]
+    # apply the scaled pe flash
+    if ismc: # Scale PE for MC-only
+        # Best-fit MC PE scale factors from the data/MC fits in FlashMCDataComparison.ipynb
+        if detector == "SBND": pe_scale = 0.642
+        elif detector == "ICARUS Run2": pe_scale = 0.632
+        elif detector == "ICARUS Run4": pe_scale = 0.358
+    else:
+        pe_scale = 1.0
 
-        flashes = pd.read_hdf(fname, flashname % idf)
-
-        time_name = "firsttime" if detector == "SBND" else "time"
-        if ismc: # Scale PE for MC-only
-            if detector == "SBND": pe_scale = 0.66
-            elif detector == "ICARUS Run2": pe_scale = 0.6
-            elif detector == "ICARUS Run4": pe_scale = 0.4
-        else:
-            pe_scale = 1.0
-
-        intime = (flashes[time_name] > -5) & (flashes[time_name] < 5)
-        maxpe = (flashes.totalpe*intime).groupby(level=[0, 1]).max().rename("flash_maxpe")*pe_scale
-        df = df.join(maxpe)
+    if "ICARUS" in detector:
+        df["flash_maxpe"] = df["flash_maxpe_cryo0"] * pe_scale
+        df.loc[df.slc_vtx_x > 0, "flash_maxpe"] = df["flash_maxpe_cryo1"] * pe_scale
+    else:
+        df["flash_maxpe"] = df["flash_maxpe"] * pe_scale
+    df["flash_maxpe"] = df["flash_maxpe"].fillna(0.).astype(float)
 
     # Apply preselection
     if preselection is not None:
@@ -504,6 +517,8 @@ def load_one(fname, idf,
                 skim["%s_univ" % s] = np.clip(wgt[s]["ps1"]/wgt[s]["cv"], 0, 10).fillna(1.)
             elif "morph" in wgt[s]:
                 skim["%s_univ" % s] = np.clip(wgt[s]["morph"], 0, 10).fillna(1.)
+            elif "univ_0" in wgt[s]:
+                skim["%s_univ" % s] = pd.Series(1 + np.sqrt(np.mean([(1 - wgt[s][c].clip(0, 10.))**2 for c in wgt[s].columns], axis=0)), index=wgt.index).fillna(1.)
             else:
                 assert(False)
 

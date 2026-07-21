@@ -240,9 +240,9 @@ def flash_cut(df):
 
     choices = [
         df.flash_maxpe > 2000.0,  # SBND
-        df.flash_maxpe > 6000.0,  # ICARUS Run2
+        df.flash_maxpe > 5000.0,  # ICARUS Run2
         df.flash_maxpe > 1000.0,  # ICARUS Run4
-        ((df.flash_maxpe > 6000.0) & (df.Run == 2))
+        ((df.flash_maxpe > 5000.0) & (df.Run == 2))
         | ((df.flash_maxpe > 1000.0) & (df.Run == 4)),  # ICARUS (Generic)
     ]
 
@@ -284,9 +284,9 @@ def del_p_cut(df):
 def twoprong_cut(df):
     return (np.isnan(df.other_shw_length) & np.isnan(df.other_trk_length))
 
-def pid_cut(df):
+def pid_cut(df, is_old=False):
     return pid_cut_df(df.mu_chi2_of_mu_cand, df.mu_chi2_of_prot_cand,
-        df.prot_chi2_of_mu_cand, df.prot_chi2_of_prot_cand, df.mu_len)
+        df.prot_chi2_of_mu_cand, df.prot_chi2_of_prot_cand, df.mu_len, is_old=is_old)
 
 def pid_cut_df(mu_chi2_mu_cand, mu_chi2_prot_cand, prot_chi2_mu_cand,
             prot_chi2_prot_cand, mu_len, is_old=False):
