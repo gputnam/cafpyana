@@ -376,6 +376,8 @@ def make_pandora_no_cuts_df(f, do_calo_syst=False):
         'mu_T': mu_E - MUON_MASS,
         'p_E': p_E,
         'p_T': p_E - PROTON_MASS,
+        'mu_dist_to_vertex': slcdf.mu.pfp.dist_to_vertex,
+        'p_dist_to_vertex': slcdf.p.pfp.dist_to_vertex,
         'mu_track_score': slcdf.mu.pfp.trackScore,
         'p_track_score': slcdf.p.pfp.trackScore,
         'mu_end_x': slcdf.mu.pfp.trk.end.x,
