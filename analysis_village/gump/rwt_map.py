@@ -110,8 +110,7 @@ def plot_2d_hist_from_file(filename, plot_title, output_tag):
     plt.savefig('/exp/sbnd/app/users/nrowe/cafpyana/analysis_village/gump/rwt_outputs/2d_ratio_'+output_tag+'.png', dpi=300)
     plt.clf() 
 
-def remake_detvar_maps(detector, DF_DIR="/exp/sbnd/data/users/gputnam/GUMP/sbn-rewgted-9/"):
-    
+def remake_detvar_maps(detector, DF_DIR="/exp/sbnd/data/users/gputnam/GUMP/sbn-rewgted-10/"):
     if detector == "ICARUS Run2":
         GOAL_POT = 2e20
         DETVAR_FILES = [[DF_DIR + "ICARUSRun2_SpringMCOverlay_rewgt.df"], [DF_DIR + "ICARUSRun2_Spring_Overlay_WMXThXW.df"], [DF_DIR + "ICARUSRun2_Spring_Overlay_SCE.df"]]
@@ -128,6 +127,7 @@ def remake_detvar_maps(detector, DF_DIR="/exp/sbnd/data/users/gputnam/GUMP/sbn-r
                        ]
 
         DETVAR_NAMES = ["Nominal", "WMXThetaXW", "WMYZ"]
+
 
         DETVAR_FILES_SMALL = [DF_DIR + "SBND_SpringMC_Nom.df", 
                               DF_DIR + "SBND_SpringMC_2xSCE.df", 
@@ -171,7 +171,6 @@ def remake_detvar_maps(detector, DF_DIR="/exp/sbnd/data/users/gputnam/GUMP/sbn-r
 
     ## SBND SCE now uses a different CV file than the WM samples, this is really cool and not annoying at all
     if detector == "SBND":
-        print("test")
         detvars, detvarsmatch, detvar_pots = zip(*tqdm([loaddf.load(f, preselection=gc.slcfv_cut, include_syst=False, detector=detector) for f in DETVAR_FILES_SMALL]))
         detvars, detvar_pots = loaddf.match_common_evts(detvarsmatch, detvars, detvar_pots)
 
