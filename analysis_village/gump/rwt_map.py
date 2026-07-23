@@ -162,8 +162,11 @@ def remake_detvar_maps(detector, DF_DIR="/exp/sbnd/data/users/gputnam/GUMP/sbn-r
 
     b = [np.array([0.3, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.25, 1.5]), [0.0, 0.2, 0.4, 0.6]]
     hists = []
+
+    selection = gc.all_cuts
+
     for d in detvars:
-        d['selected'] = gc.all_cuts(d)
+        d['selected'] = selection(d)
         hists.append(np.histogram2d(*d.loc[d['selected'], ['nu_E_calo', 'del_p']].to_numpy().T, bins=b)[0])
 
     for name, h in zip(DETVAR_NAMES[1:], hists[1:]):
@@ -180,7 +183,7 @@ def remake_detvar_maps(detector, DF_DIR="/exp/sbnd/data/users/gputnam/GUMP/sbn-r
         b = [np.array([0.3, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.25, 1.5]), [0.0, 0.2, 0.4, 0.6]]
         hists = []
         for d in detvars:
-            d['selected'] = gc.all_cuts(d)
+            d['selected'] = selection(d)
             hists.append(np.histogram2d(*d.loc[d['selected'], ['nu_E_calo', 'del_p']].to_numpy().T, bins=b)[0])
 
         for name, h in zip(DETVAR_NAMES_SMALL[1:], hists[1:]):
