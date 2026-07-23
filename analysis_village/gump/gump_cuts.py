@@ -354,13 +354,9 @@ def flash_cut(df):
 
     return pd.Series(np_mask, index=df.index) 
 
-def cosmic_cut(df, is_opt=False):
-    if is_opt:
-        df = add_opening_angle_mu_p(df)
-        return (df.nu_score > 0.48) & (df["mu_p_opening_angle_deg"] < 140)
-    else:
-        df = add_opening_angle_mu_p(df)
-        return (df.nu_score > 0.4) & (df["mu_p_opening_angle_deg"] < 155)
+def cosmic_cut(df):
+    df = add_opening_angle_mu_p(df)
+    return (df.nu_score > 0.4) & (df["mu_p_opening_angle_deg"] < 155)
 
 def add_opening_angle_mu_p(df, out_col="mu_p_opening_angle_deg", degrees=True):
     mu = df[["mu_dir_x", "mu_dir_y", "mu_dir_z"]].to_numpy(dtype=float)
@@ -391,18 +387,21 @@ def twoprong_cut(df):
 
 def pid_cut(df, is_old=False):
     return pid_cut_df(df.mu_chi2_of_mu_cand, df.mu_chi2_of_prot_cand,
-        df.prot_chi2_of_mu_cand, df.prot_chi2_of_prot_cand, df.mu_len, is_old=is_old)
+        df.prot_chi2_of_mu_cand, df.prot_chi2_of_prot_cand, df.mu_len, df.mu_track_score, is_old=is_old)
 
 def pid_cut_df(mu_chi2_mu_cand, mu_chi2_prot_cand, prot_chi2_mu_cand,
-            prot_chi2_prot_cand, mu_len, is_opt=False):
-    if is_opt:
-        MUSEL_MUSCORE_TH, MUSEL_PSCORE_TH, MUSEL_LEN_TH, PSEL_MUSCORE_TH, PSEL_PSCORE_TH  = 80, 70, 26, 0, 123
+            prot_chi2_prot_cand, mu_len, mu_track_score, is_old=False):
+
+    if is_old:
+        MUSEL_MUSCORE_TH, MUSEL_PSCORE_TH, MUSEL_LEN_TH_MIN, MUSEL_LEN_TH_MAX, MUSEL_TRACK_SCORE_MIN, PSEL_MUSCORE_TH, PSEL_PSCORE_TH = 15, 90, 50, 1e20, -999, 0, 90
     else:
-        MUSEL_MUSCORE_TH, MUSEL_PSCORE_TH, MUSEL_LEN_TH, PSEL_MUSCORE_TH, PSEL_PSCORE_TH = 30, 80, 25, 0, 90
+        MUSEL_MUSCORE_TH, MUSEL_PSCORE_TH, MUSEL_LEN_TH_MIN, MUSEL_LEN_TH_MAX, MUSEL_TRACK_SCORE_MIN, PSEL_MUSCORE_TH, PSEL_PSCORE_TH = 30, 80, 25, 1e20, -999, 0, 90
 
     mu_cut = (mu_chi2_mu_cand < MUSEL_MUSCORE_TH) & \
              (prot_chi2_mu_cand > MUSEL_PSCORE_TH) & \
-             (mu_len > MUSEL_LEN_TH)
+             (mu_len > MUSEL_LEN_TH_MIN) & \
+             (mu_len < MUSEL_LEN_TH_MAX) & \
+             (mu_track_score > MUSEL_TRACK_SCORE_MIN)
 
     p_cut = (mu_chi2_prot_cand > PSEL_MUSCORE_TH) & \
             (prot_chi2_prot_cand < PSEL_PSCORE_TH)
@@ -505,8 +504,7 @@ def containment_cut(df):
 def presel_cut(df):
     return slcfv_cut(df) & containment_cut(df) & cathode_cut(df)
 
-def all_cuts_opt(recodf, DETECTOR=None, det_run=None):
-    print("RUNNING OPTIMIZED CUTS")
+def all_cuts_old(recodf, DETECTOR=None, det_run=None):
     if DETECTOR:
         print(f"manual detector: {DETECTOR}")
         recodf['detector'] = DETECTOR
@@ -518,7 +516,7 @@ def all_cuts_opt(recodf, DETECTOR=None, det_run=None):
     presel_mask = presel_cut(recodf)
 
     ### cosmic cut
-    cosmic_mask = cosmic_cut(recodf, is_opt=True)
+    cosmic_mask = cosmic_cut(recodf)
 
     ### flash cut
     flash_mask = flash_cut(recodf)
@@ -529,7 +527,7 @@ def all_cuts_opt(recodf, DETECTOR=None, det_run=None):
     ### PID cut
     pid_mask = pid_cut_df(recodf.mu_chi2_of_mu_cand, recodf.mu_chi2_of_prot_cand,
                             recodf.prot_chi2_of_mu_cand, recodf.prot_chi2_of_prot_cand,
-                            recodf.mu_len, is_opt=True)
+                            recodf.mu_len, is_old=True)
 
     return presel_mask & cosmic_mask & flash_mask & two_prong_mask & pid_mask
 
