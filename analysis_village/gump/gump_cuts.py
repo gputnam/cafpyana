@@ -1,15 +1,14 @@
 ### Note to self: half of this file is just geometry cuts, we should try to consolidate these.
 
-
 # Standard library imports
 import os
 import sys
 
 # Third-party imports
-import pandas as pd
 import numpy as np
+import pandas as pd
 
-# Add the head direcoty to sys.path
+# Add the head directory to sys.path
 workspace_root = os.getcwd()
 sys.path.insert(0, workspace_root + "/../../")
 
@@ -20,73 +19,73 @@ from makedf.util import *
 # Fiducial volume cuts for SBND and ICARUS
 SBNDFVCuts = {
     "lowYZ": {
-        "x": {"min": -200., "max": 200.},
-        "y": {"min": -200., "max": 200.},
-        "z": {"min": 0., "max": 250.}
+        "x": {"min": -200.0, "max": 200.0},
+        "y": {"min": -200.0, "max": 200.0},
+        "z": {"min": 0.0, "max": 250.0},
     },
     "highYZEast": {
-        "x": {"min": -200., "max": 0.},
-        "y": {"min": -200., "max": 100},
-        "z": {"min": 250., "max": 500.}
+        "x": {"min": -200.0, "max": 0.0},
+        "y": {"min": -200.0, "max": 100},
+        "z": {"min": 250.0, "max": 500.0},
     },
     "highYZWest": {
-        "x": {"min": 0., "max": 200.},
-        "y": {"min": -200., "max": 200},
-        "z": {"min": 250., "max": 500.}
+        "x": {"min": 0.0, "max": 200.0},
+        "y": {"min": -200.0, "max": 200},
+        "z": {"min": 250.0, "max": 500.0},
     },
     "highYZ": {
-        "x": {"min": -200., "max": 200.},
-        "y": {"min": -200., "max": 100},
-        "z": {"min": 250., "max": 500.}
-    }
+        "x": {"min": -200.0, "max": 200.0},
+        "y": {"min": -200.0, "max": 100},
+        "z": {"min": 250.0, "max": 500.0},
+    },
 }
 
 ICARUSRun2FVCuts = {
     "C0": {
-        "x": {"min": -210.22, "max": -61.94}, # exluce EE in Run 2
+        "x": {"min": -210.22, "max": -61.94},  # exclude EE in Run 2
         "y": {"min": -181.86, "max": 134.96},
-        "z": {"min": -894.950652270838, "max": 894.950652270838}
+        "z": {"min": -894.950652270838, "max": 894.950652270838},
     },
     "C1": {
         "x": {"min": 61.94, "max": 358.49},
         "y": {"min": -181.86, "max": 134.96},
-        "z": {"min": -894.950652270838, "max": 894.950652270838}
-    }
+        "z": {"min": -894.950652270838, "max": 894.950652270838},
+    },
 }
 
 ICARUSRun4FVCuts = {
     "C0": {
         "x": {"min": -358.49, "max": -61.94},
         "y": {"min": -181.86, "max": 134.96},
-        "z": {"min": -894.950652270838, "max": 894.950652270838}
+        "z": {"min": -894.950652270838, "max": 894.950652270838},
     },
     "C1": {
         "x": {"min": 61.94, "max": 358.49},
         "y": {"min": -181.86, "max": 134.96},
-        "z": {"min": -894.950652270838, "max": 894.950652270838}
-    }
+        "z": {"min": -894.950652270838, "max": 894.950652270838},
+    },
 }
 
-#def TrueAV(df, det):
-#    vtx = pd.DataFrame({'x': df.true_vtx_x,
-#                       'y': df.true_vtx_y,
-#                       'z': df.true_vtx_z}, index=df.index)
-#    return _fv_cut(vtx, det, 0, 0, 0, 0)
 
 def TrueAVSBND(df):
     return TrueAV(df, "SBND")
 
+
 def TrueAVICARUSRun2(df):
     return TrueAV(df, "ICARUS Run2")
+
 
 def TrueAVICARUSRun4(df):
     return TrueAV(df, "ICARUS Run4")
 
+
 def OOAVSBND(df):
     return ~np.isnan(df.true_vtx_x) & ~TrueAVSBND(df)
 
+
 def OOAVICARUS(df):
     return ~np.isnan(df.true_vtx_x) & ~TrueAVICARUSRun4(df)
+
 
 def ICARUS_dirtcut(df):
     # mbox from CV sample
@@ -97,172 +96,256 @@ def ICARUS_dirtcut(df):
     xhi = 378.49
     yhi = 144.96
     zhi = 904.950652270838
-    vtx = pd.DataFrame({'x': df.true_vtx_x,
-                       'y': df.true_vtx_y,
-                       'z': df.true_vtx_z}, index=df.index)
+    vtx = pd.DataFrame(
+        {"x": df.true_vtx_x, "y": df.true_vtx_y, "z": df.true_vtx_z},
+        index=df.index,
+    )
 
-    return ~((vtx.x > xlo) & (vtx.x < xhi) & (vtx.y > ylo) & (vtx.y < yhi) & (vtx.z > zlo) & (vtx.z < zhi))
+    return ~(
+        (vtx.x > xlo)
+        & (vtx.x < xhi)
+        & (vtx.y > ylo)
+        & (vtx.y < yhi)
+        & (vtx.z > zlo)
+        & (vtx.z < zhi)
+    )
+
 
 def TrueAV(df, det):
     if det == "ICARUS Run4":
-        df['Run'] = 4
-        df['detector'] = "ICARUS"
+        df["Run"] = 4
+        df["detector"] = "ICARUS"
     elif det == "ICARUS Run2":
-        df['Run'] = 2    
-        df['detector'] = "ICARUS"
+        df["Run"] = 2
+        df["detector"] = "ICARUS"
     elif det == "SBND":
-        df['Run'] = 1
-        df['detector'] = "SBND"
+        df["Run"] = 1
+        df["detector"] = "SBND"
     else:
-        print('unclear run!!!')
-        
-    vtx = pd.DataFrame({'detector': df.detector,
-                       'Run': df.Run,
-                       'x': df.true_vtx_x,
-                       'y': df.true_vtx_y,
-                       'z': df.true_vtx_z}, index=df.index)
+        print("unclear run!!!")
+
+    vtx = pd.DataFrame(
+        {
+            "detector": df.detector,
+            "Run": df.Run,
+            "x": df.true_vtx_x,
+            "y": df.true_vtx_y,
+            "z": df.true_vtx_z,
+        },
+        index=df.index,
+    )
     return _fv_cut(vtx, 0, 0, 0, 0)
 
+
 def OOAV(df):
-    if df['detector'].nunique() == 1:
+    if df["detector"].nunique() == 1:
         det = df.detector.iloc[0]
         return ~np.isnan(df.true_vtx_x) & ~TrueAV(df, det)
     else:
-        print('df contains info from multiple detectors')
+        print("df contains info from multiple detectors")
         return
 
-def breakdown_mode(var, df):
-    """Break down variable by interaction mode."""
-    numu_cc = (np.abs(df.true_pdg) == 14) & (df.true_isnc == False)
-    fid = nuFV(df)
-    fid = ~df.dirt
-
-    ret = [
-        var[np.isnan(df.genie_mode)],
-        var[~fid & ~np.isnan(df.genie_mode)],
-        var[(~np.any([df.genie_mode == i for i in mode_list], axis=0) | ~numu_cc) & fid & ~np.isnan(df.genie_mode)]
-    ] +\
-        [var[(df.genie_mode == i) & numu_cc & fid] for i in mode_list]
-        
-    return ret
 
 def get_top_labels():
-    return ['$1\\mu1p$ $\\nu_{\\mu}CC$', 'Other $\\nu_{\\mu}CC$', 'NC', 'Cosmics', 'Other']
+    return [
+        "$1\\mu1p$ $\\nu_{\\mu}CC$",
+        "Other $\\nu_{\\mu}CC$",
+        "NC",
+        "Cosmics",
+        "Other",
+    ]
+
 
 def breakdown_top(var, df):
-    is_numu_cc = (df['true_pdg'].fillna(0) == 14) & (df['true_isnc'].fillna(0) == False)
-    c_1mu1p = is_numu_cc & (df['true_nmu'].fillna(0) == 1) & (df['true_np'].fillna(0) == 1) &\
-            (df['true_npi'].fillna(-999) == 0) & (df['true_npi0'].fillna(-999) == 0)
+    is_numu_cc = (df["true_pdg"].fillna(0) == 14) & (
+        df["true_isnc"].fillna(0) == False
+    )
+    c_1mu1p = (
+        is_numu_cc
+        & (df["true_nmu"].fillna(0) == 1)
+        & (df["true_np"].fillna(0) == 1)
+        & (df["true_npi"].fillna(-999) == 0)
+        & (df["true_npi0"].fillna(-999) == 0)
+    )
     c_other_numu_cc = is_numu_cc & ~c_1mu1p
-    c_nc = (df['true_isnc'].fillna(0) == True)
-    c_cosmic = (df['true_is_cosmic'].fillna(0) == True)
+    c_nc = df["true_isnc"].fillna(0) == True
+    c_cosmic = df["true_is_cosmic"].fillna(0) == True
     c_other = ~(c_1mu1p | c_other_numu_cc | c_nc | c_cosmic)
-    return [var[c_1mu1p], var[c_other_numu_cc], var[c_nc], var[c_cosmic], var[c_other]]
+    return [
+        var[c_1mu1p],
+        var[c_other_numu_cc],
+        var[c_nc],
+        var[c_cosmic],
+        var[c_other],
+    ]
+
 
 def vtxfv_cut(df):
     return _fv_cut(df, inzback=50)
 
+
 def true_fv_cut(df):
-    vtx = pd.DataFrame({
-                           'detector': df.detector,
-                           'Run': df.Run,
-                           'x': df.position.x,
-                           'y': df.position.y,
-                           'z': df.position.z}, index=df.index)
+    vtx = pd.DataFrame(
+        {
+            "detector": df.detector,
+            "Run": df.Run,
+            "x": df.position.x,
+            "y": df.position.y,
+            "z": df.position.z,
+        },
+        index=df.index,
+    )
     return vtxfv_cut(vtx)
 
+
 def slcfv_cut(df):
-    vtx = pd.DataFrame({
-                           'detector': df.detector,
-                           'Run': df.Run,
-                           'x': df.slc_vtx_x,
-                           'y': df.slc_vtx_y,
-                           'z': df.slc_vtx_z}, index=df.index)
+    vtx = pd.DataFrame(
+        {
+            "detector": df.detector,
+            "Run": df.Run,
+            "x": df.slc_vtx_x,
+            "y": df.slc_vtx_y,
+            "z": df.slc_vtx_z,
+        },
+        index=df.index,
+    )
     return vtxfv_cut(vtx)
+
 
 def trkfv_cut(df):
     return _fv_cut(df, inzback=10)
 
-def true_trkstartfv_cut(df):
-    mu_vtx = pd.DataFrame({
-                           'detector': df.detector,
-                           'Run': df.Run,
-                           'x': df.mu.start.x,
-                           'y': df.mu.start.y,
-                           'z': df.mu.start.z}, index=df.index)
 
-    p_vtx = pd.DataFrame({
-                           'detector': df.detector,
-                           'Run': df.Run,
-                           'x': df.mu.start.x,
-                           'y': df.mu.start.y,
-                           'z': df.mu.start.z}, index=df.index)
+def true_trkstartfv_cut(df):
+    mu_vtx = pd.DataFrame(
+        {
+            "detector": df.detector,
+            "Run": df.Run,
+            "x": df.mu.start.x,
+            "y": df.mu.start.y,
+            "z": df.mu.start.z,
+        },
+        index=df.index,
+    )
+
+    p_vtx = pd.DataFrame(
+        {
+            "detector": df.detector,
+            "Run": df.Run,
+            "x": df.mu.start.x,
+            "y": df.mu.start.y,
+            "z": df.mu.start.z,
+        },
+        index=df.index,
+    )
 
     return trkfv_cut(mu_vtx) & trkfv_cut(p_vtx)
+
 
 def true_trkendfv_cut(df):
-    mu_vtx = pd.DataFrame({
-                           'detector': df.detector,
-                           'Run': df.Run,
-                           'x': df.mu.end.x,
-                           'y': df.mu.end.y,
-                           'z': df.mu.end.z}, index=df.index)
+    mu_vtx = pd.DataFrame(
+        {
+            "detector": df.detector,
+            "Run": df.Run,
+            "x": df.mu.end.x,
+            "y": df.mu.end.y,
+            "z": df.mu.end.z,
+        },
+        index=df.index,
+    )
 
-    p_vtx = pd.DataFrame({
-                           'detector': df.detector,
-                           'Run': df.Run,
-                           'x': df.mu.end.x,
-                           'y': df.mu.end.y,
-                           'z': df.mu.end.z}, index=df.index)
+    p_vtx = pd.DataFrame(
+        {
+            "detector": df.detector,
+            "Run": df.Run,
+            "x": df.p.end.x,
+            "y": df.p.end.y,
+            "z": df.p.end.z,
+        },
+        index=df.index,
+    )
 
     return trkfv_cut(mu_vtx) & trkfv_cut(p_vtx)
 
+
 def trkstartfv_cut(df):
-    vtx = pd.DataFrame({
-                           'detector': df.detector,
-                           'Run': df.Run,
-                           'x': df.pfp.trk.start.x,
-                           'y': df.pfp.trk.start.y,
-                           'z': df.pfp.trk.start.z}, index=df.index)
+    vtx = pd.DataFrame(
+        {
+            "detector": df.detector,
+            "Run": df.Run,
+            "x": df.pfp.trk.start.x,
+            "y": df.pfp.trk.start.y,
+            "z": df.pfp.trk.start.z,
+        },
+        index=df.index,
+    )
     return trkfv_cut(vtx)
+
 
 def trkendfv_cut(df):
-    vtx = pd.DataFrame({
-                           'detector': df.detector,
-                           'Run': df.Run,
-                           'x': df.pfp.trk.end.x,
-                           'y': df.pfp.trk.end.y,
-                           'z': df.pfp.trk.end.z}, index=df.index)
+    vtx = pd.DataFrame(
+        {
+            "detector": df.detector,
+            "Run": df.Run,
+            "x": df.pfp.trk.end.x,
+            "y": df.pfp.trk.end.y,
+            "z": df.pfp.trk.end.z,
+        },
+        index=df.index,
+    )
     return trkfv_cut(vtx)
+
 
 def mufv_cut(df):
-    vtx = pd.DataFrame({
-                           'detector': df.detector,
-                           'Run': df.Run,
-                           'x': df.mu_end_x,
-                           'y': df.mu_end_y,
-                           'z': df.mu_end_z}, index=df.index)
+    vtx = pd.DataFrame(
+        {
+            "detector": df.detector,
+            "Run": df.Run,
+            "x": df.mu_end_x,
+            "y": df.mu_end_y,
+            "z": df.mu_end_z,
+        },
+        index=df.index,
+    )
     return trkfv_cut(vtx)
+
 
 def pfv_cut(df):
-    vtx = pd.DataFrame({
-                           'detector': df.detector,
-                           'Run': df.Run,
-                           'x': df.p_end_x,
-                           'y': df.p_end_y,
-                           'z': df.p_end_z}, index=df.index)
+    vtx = pd.DataFrame(
+        {
+            "detector": df.detector,
+            "Run": df.Run,
+            "x": df.p_end_x,
+            "y": df.p_end_y,
+            "z": df.p_end_z,
+        },
+        index=df.index,
+    )
     return trkfv_cut(vtx)
 
-def fv_cut(df, inx=10, iny=10, inzfront=10, inzback=50, detector=None, Run=None):
-    return _fv_cut(df, inx=inx, iny=iny, inzfront=inzfront, inzback=inzback, detector=detector, Run=Run)
 
-def _fv_cut(df, inx=10, iny=10, inzfront=10, inzback=50, detector=None, Run=None):
+def fv_cut(
+    df, inx=10, iny=10, inzfront=10, inzback=50, detector=None, Run=None
+):
+    return _fv_cut(
+        df,
+        inx=inx,
+        iny=iny,
+        inzfront=inzfront,
+        inzback=inzback,
+        detector=detector,
+        Run=Run,
+    )
+
+
+def _fv_cut(
+    df, inx=10, iny=10, inzfront=10, inzback=50, detector=None, Run=None
+):
     if detector is not None:
-        df['detector'] = detector
+        df["detector"] = detector
 
     if Run is not None:
-        print('test')
-        df['Run'] = Run
+        df["Run"] = Run
 
     det_col = "detector"
     if det_col not in df.columns:
@@ -271,7 +354,7 @@ def _fv_cut(df, inx=10, iny=10, inzfront=10, inzback=50, detector=None, Run=None
         )
 
     valid_detectors = {"ICARUS Run2", "ICARUS Run4", "ICARUS", "SBND"}
-    
+
     present_detectors = set(df[det_col].unique())
     invalid_detectors = present_detectors - valid_detectors
 
@@ -282,22 +365,55 @@ def _fv_cut(df, inx=10, iny=10, inzfront=10, inzback=50, detector=None, Run=None
             f"at dataframe rows {bad_rows}. Must be strictly 'SBND', 'ICARUS', 'ICARUS Run2', or 'ICARUS Run4'."
         )
 
-    FVRun2 = (((df.x < (ICARUSRun2FVCuts['C0']['x']['max'] - inx)) & (df.x > (ICARUSRun2FVCuts['C0']['x']['min'] + inx))) |\
-            ((df.x < (ICARUSRun2FVCuts['C1']['x']['max'] - inx)) & (df.x > (ICARUSRun2FVCuts['C1']['x']['min'] + inx)))) &\
-             (df.y < (ICARUSRun2FVCuts['C0']['y']['max'] - iny)) & (df.y > (ICARUSRun2FVCuts['C0']['y']['min'] + iny)) &\
-             (df.z < (ICARUSRun2FVCuts['C0']['z']['max'] - inzback)) & (df.z > (ICARUSRun2FVCuts['C0']['z']['min'] + inzfront))
+    FVRun2 = (
+        (
+            (df.x < (ICARUSRun2FVCuts["C0"]["x"]["max"] - inx))
+            & (df.x > (ICARUSRun2FVCuts["C0"]["x"]["min"] + inx))
+        )
+        | (
+            (df.x < (ICARUSRun2FVCuts["C1"]["x"]["max"] - inx))
+            & (df.x > (ICARUSRun2FVCuts["C1"]["x"]["min"] + inx))
+        )
+    ) & (
+        (df.y < (ICARUSRun2FVCuts["C0"]["y"]["max"] - iny))
+        & (df.y > (ICARUSRun2FVCuts["C0"]["y"]["min"] + iny))
+    ) & (
+        (df.z < (ICARUSRun2FVCuts["C0"]["z"]["max"] - inzback))
+        & (df.z > (ICARUSRun2FVCuts["C0"]["z"]["min"] + inzfront))
+    )
 
-    FVRun4 = (((df.x < (ICARUSRun4FVCuts['C0']['x']['max'] - inx)) & (df.x > (ICARUSRun4FVCuts['C0']['x']['min'] + inx))) |\
-            ((df.x < (ICARUSRun4FVCuts['C1']['x']['max'] - inx)) & (df.x > (ICARUSRun4FVCuts['C1']['x']['min'] + inx)))) &\
-             (df.y < (ICARUSRun4FVCuts['C0']['y']['max'] - iny)) & (df.y > (ICARUSRun4FVCuts['C0']['y']['min'] + iny)) &\
-             (df.z < (ICARUSRun4FVCuts['C0']['z']['max'] - inzback)) & (df.z > (ICARUSRun4FVCuts['C0']['z']['min'] + inzfront))
+    FVRun4 = (
+        (
+            (df.x < (ICARUSRun4FVCuts["C0"]["x"]["max"] - inx))
+            & (df.x > (ICARUSRun4FVCuts["C0"]["x"]["min"] + inx))
+        )
+        | (
+            (df.x < (ICARUSRun4FVCuts["C1"]["x"]["max"] - inx))
+            & (df.x > (ICARUSRun4FVCuts["C1"]["x"]["min"] + inx))
+        )
+    ) & (
+        (df.y < (ICARUSRun4FVCuts["C0"]["y"]["max"] - iny))
+        & (df.y > (ICARUSRun4FVCuts["C0"]["y"]["min"] + iny))
+    ) & (
+        (df.z < (ICARUSRun4FVCuts["C0"]["z"]["max"] - inzback))
+        & (df.z > (ICARUSRun4FVCuts["C0"]["z"]["min"] + inzfront))
+    )
 
-    FVSBND = ((df.x < SBNDFVCuts['lowYZ']['x']['max'] - inx) & (df.x > SBNDFVCuts['lowYZ']['x']['min'] + inx) &\
-            (df.y < SBNDFVCuts['lowYZ']['y']['max'] - iny) & (df.y > SBNDFVCuts['lowYZ']['y']['min'] + iny) &\
-            (df.z < SBNDFVCuts['lowYZ']['z']['max']) & (df.z > SBNDFVCuts['lowYZ']['z']['min'] + inzfront)) |\
-           ((df.x < SBNDFVCuts['highYZ']['x']['max'] - inx) & (df.x > SBNDFVCuts['highYZ']['x']['min'] + inx) &\
-            (df.y < SBNDFVCuts['highYZ']['y']['max'] - iny) & (df.y > SBNDFVCuts['highYZ']['y']['min'] + iny) &\
-            (df.z < SBNDFVCuts['highYZ']['z']['max'] - inzback) & (df.z > SBNDFVCuts['highYZ']['z']['min']))
+    FVSBND = (
+        (df.x < SBNDFVCuts["lowYZ"]["x"]["max"] - inx)
+        & (df.x > SBNDFVCuts["lowYZ"]["x"]["min"] + inx)
+        & (df.y < SBNDFVCuts["lowYZ"]["y"]["max"] - iny)
+        & (df.y > SBNDFVCuts["lowYZ"]["y"]["min"] + iny)
+        & (df.z < SBNDFVCuts["lowYZ"]["z"]["max"])
+        & (df.z > SBNDFVCuts["lowYZ"]["z"]["min"] + inzfront)
+    ) | (
+        (df.x < SBNDFVCuts["highYZ"]["x"]["max"] - inx)
+        & (df.x > SBNDFVCuts["highYZ"]["x"]["min"] + inx)
+        & (df.y < SBNDFVCuts["highYZ"]["y"]["max"] - iny)
+        & (df.y > SBNDFVCuts["highYZ"]["y"]["min"] + iny)
+        & (df.z < SBNDFVCuts["highYZ"]["z"]["max"] - inzback)
+        & (df.z > SBNDFVCuts["highYZ"]["z"]["min"])
+    )
 
     conditions = [
         (df[det_col] == "ICARUS Run2")
@@ -315,7 +431,8 @@ def _fv_cut(df, inx=10, iny=10, inzfront=10, inzback=50, detector=None, Run=None
 
     np_mask = np.select(conditions, choices, default=False)
 
-    return pd.Series(np_mask, index=df.index) 
+    return pd.Series(np_mask, index=df.index)
+
 
 def flash_cut(df):
     det_col = "detector"
@@ -352,20 +469,26 @@ def flash_cut(df):
 
     np_mask = np.select(conditions, choices, default=False)
 
-    return pd.Series(np_mask, index=df.index) 
+    return pd.Series(np_mask, index=df.index)
 
-def cosmic_cut(df):
+
+def cosmic_cut(df, nu_score_th=0.4, max_opening_angle=155):
     df = add_opening_angle_mu_p(df)
-    return (df.nu_score > 0.4) & (df["mu_p_opening_angle_deg"] < 155)
+    return (df.nu_score > nu_score_th) & (
+        df["mu_p_opening_angle_deg"] < max_opening_angle
+    )
+
 
 def add_opening_angle_mu_p(df, out_col="mu_p_opening_angle_deg", degrees=True):
     mu = df[["mu_dir_x", "mu_dir_y", "mu_dir_z"]].to_numpy(dtype=float)
-    p  = df[["p_dir_x",  "p_dir_y",  "p_dir_z"]].to_numpy(dtype=float)
+    p = df[["p_dir_x", "p_dir_y", "p_dir_z"]].to_numpy(dtype=float)
 
     mu_norm = np.linalg.norm(mu, axis=1)
-    p_norm  = np.linalg.norm(p,  axis=1)
+    p_norm = np.linalg.norm(p, axis=1)
 
-    valid = np.isfinite(mu_norm) & np.isfinite(p_norm) & (mu_norm > 0) & (p_norm > 0)
+    valid = (
+        np.isfinite(mu_norm) & np.isfinite(p_norm) & (mu_norm > 0) & (p_norm > 0)
+    )
 
     cosang = np.full(len(df), np.nan, dtype=float)
     dot = np.einsum("ij,ij->i", mu, p)
@@ -379,53 +502,123 @@ def add_opening_angle_mu_p(df, out_col="mu_p_opening_angle_deg", degrees=True):
     df[out_col] = ang
     return df
 
+
 def del_p_cut(df):
-    return (df.del_p <= 0.6)
+    return df.del_p <= 0.6
+
 
 def twoprong_cut(df):
-    return (np.isnan(df.other_shw_length) & np.isnan(df.other_trk_length))
+    return np.isnan(df.other_shw_length) & np.isnan(df.other_trk_length)
 
-def pid_cut(df, is_old=False):
-    return pid_cut_df(df.mu_chi2_of_mu_cand, df.mu_chi2_of_prot_cand,
-        df.prot_chi2_of_mu_cand, df.prot_chi2_of_prot_cand, df.mu_len, df.mu_track_score, is_old=is_old)
 
-def pid_cut_df(mu_chi2_mu_cand, mu_chi2_prot_cand, prot_chi2_mu_cand,
-            prot_chi2_prot_cand, mu_len, mu_track_score, is_old=False):
+def pid_cut(
+    df,
+    is_old=False,
+    musel_muscore_th=None,
+    musel_pscore_th=None,
+    musel_len_th_min=None,
+    musel_len_th_max=None,
+    musel_track_score_min=None,
+    psel_muscore_th=None,
+    psel_pscore_th=None,
+):
+    return pid_cut_df(
+        df.mu_chi2_of_mu_cand,
+        df.mu_chi2_of_prot_cand,
+        df.prot_chi2_of_mu_cand,
+        df.prot_chi2_of_prot_cand,
+        df.mu_len,
+        df.mu_track_score,
+        is_old=is_old,
+        musel_muscore_th=musel_muscore_th,
+        musel_pscore_th=musel_pscore_th,
+        musel_len_th_min=musel_len_th_min,
+        musel_len_th_max=musel_len_th_max,
+        musel_track_score_min=musel_track_score_min,
+        psel_muscore_th=psel_muscore_th,
+        psel_pscore_th=psel_pscore_th,
+    )
 
+
+def pid_cut_df(
+    mu_chi2_mu_cand,
+    mu_chi2_prot_cand,
+    prot_chi2_mu_cand,
+    prot_chi2_prot_cand,
+    mu_len,
+    mu_track_score,
+    is_old=False,
+    musel_muscore_th=None,
+    musel_pscore_th=None,
+    musel_len_th_min=None,
+    musel_len_th_max=None,
+    musel_track_score_min=None,
+    psel_muscore_th=None,
+    psel_pscore_th=None,
+):
     if is_old:
-        MUSEL_MUSCORE_TH, MUSEL_PSCORE_TH, MUSEL_LEN_TH_MIN, MUSEL_LEN_TH_MAX, MUSEL_TRACK_SCORE_MIN, PSEL_MUSCORE_TH, PSEL_PSCORE_TH = 15, 90, 50, 1e20, -999, 0, 90
+        defaults = (15, 90, 50, 1e20, -999, 0, 90)
     else:
-        MUSEL_MUSCORE_TH, MUSEL_PSCORE_TH, MUSEL_LEN_TH_MIN, MUSEL_LEN_TH_MAX, MUSEL_TRACK_SCORE_MIN, PSEL_MUSCORE_TH, PSEL_PSCORE_TH = 30, 80, 25, 1e20, -999, 0, 90
+        defaults = (30, 80, 25, 1e20, -999, 0, 90)
 
-    mu_cut = (mu_chi2_mu_cand < MUSEL_MUSCORE_TH) & \
-             (prot_chi2_mu_cand > MUSEL_PSCORE_TH) & \
-             (mu_len > MUSEL_LEN_TH_MIN) & \
-             (mu_len < MUSEL_LEN_TH_MAX) & \
-             (mu_track_score > MUSEL_TRACK_SCORE_MIN)
+    MUSEL_MUSCORE_TH = (
+        musel_muscore_th if musel_muscore_th is not None else defaults[0]
+    )
+    MUSEL_PSCORE_TH = (
+        musel_pscore_th if musel_pscore_th is not None else defaults[1]
+    )
+    MUSEL_LEN_TH_MIN = (
+        musel_len_th_min if musel_len_th_min is not None else defaults[2]
+    )
+    MUSEL_LEN_TH_MAX = (
+        musel_len_th_max if musel_len_th_max is not None else defaults[3]
+    )
+    MUSEL_TRACK_SCORE_MIN = (
+        musel_track_score_min
+        if musel_track_score_min is not None
+        else defaults[4]
+    )
+    PSEL_MUSCORE_TH = (
+        psel_muscore_th if psel_muscore_th is not None else defaults[5]
+    )
+    PSEL_PSCORE_TH = (
+        psel_pscore_th if psel_pscore_th is not None else defaults[6]
+    )
 
-    p_cut = (mu_chi2_prot_cand > PSEL_MUSCORE_TH) & \
-            (prot_chi2_prot_cand < PSEL_PSCORE_TH)
+    mu_cut = (
+        (mu_chi2_mu_cand < MUSEL_MUSCORE_TH)
+        & (prot_chi2_mu_cand > MUSEL_PSCORE_TH)
+        & (mu_len > MUSEL_LEN_TH_MIN)
+        & (mu_len < MUSEL_LEN_TH_MAX)
+        & (mu_track_score > MUSEL_TRACK_SCORE_MIN)
+    )
+
+    p_cut = (mu_chi2_prot_cand > PSEL_MUSCORE_TH) & (
+        prot_chi2_prot_cand < PSEL_PSCORE_TH
+    )
 
     return mu_cut & p_cut
 
+
 def stub_cut(df):
-    cut = (df.has_stub == 0)
-    return cut
+    return df.has_stub == 0
+
 
 def clear_cosmic_cut(df):
-    cut = (df.is_clear_cosmic == 0)
-    return cut
+    return df.is_clear_cosmic == 0
+
 
 def contained_cut(df):
-    cut = (df.is_contained == 1)
-    return cut
+    return df.is_contained == 1
 
 
 def crthitveto_cut(df):
     return ~df.crthit
 
+
 def get_mode_labels():
-    return ['QE', 'MEC', 'RES', 'SIS/DIS', 'COH', "other"]
+    return ["QE", "MEC", "RES", "SIS/DIS", "COH", "other"]
+
 
 def breakdown_mode(var, df):
     """Break down variable by interaction mode."""
@@ -435,25 +628,35 @@ def breakdown_mode(var, df):
     ret.append(var[sum([df.genie_mode == i for i in mode_list]) == 0])
     return ret
 
+
 def cathode_cut(df):
     if df.detector.iloc[0] == "SBND":
-        p_start = df[['slc_vtx_x', 'slc_vtx_y', 'slc_vtx_z']].values
-        p_mu = df[['mu_end_x', 'mu_end_y', 'mu_end_z']].values
-        
+        p_start = df[["slc_vtx_x", "slc_vtx_y", "slc_vtx_z"]].values
+        p_mu = df[["mu_end_x", "mu_end_y", "mu_end_z"]].values
 
-        p_start = df[['slc_vtx_x', 'slc_vtx_y', 'slc_vtx_z']].values
-        p_prot = df[['p_end_x', 'p_end_y', 'p_end_z']].values
+        p_start = df[["slc_vtx_x", "slc_vtx_y", "slc_vtx_z"]].values
+        p_prot = df[["p_end_x", "p_end_y", "p_end_z"]].values
 
-        return ~intersects_prism_vectorized(p_start, p_prot, (-5., -200., 0.), (5., 200., 500.)) & ~intersects_prism_vectorized(p_start, p_mu, (-5., -200., 0.), (5., 200., 500.))
+        return ~intersects_prism_vectorized(
+            p_start, p_prot, (-5.0, -200.0, 0.0), (5.0, 200.0, 500.0)
+        ) & ~intersects_prism_vectorized(
+            p_start, p_mu, (-5.0, -200.0, 0.0), (5.0, 200.0, 500.0)
+        )
     else:
-        return (df.nu_E_calo > -999)
+        return df.nu_E_calo > -999
 
-def intersects_prism_vectorized(p1_array, p2_array, prism_min=(-200., 100., 250.), prism_max=(200., 200., 500.), solid=True):
-    """
-    Determines intersection for multiple line segments simultaneously.
-    
-    p1_array, p2_array: NumPy arrays of shape (N, 3)
-    prism_min, prism_max: Tuples or arrays of (x, y, z)
+
+def intersects_prism_vectorized(
+    p1_array,
+    p2_array,
+    prism_min=(-200.0, 100.0, 250.0),
+    prism_max=(200.0, 200.0, 500.0),
+    solid=True,
+):
+    """Determines intersection for multiple line segments simultaneously.
+
+    p1_array, p2_array: NumPy arrays of shape (N, 3) prism_min, prism_max: Tuples
+    or arrays of (x, y, z)
     """
     p1 = np.asarray(p1_array)
     p2 = np.asarray(p2_array)
@@ -468,13 +671,15 @@ def intersects_prism_vectorized(p1_array, p2_array, prism_min=(-200., 100., 250.
 
     inside_bool = np.zeros(len(p1))
 
-    p_mins = np.array([p_min]*len(p1))
-    p_maxs = np.array([p_max]*len(p1))
+    p_mins = np.array([p_min] * len(p1))
+    p_maxs = np.array([p_max] * len(p1))
 
     if solid:
-        inside_bool = ((p_mins < p1) & (p1 < p_maxs)).all(axis=1) | ((p_mins < p2) & (p2 < p_maxs)).all(axis=1)
+        inside_bool = (
+            (p_mins < p1) & (p1 < p_maxs)
+        ).all(axis=1) | ((p_mins < p2) & (p2 < p_maxs)).all(axis=1)
 
-    for i in range(3): # Iterate over X, Y, Z dimensions
+    for i in range(3):  # Iterate over X, Y, Z dimensions
         # Use a small epsilon to avoid true division by zero
         # or handle it via numpy's error handling
         inv_dir = 1.0 / np.where(direction[:, i] == 0, 1e-9, direction[:, i])
@@ -489,7 +694,7 @@ def intersects_prism_vectorized(p1_array, p2_array, prism_min=(-200., 100., 250.
         t_min = np.maximum(t_min, t_near)
         t_max = np.minimum(t_max, t_far)
         # If the line is parallel to the axis (dir=0), manually check bounds
-        parallel_mask = (direction[:, i] == 0)
+        parallel_mask = direction[:, i] == 0
         outside_bounds = (p1[:, i] < p_min[i]) | (p1[:, i] > p_max[i])
 
         # If parallel and outside, invalidate the t range so it returns False
@@ -498,19 +703,87 @@ def intersects_prism_vectorized(p1_array, p2_array, prism_min=(-200., 100., 250.
 
     return (t_min <= t_max) | inside_bool
 
+
 def containment_cut(df):
     return mufv_cut(df) & pfv_cut(df)
+
 
 def presel_cut(df):
     return slcfv_cut(df) & containment_cut(df) & cathode_cut(df)
 
+
+def manual_cuts(
+    recodf,
+    cuts_dict=None,
+    DETECTOR=None,
+    det_run=None,
+    **kwargs,
+):
+    """Applies custom/manual cuts specifically for cosmic and PID selection.
+
+    Parameters
+    ----------
+    recodf : pandas.DataFrame
+        DataFrame containing reco variables.
+    cuts_dict : dict, optional
+        Dictionary mapping cosmic or PID cut parameters to custom values:
+        - Cosmic cut parameters: 'nu_score_th', 'max_opening_angle'
+        - PID cut parameters: 'musel_muscore_th', 'musel_pscore_th',
+          'musel_len_th_min', 'musel_len_th_max', 'musel_track_score_min',
+          'psel_muscore_th', 'psel_pscore_th'
+    DETECTOR : str, optional
+        Manual detector label override.
+    det_run : int, optional
+        Manual run number override.
+    **kwargs
+        Additional cosmic or PID cut parameters passed directly as keyword
+        arguments.
+    """
+    cuts = {}
+    if cuts_dict:
+        cuts.update(cuts_dict)
+    cuts.update(kwargs)
+
+    if DETECTOR:
+        print(f"manual detector: {DETECTOR}")
+        recodf["detector"] = DETECTOR
+    if det_run:
+        print(f"manual run: {det_run}")
+        recodf["Run"] = det_run
+
+    # Standard cuts (using defaults)
+    presel_mask = presel_cut(recodf)
+    flash_mask = flash_cut(recodf)
+    two_prong_mask = twoprong_cut(recodf)
+
+    # Configurable cuts
+    cosmic_mask = cosmic_cut(
+        recodf,
+        nu_score_th=cuts.get("nu_score_th", 0.4),
+        max_opening_angle=cuts.get("max_opening_angle", 155),
+    )
+
+    pid_mask = pid_cut(
+        recodf,
+        musel_muscore_th=cuts.get("musel_muscore_th", None),
+        musel_pscore_th=cuts.get("musel_pscore_th", None),
+        musel_len_th_min=cuts.get("musel_len_th_min", None),
+        musel_len_th_max=cuts.get("musel_len_th_max", None),
+        musel_track_score_min=cuts.get("musel_track_score_min", None),
+        psel_muscore_th=cuts.get("psel_muscore_th", None),
+        psel_pscore_th=cuts.get("psel_pscore_th", None),
+    )
+
+    return presel_mask & cosmic_mask & flash_mask & two_prong_mask & pid_mask
+
+
 def all_cuts_old(recodf, DETECTOR=None, det_run=None):
     if DETECTOR:
         print(f"manual detector: {DETECTOR}")
-        recodf['detector'] = DETECTOR
+        recodf["detector"] = DETECTOR
     if det_run:
         print(f"manual run: {det_run}")
-        recodf['Run'] = det_run
+        recodf["Run"] = det_run
 
     ## presel cut
     presel_mask = presel_cut(recodf)
@@ -525,36 +798,18 @@ def all_cuts_old(recodf, DETECTOR=None, det_run=None):
     two_prong_mask = twoprong_cut(recodf)
 
     ### PID cut
-    pid_mask = pid_cut_df(recodf.mu_chi2_of_mu_cand, recodf.mu_chi2_of_prot_cand,
-                            recodf.prot_chi2_of_mu_cand, recodf.prot_chi2_of_prot_cand,
-                            recodf.mu_len, is_old=True)
+    pid_mask = pid_cut_df(
+        recodf.mu_chi2_of_mu_cand,
+        recodf.mu_chi2_of_prot_cand,
+        recodf.prot_chi2_of_mu_cand,
+        recodf.prot_chi2_of_prot_cand,
+        recodf.mu_len,
+        recodf.mu_track_score,
+        is_old=True,
+    )
 
     return presel_mask & cosmic_mask & flash_mask & two_prong_mask & pid_mask
+
 
 def all_cuts(recodf, DETECTOR=None, det_run=None):
-    if DETECTOR:
-        print(f"manual detector: {DETECTOR}")
-        recodf['detector'] = DETECTOR
-    if det_run:
-        print(f"manual run: {det_run}")
-        recodf['Run'] = det_run
-
-    ## presel cut
-    presel_mask = presel_cut(recodf)
-
-    ### cosmic cut
-    cosmic_mask = cosmic_cut(recodf)
-
-    ### flash cut
-    flash_mask = flash_cut(recodf)
-
-    ### Two prong cut
-    two_prong_mask = twoprong_cut(recodf)
-
-    ### PID cut
-    pid_mask = pid_cut_df(recodf.mu_chi2_of_mu_cand, recodf.mu_chi2_of_prot_cand,
-                            recodf.prot_chi2_of_mu_cand, recodf.prot_chi2_of_prot_cand,
-                            recodf.mu_len)
-
-    return presel_mask & cosmic_mask & flash_mask & two_prong_mask & pid_mask
-
+    return manual_cuts(recodf, DETECTOR=DETECTOR, det_run=det_run)
