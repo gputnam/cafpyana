@@ -72,7 +72,6 @@ def grab_pot(files, mc_bools, sep_bool=True):
                 N_GATES_ON_PER_5e12POT = 1.05104
 
             ngates_OFF = 0
-            print_keys(file)
             for i in range(n_splits):
                 if detector == "ICARUS": single_ngates_OFF = pd.read_hdf(file, "trig_"+str(i)).gate_delta.sum()*(1-1/20.)
                 elif detector == "SBND": single_ngates_OFF = pd.read_hdf(file, "hdr_"+str(i)).noffbeambnb.sum()

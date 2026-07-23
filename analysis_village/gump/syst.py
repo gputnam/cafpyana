@@ -65,13 +65,21 @@ def v_flashscale(df, updn):
 
 def v_chi2smear(df):
     setvars = [
-        ("mu_chi2_of_mu_cand", "mu_chi2smear15_of_mu_cand"),
-        ("mu_chi2_of_prot_cand",  "mu_chi2smear15_of_prot_cand"),
-        ("prot_chi2_of_mu_cand", "prot_chi2smear15_of_mu_cand"),
-        ("prot_chi2_of_prot_cand",  "prot_chi2smear15_of_prot_cand"),
+        ("mu_chi2_of_mu_cand", "mu_chi2smear13_of_mu_cand"),
+        ("mu_chi2_of_prot_cand",  "mu_chi2smear13_of_prot_cand"),
+        ("prot_chi2_of_mu_cand", "prot_chi2smear13_of_mu_cand"),
+        ("prot_chi2_of_prot_cand",  "prot_chi2smear13_of_prot_cand"),
     ]
     return v_variation(df, setvars)
 
+def v_chi2sqsmear(df):
+    setvars = [
+        ("mu_chi2_of_mu_cand", "mu_chi2sqsmear15_of_mu_cand"),
+        ("mu_chi2_of_prot_cand",  "mu_chi2sqsmear15_of_prot_cand"),
+        ("prot_chi2_of_mu_cand", "prot_chi2sqsmear15_of_mu_cand"),
+        ("prot_chi2_of_prot_cand",  "prot_chi2sqsmear15_of_prot_cand"),
+    ]
+    return v_variation(df, setvars)
 
 def v_chi2hi(df):
     setvars = [
