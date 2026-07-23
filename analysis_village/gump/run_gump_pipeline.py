@@ -130,7 +130,6 @@ def main():
         reweight_aFF=is_mc,
         preselection=preselection_cuts,
         detector=detector_context,
-        #drops=get_cols_to_drop(),
         lightmem=True,
     )
     # Step 2: Export to intermediate uproot template structure
