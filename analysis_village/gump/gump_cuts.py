@@ -522,6 +522,11 @@ def pid_cut(
     psel_muscore_th=None,
     psel_pscore_th=None,
 ):
+    # some older dataframes don't have track score
+    # put in a default value to get around this
+    if not 'mu_track_score' in df.columns:
+        df['mu_track_score'] = 0.0
+
     return pid_cut_df(
         df.mu_chi2_of_mu_cand,
         df.mu_chi2_of_prot_cand,
@@ -717,6 +722,7 @@ def manual_cuts(
     cuts_dict=None,
     DETECTOR=None,
     det_run=None,
+    skip_flash=False,
     **kwargs,
 ):
     """Applies custom/manual cuts specifically for cosmic and PID selection.
@@ -753,7 +759,11 @@ def manual_cuts(
 
     # Standard cuts (using defaults)
     presel_mask = presel_cut(recodf)
-    flash_mask = flash_cut(recodf)
+    if not skip_flash:
+        flash_mask = flash_cut(recodf)
+    else:
+        flash_mask = pd.Series(True, index=recodf.index)
+
     two_prong_mask = twoprong_cut(recodf)
 
     # Configurable cuts
@@ -797,6 +807,10 @@ def all_cuts_old(recodf, DETECTOR=None, det_run=None):
     ### Two prong cut
     two_prong_mask = twoprong_cut(recodf)
 
+    # catch old dataframes and use def val
+    if 'mu_track_score' not in recodf.columns:
+        recodf['mu_track_score'] = 0.0
+
     ### PID cut
     pid_mask = pid_cut_df(
         recodf.mu_chi2_of_mu_cand,
@@ -813,3 +827,35 @@ def all_cuts_old(recodf, DETECTOR=None, det_run=None):
 
 def all_cuts(recodf, DETECTOR=None, det_run=None):
     return manual_cuts(recodf, DETECTOR=DETECTOR, det_run=det_run)
+
+# Hannah cuts
+HANNAH_CUTS = {
+    "nu_score_th": 0.4,
+    "max_opening_angle": 155,
+    "musel_muscore_th": 30,
+    "musel_pscore_th": 80,
+    "musel_len_th_min": 25,
+    "psel_muscore_th": 0,
+    "psel_pscore_th": 90,
+}
+
+def hannah_cuts(recodf, DETECTOR=None, det_run=None):
+    det = DETECTOR if DETECTOR is not None else recodf["detector"].iloc[0]
+    cuts_config = HANNAH_CUTS
+    return manual_cuts(recodf, cuts_dict=cuts_config, DETECTOR=det, det_run=det_run)
+
+# Gray cuts
+GRAY_CUTS = {
+    "nu_score_th": 0.4,
+    "max_opening_angle": 999.,
+    "musel_muscore_th": 15,
+    "musel_pscore_th": 90,
+    "musel_len_th_min": 50,
+    "psel_muscore_th": 0,
+    "psel_pscore_th": 90,
+}
+
+def gray_cuts(recodf, DETECTOR=None, det_run=None):
+    det = DETECTOR if DETECTOR is not None else recodf["detector"].iloc[0]
+    cuts_config = GRAY_CUTS
+    return manual_cuts(recodf, cuts_dict=cuts_config, DETECTOR=det, det_run=det_run)
