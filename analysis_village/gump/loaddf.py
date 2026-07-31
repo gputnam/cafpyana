@@ -197,35 +197,38 @@ truthvars = {
 }
 
 detvar_rwt_files = [
-  '/exp/sbnd/app/users/nrowe/cafpyana/analysis_village/gump/rwt_outputs/SBND_WMXThetaXW.txt',
-  '/exp/sbnd/app/users/nrowe/cafpyana/analysis_village/gump/rwt_outputs/SBND_WMYZ.txt',
-  ['/exp/sbnd/app/users/nrowe/cafpyana/analysis_village/gump/rwt_outputs/SBND_0xSCE.txt', 'rwt_outputs/SBND_2xSCE.txt'],
-  '/exp/sbnd/app/users/nrowe/cafpyana/analysis_village/gump/rwt_outputs/ICARUSRun2_SCE.txt',
-  '/exp/sbnd/app/users/nrowe/cafpyana/analysis_village/gump/rwt_outputs/ICARUSRun4_SCE.txt',
-  '/exp/sbnd/app/users/nrowe/cafpyana/analysis_village/gump/rwt_outputs/SBND_SmeareddEdx.txt',
-  '/exp/sbnd/app/users/nrowe/cafpyana/analysis_village/gump/rwt_outputs/ICARUSRun2_SmeareddEdx.txt',
-  '/exp/sbnd/app/users/nrowe/cafpyana/analysis_village/gump/rwt_outputs/ICARUSRun2_WMXThetaXW.txt',
-  '/exp/sbnd/app/users/nrowe/cafpyana/analysis_village/gump/rwt_outputs/ICARUSRun4_SmeareddEdx.txt',
-  '/exp/sbnd/app/users/nrowe/cafpyana/analysis_village/gump/rwt_outputs/SBND_GainHi.txt',
-  '/exp/sbnd/app/users/nrowe/cafpyana/analysis_village/gump/rwt_outputs/ICARUSRun2_GainHi.txt',
-  '/exp/sbnd/app/users/nrowe/cafpyana/analysis_village/gump/rwt_outputs/ICARUSRun4_GainHi.txt',
-  '/exp/sbnd/app/users/nrowe/cafpyana/analysis_village/gump/rwt_outputs/SBND_EMBAlpha.txt',
-  '/exp/sbnd/app/users/nrowe/cafpyana/analysis_village/gump/rwt_outputs/ICARUSRun2_EMBAlpha.txt',
-  '/exp/sbnd/app/users/nrowe/cafpyana/analysis_village/gump/rwt_outputs/ICARUSRun4_EMBAlpha.txt',
-  '/exp/sbnd/app/users/nrowe/cafpyana/analysis_village/gump/rwt_outputs/SBND_EMBBeta.txt',
-  '/exp/sbnd/app/users/nrowe/cafpyana/analysis_village/gump/rwt_outputs/ICARUSRun2_EMBBeta.txt',
-  '/exp/sbnd/app/users/nrowe/cafpyana/analysis_village/gump/rwt_outputs/ICARUSRun4_EMBBeta.txt',
-  '/exp/sbnd/app/users/nrowe/cafpyana/analysis_village/gump/rwt_outputs/SBND_EMBR.txt',
-  '/exp/sbnd/app/users/nrowe/cafpyana/analysis_village/gump/rwt_outputs/ICARUSRun2_EMBR.txt',
-  '/exp/sbnd/app/users/nrowe/cafpyana/analysis_village/gump/rwt_outputs/ICARUSRun4_EMBR.txt',
-  ['/exp/sbnd/app/users/nrowe/cafpyana/analysis_village/gump/rwt_outputs/SBND_TrigEffMin.txt', 'rwt_outputs/SBND_TrigEffPls.txt'],
-  ['/exp/sbnd/app/users/nrowe/cafpyana/analysis_village/gump/rwt_outputs/ICARUSRun2_TrigEffMin.txt', 'rwt_outputs/ICARUSRun2_TrigEffPls.txt'],
-  ['/exp/sbnd/app/users/nrowe/cafpyana/analysis_village/gump/rwt_outputs/ICARUSRun4_TrigEffMin.txt', 'rwt_outputs/ICARUSRun4_TrigEffPls.txt'],
+  'SBND_WMXThetaXW.txt',
+  'SBND_WMYZ.txt',
+  'SBND_DENT.txt',
+  ['SBND_0xSCE.txt', 'SBND_2xSCE.txt'],
+  'ICARUSRun2_SCE.txt',
+  'ICARUSRun4_SCE.txt',
+  'SBND_SmeareddEdx.txt',
+  'ICARUSRun2_SmeareddEdx.txt',
+  'ICARUSRun2_WMXThetaXW.txt',
+  'ICARUSRun4_SmeareddEdx.txt',
+  'ICARUSRun4_WMXThetaXW.txt',
+  'SBND_GainHi.txt',
+  'ICARUSRun2_GainHi.txt',
+  'ICARUSRun4_GainHi.txt',
+  'SBND_EMBAlpha.txt',
+  'ICARUSRun2_EMBAlpha.txt',
+  'ICARUSRun4_EMBAlpha.txt',
+  'SBND_EMBBeta.txt',
+  'ICARUSRun2_EMBBeta.txt',
+  'ICARUSRun4_EMBBeta.txt',
+  'SBND_EMBR.txt',
+  'ICARUSRun2_EMBR.txt',
+  'ICARUSRun4_EMBR.txt',
+  ['SBND_TrigEffMin.txt', 'SBND_TrigEffPls.txt'],
+  ['ICARUSRun2_TrigEffMin.txt', 'ICARUSRun2_TrigEffPls.txt'],
+  ['ICARUSRun4_TrigEffMin.txt', 'ICARUSRun4_TrigEffPls.txt'],
 ]
 
 detvar_rwt_lbls = [
   'WireMod_SBND_multisigma_WMXThetaXW',
   'WireMod_SBND_multisigma_WMYZ',
+  'DENT_SBND_multisigma_DENT',
   'SCE_SBND_multisigma_SCE',
   'SCE_ICARUSRun2_multisigma_SCE',
   'SCE_ICARUSRun4_multisigma_SCE',
@@ -233,6 +236,7 @@ detvar_rwt_lbls = [
   'ICARUSRun2_PID_Smear',
   'WireMod_ICARUSRun2_multisigma_WMXThetaXW',
   'ICARUSRun4_PID_Smear',
+  'WireMod_ICARUSRun4_multisigma_WMXThetaXW',
   'SBND_PID_Gain',
   'ICARUSRun2_PID_Gain',
   'ICARUSRun4_PID_Gain',
@@ -255,8 +259,7 @@ std_drops = ['is_clear_cosmic', 'crlongtrkdiry', 'p_len', 'mu_E', 'mu_T',
              'true_pcand_pdg', 'true_p_dir_x', 'true_p_dir_y', 'true_p_dir_z', 
              'true_pcand_dir_x', 'true_pcand_dir_y', 'true_pcand_dir_z', 
              'true_pcand_end_x', 'true_pcand_end_y', 'true_pcand_end_z',
-             'true_mucand_pdg', 'true_mu_dir_x', 'true_mu_dir_y', 
-             'true_mu_dir_z', 'true_mucand_dir_x', 'true_mucand_dir_y', 
+             'true_mucand_pdg', 'true_mucand_dir_x', 'true_mucand_dir_y', 
              'true_mucand_dir_z', 'true_mucand_end_x', 'true_mucand_end_y', 
              'true_mucand_end_z', 'stub_l0_5cm_dedx','stub_l0_5cm_charge',
              'stub_l1cm_dedx','stub_l1cm_charge','stub_l2cm_dedx',
@@ -267,7 +270,7 @@ std_drops = ['is_clear_cosmic', 'crlongtrkdiry', 'p_len', 'mu_E', 'mu_T',
              'true_baseline', 'true_nu_pdg_x', 'true_nu_pdg_y',
              'true_nmu_27MeV', 'true_np_20MeV', 'true_np_50MeV', 
              'true_npi_30MeV', 'is_cosmic', 'flash_sumpe', 'true_mucand_p', 
-             'true_pcand_p', 'mu_true_p', 'p_true_p', 'true_mu_end_x', 
+             'true_pcand_p', 'p_true_p', 'true_mu_end_x', 
              'true_p_end_x', 'true_mu_end_y', 'true_p_end_y', 'true_mu_end_z', 
              'true_p_end_z','crthit', 'true_nu_E', 'p_true_pdg', 'mu_true_pdg', 
              'mu_chi22lo_of_mu_cand', 'mu_chi22hi_of_mu_cand', 
@@ -310,7 +313,7 @@ def load_one(fname, idf,
     detector=None, # One of SBND, ICARUS, ICARUS Run4
     include_syst=True, nuniv=100, spline=False, xsec_univ=False, xsec_spline=False,# systematic handling
     reweight_aFF=False, pot_univ=False, flux_univ=True, sep_flux_univ=False,
-    pot_spline=False, detvar_spline=False,
+    pot_spline=False, detvar_spline=False, spline_dir="rwt_outputs",
     load_truth=True, load_crt=False, match_Enu=True, # load extra information
     offbeampot=False, # POT handling
     preselection=None, # apply preselection cut
@@ -603,7 +606,12 @@ def load_one(fname, idf,
                     np.clip((w["ps2"] / w["cv"]).to_numpy(), 0, 10),
                     np.clip((w["ps3"] / w["cv"]).to_numpy(), 0, 10)
                 ])
-
+                if not 'multisigma' in s:
+                    col_str = 'multisigma_'+s
+                else:
+                    col_str = s
+                skim[col_str] = stacked_variants.T.tolist()
+                multisigma_cols.append(col_str)
             elif "morph" in wgt[s]:
                 w = wgt[s].fillna(1).replace([np.inf, -np.inf], 1)
                 if lightmem:
@@ -613,14 +621,19 @@ def load_one(fname, idf,
                     np.ones(len(w)),  # Central value ratio is exactly 1.0
                     np.clip((w["morph"]).to_numpy(), 0, 10)
                 ])
-
-            if not 'multisigma' in s:
-                col_str = 'multisigma_'+s
-            else:
-                col_str = s
-            skim[col_str] = stacked_variants.T.tolist()
-            multisigma_cols.append(col_str)
-
+                if not 'multisigma' in s:
+                    col_str = 'multisigma_'+s
+                else:
+                    col_str = s
+                skim[col_str] = stacked_variants.T.tolist()
+                multisigma_cols.append(col_str)
+            elif "multisim" in s:
+                multisim_cols.append(s)
+                w = wgt[s]#.fillna(1).replace([np.inf, -np.inf], 1)
+                if lightmem:
+                    w[w.select_dtypes(include=["float64"]).columns] = w.select_dtypes(include=["float64"]).astype("float32")
+                stacked_variants = np.vstack([np.nan_to_num(w["univ_%i" % i].to_numpy(), nan=1.0, posinf=1.0, neginf=1.0) for i in range(min(250, nuniv))])
+                skim[s] = stacked_variants.T.tolist()
     else:
         for i, s in enumerate(xsec_syst):
             if "ps1" in wgt[s]:
@@ -644,9 +657,9 @@ def load_one(fname, idf,
     if detvar_spline:
         for s, f in zip(detvar_rwt_lbls, detvar_rwt_files):
             if isinstance(f, (str, bytes)):
-                fs = [f]
+                fs = [spline_dir + '/' + f]
             else:
-                fs = f
+                fs = [spline_dir + '/' + fi for fi in f]
             
             allowed_substrings = ["ICARUSRun4", "ICARUSRun2", "SBND"]
 
