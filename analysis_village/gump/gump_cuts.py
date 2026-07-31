@@ -677,13 +677,7 @@ def cathode_cut(df):
     else:
         return pd.Series(True, df.index)
 
-def intersects_prism_vectorized(
-    p1_array,
-    p2_array,
-    prism_min=(-200.0, 100.0, 250.0),
-    prism_max=(200.0, 200.0, 500.0),
-    solid=True,
-):
+def intersects_prism_vectorized(p1_array, p2_array, prism_min=(-200.0, 100.0, 250.0), prism_max=(200.0, 200.0, 500.0), solid=True):
     """Determines intersection for multiple line segments simultaneously.
 
     p1_array, p2_array: NumPy arrays of shape (N, 3) prism_min, prism_max: Tuples
