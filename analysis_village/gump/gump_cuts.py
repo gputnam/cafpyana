@@ -471,13 +471,40 @@ def flash_cut(df):
 
     return pd.Series(np_mask, index=df.index)
 
+# Final optimized selection
+# opt to ratio, min mu len 40, shared track score, per-detector PID
+# opt used the most updated calo treatment (no EMB IC, no sqmear15, double SBND 13)
+SBND_CUTS = {
+    "nu_score_th": 0.35,
+    "max_opening_angle": 160,
+    "musel_track_score_min": 0.5,
+    "musel_muscore_th": 38,
+    "musel_pscore_th": 82,
+    "musel_len_th_min": 40,
+    "musel_len_th_max": 400,
+    "psel_muscore_th": 0,
+    "psel_pscore_th": 141,
+}
 
-def cosmic_cut(df, nu_score_th=0.4, max_opening_angle=155):
+ICARUS_CUTS = {
+    "nu_score_th": 0.35,
+    "max_opening_angle": 160,
+    "musel_track_score_min": 0.5,
+    "musel_muscore_th": 111,
+    "musel_pscore_th": 74,
+    "musel_len_th_min": 40,
+    "musel_len_th_max": 400,
+    "psel_muscore_th": 0,
+    "psel_pscore_th": 92,
+}
+
+def _det_cut_th(detector, key):
+    return np.where(detector == "SBND", SBND_CUTS[key], ICARUS_CUTS[key])
+
+def cosmic_cut(df):
     df = add_opening_angle_mu_p(df)
-    return (df.nu_score > nu_score_th) & (
-        df["mu_p_opening_angle_deg"] < max_opening_angle
-    )
-
+    return (df.nu_score > _det_cut_th(df.detector, "nu_score_th")) & \
+           (df["mu_p_opening_angle_deg"] < _det_cut_th(df.detector, "max_opening_angle"))
 
 def add_opening_angle_mu_p(df, out_col="mu_p_opening_angle_deg", degrees=True):
     mu = df[["mu_dir_x", "mu_dir_y", "mu_dir_z"]].to_numpy(dtype=float)
@@ -648,8 +675,7 @@ def cathode_cut(df):
             p_start, p_mu, (-5.0, -200.0, 0.0), (5.0, 200.0, 500.0)
         )
     else:
-        return df.nu_E_calo > -999
-
+        return pd.Series(True, df.index)
 
 def intersects_prism_vectorized(
     p1_array,
@@ -812,15 +838,7 @@ def all_cuts_old(recodf, DETECTOR=None, det_run=None):
         recodf['mu_track_score'] = 0.0
 
     ### PID cut
-    pid_mask = pid_cut_df(
-        recodf.mu_chi2_of_mu_cand,
-        recodf.mu_chi2_of_prot_cand,
-        recodf.prot_chi2_of_mu_cand,
-        recodf.prot_chi2_of_prot_cand,
-        recodf.mu_len,
-        recodf.mu_track_score,
-        is_old=True,
-    )
+    pid_mask = pid_cut(recodf)
 
     return presel_mask & cosmic_mask & flash_mask & two_prong_mask & pid_mask
 
