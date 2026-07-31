@@ -17,6 +17,8 @@ from sbruce import *
 import loaddf
 
 import gump_cuts as gc
+from rwt_map import resolve_function
+
 def get_cols_to_drop():
     """Returns the explicit lists of columns to drop to save memory."""
 
@@ -85,6 +87,16 @@ def main():
     parser.add_argument(
         "-j", "--cores", type=int, default=1, help="Number of cores for loadl"
     )
+    parser.add_argument(
+        "-f", "--dvsplines", type=str, default="rwt_outputs", help="directory of detvar splines"
+    )
+
+    parser.add_argument(
+        "-s", "--selection",
+        type=resolve_function,
+        default=gc.all_cuts,
+        help="Selection function to run (e.g., 'gc.all_cuts' or 'gc.coworker_cuts')"
+    )
 
     args = parser.parse_args()
 
@@ -116,7 +128,6 @@ def main():
     # Assumes 'gc.all_cuts' equivalent logic is packaged or ignored for flat passes
 
 
-    preselection_cuts = gc.all_cuts
     df, _, _ = loaddf.loadl(
         [args.input],
         njob=args.cores,
@@ -126,9 +137,10 @@ def main():
         xsec_spline=is_mc,
         pot_spline=is_mc,
         detvar_spline=is_mc,
+        spline_dir=args.dvsplines,
         include_syst=is_mc,
         reweight_aFF=is_mc,
-        preselection=preselection_cuts,
+        preselection=args.selection,
         detector=detector_context,
         lightmem=True,
     )

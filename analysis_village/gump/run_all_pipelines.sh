@@ -11,7 +11,10 @@ echo " Starting GUMP TTree Processing Batch Run...            "
 echo "========================================================"
 
 echo "Remaking det var maps..."
-python3 rwt_map.py
+selection="gc.opt_cuts"
+splinedir="${selection#*.}"
+
+python3 rwt_map.py -s ${selection} -o ${splinedir}
 
 ## 1. SBND MC (20 files, 0 to 19)
 echo "--> Staging SBND Spring MC Files..."
@@ -24,6 +27,8 @@ do
     echo "Launching SBND MC Step $i"
     python3 run_gump_pipeline.py \
         -c mc \
+        -f ${splinedir} \
+	-s ${selection} \
         -i ${gray_prefix}SBNDMCCV_${i}.df \
         -o ${output}SBNDMCCV_${i}_sbruce.root &
 done
@@ -39,6 +44,8 @@ do
     echo "Launching ICARUS Run 4 MC Step $i"
     python3 run_gump_pipeline.py \
         -c mc \
+        -f ${splinedir} \
+	-s ${selection} \
         -i ${gray_prefix}ICARUSRun4_SpringMCOverlay_rewgt_${i}.df \
         -o ${output}ICARUSRun4_SpringMCOverlay_rewgt_${i}_sbruce.root &
 done
@@ -51,6 +58,8 @@ done
 echo "--> Launching ICARUS Run 2 MC..."
 python3 run_gump_pipeline.py \
     -c mc \
+    -f ${splinedir} \
+    -s ${selection} \
     -i ${gray_prefix}ICARUSRun2_SpringMCOverlay_rewgt.df \
     -o ${output}ICARUSRun2_SpringMCOverlay_rewgt_sbruce.root &
 
@@ -62,6 +71,8 @@ done
 echo "--> Launching ICARUS Run 2 OffBeam Data..."
 python3 run_gump_pipeline.py \
     -c data \
+    -f ${splinedir} \
+    -s ${selection} \
     -i ${gray_prefix}ICARUS_SpringRun2BNBOff_unblind.df \
     -o ${output}ICARUS_SpringRun2BNBOff_unblind_sbruce.root &
 
@@ -73,6 +84,7 @@ done
 echo "--> Launching ICARUS Run 4 OffBeam Data..."
 python3 run_gump_pipeline.py \
     -c data \
+    -s ${selection} \
     -i ${gray_prefix}ICARUS_SpringRun4BNBOff_unblind.df \
     -o ${output}ICARUS_SpringRun4BNBOff_unblind_sbruce.root &
 
@@ -84,6 +96,7 @@ done
 echo "--> Launching SBND OffBeam Data..."
 python3 run_gump_pipeline.py \
     -c data \
+    -s ${selection} \
     -i ${gray_prefix}SBND_SpringBNBOffData.df \
     -o ${output}SBND_SpringBNBOffData_sbruce.root &
 
@@ -95,6 +108,7 @@ done
 echo "--> Launching ICARUS Run 2 Dirt..."
 python3 run_gump_pipeline.py \
     -c data \
+    -s ${selection} \
     -i ${gray_prefix}ICARUS_Spring_Overlay_Dirt.df \
     -o ${output}ICARUS_Spring_Overlay_Dirt_sbruce.root &
 
@@ -106,6 +120,7 @@ done
 echo "--> Launching ICARUS Run 4 Dirt..."
 python3 run_gump_pipeline.py \
     -c data \
+    -s ${selection} \
     -i ${gray_prefix}ICARUSRun4_Spring_Overlay_Dirt.df \
     -o ${output}ICARUSRun4_Spring_Overlay_Dirt_sbruce.root &
 
@@ -117,5 +132,6 @@ done
 echo "--> Launching SBND Dirt..."
 python3 run_gump_pipeline.py \
     -c data \
+    -s ${selection} \
     -i ${gray_prefix}SBND_SpringLowEMC.df \
     -o ${output}SBND_SpringLowEMC_sbruce.root &

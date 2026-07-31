@@ -1,10 +1,13 @@
 import pandas as pd
 import os
 import sys
+import matplotlib.pyplot as plt
 from cycler import cycler
 import argparse
 from functools import reduce
 from tqdm.auto import tqdm
+
+import importlib
 
 workspace_root = os.getcwd()
 sys.path.insert(0, workspace_root + "/../../")
@@ -99,7 +102,8 @@ def plot_2d_hist_from_file(filename, plot_title, output_tag):
 
     plt.figure(figsize=(10, 6))
     X, Y = np.meshgrid(x_edges, y_edges)
-    mesh = plt.pcolormesh(x_edges, y_edges, z_values.T, cmap='seismic', linewidth=0.1, vmin=0.5, vmax=1.5)
+    #mesh = plt.pcolormesh(x_edges, y_edges, z_values.T, cmap='seismic', linewidth=0.1, vmin=0.5, vmax=1.5)
+    mesh = plt.pcolormesh(x_edges, y_edges, z_values.T, cmap='seismic', linewidth=0.1)
     
     plt.colorbar(mesh, label='Value')
     plt.title(plot_title)
@@ -110,15 +114,17 @@ def plot_2d_hist_from_file(filename, plot_title, output_tag):
     plt.savefig('/exp/sbnd/app/users/nrowe/cafpyana/analysis_village/gump/rwt_outputs/2d_ratio_'+output_tag+'.png', dpi=300)
     plt.clf() 
 
-def remake_detvar_maps(detector, DF_DIR="/exp/sbnd/data/users/gputnam/GUMP/sbn-rewgted-10/"):
+def remake_detvar_maps(detector, DF_DIR="/exp/sbnd/data/users/gputnam/GUMP/sbn-rewgted-10/", selection=gc.all_cuts, outdir="rwt_outputs"):
+    if not os.path.exists(outdir):
+        os.makedirs(outdir)
     if detector == "ICARUS Run2":
         GOAL_POT = 2e20
         DETVAR_FILES = [[DF_DIR + "ICARUSRun2_SpringMCOverlay_rewgt.df"], [DF_DIR + "ICARUSRun2_Spring_Overlay_WMXThXW.df"], [DF_DIR + "ICARUSRun2_Spring_Overlay_SCE.df"]]
         DETVAR_NAMES = ["Nominal", "WMXThetaXW", "SCE"]
     elif detector == "ICARUS Run4":
         GOAL_POT = 3e20
-        DETVAR_FILES = [[DF_DIR + "ICARUSRun4_SpringMCOverlay_rewgt_%i.df" % i for i in range(2)], [DF_DIR + "ICARUSRun4_Spring_Overlay_SCE.df"]]
-        DETVAR_NAMES = ["Nominal", "SCE"]
+        DETVAR_FILES = [[DF_DIR + "ICARUSRun4_SpringMCOverlay_rewgt_%i.df" % i for i in range(2)], [DF_DIR + "ICARUSRun4_Spring_Overlay_WMXThXW.df"], [DF_DIR + "ICARUSRun4_Spring_Overlay_SCE.df"]]
+        DETVAR_NAMES = ["Nominal", "WMXThetaXW", "SCE"]
     elif detector == "SBND": 
         GOAL_POT = 1e20
         DETVAR_FILES = [[DF_DIR + "SBNDMCCV_%i.df" % i for i in range(3)], 
@@ -126,7 +132,11 @@ def remake_detvar_maps(detector, DF_DIR="/exp/sbnd/data/users/gputnam/GUMP/sbn-r
                         [DF_DIR + "SBND_SpringMC_WMYZ.df"], 
                        ]
 
-        DETVAR_NAMES = ["Nominal", "WMXThetaXW", "WMYZ"]
+        DETVAR_NAMES = [
+                        "Nominal", 
+                        "WMXThetaXW", 
+                        "WMYZ", 
+                        ]
 
 
         DETVAR_FILES_SMALL = [DF_DIR + "SBND_SpringMC_Nom.df", 
@@ -150,7 +160,32 @@ def remake_detvar_maps(detector, DF_DIR="/exp/sbnd/data/users/gputnam/GUMP/sbn-r
                     'prot_chi22lo_of_mu_cand', 'prot_chi22hi_of_mu_cand', 'mu_chi22lo_of_prot_cand', 'mu_chi22hi_of_prot_cand', 
                     'prot_chi22lo_of_prot_cand', 'prot_chi22hi_of_prot_cand', 'true_mu_p', 'true_p_p', 'pot_univ']
 
+
+    b = [np.array([0.3, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.25, 1.5]), [0.0, 0.2, 0.4, 0.6]]
+
+    dent_df, _, dent_pot = loaddf.load(DF_DIR + "SBND_SpringMC_DENT.df", preselection=gc.slcfv_cut, include_syst=False, detector=detector, lightmem=True, drops=cols_to_drop)
+
     detvars, detvarsmatch, detvar_pots = zip(*tqdm([loaddf.loadl(f, preselection=gc.slcfv_cut, include_syst=False, detector=detector, lightmem=True, drops=cols_to_drop) for f in DETVAR_FILES]))
+
+    ### DENT stuff is separate ###
+    if detector == "SBND":
+        cv_df = detvars[0].copy()
+        cv_pot = detvar_pots[0].copy()
+
+        loaddf.scale_pot(cv_df, cv_pot, GOAL_POT)
+        loaddf.scale_pot(dent_df, dent_pot, GOAL_POT)
+
+        cv_df['selected'] = selection(cv_df)
+        dent_df['selected'] = selection(dent_df)
+
+        cv_hist = np.histogram2d(*cv_df.loc[cv_df['selected'], ['nu_E_calo', 'del_p']].to_numpy().T, bins=b, weights=cv_df.loc[cv_df['selected'], 'glob_scale'].to_numpy())[0]
+        dent_hist = np.histogram2d(*dent_df.loc[dent_df['selected'], ['nu_E_calo', 'del_p']].to_numpy().T, bins=b, weights=dent_df.loc[dent_df['selected'], 'glob_scale'].to_numpy())[0]
+        save_histogram(f"{outdir}/SBND_DENT.txt", dent_hist/cv_hist, b[0], b[1])
+
+        del cv_df
+        del dent_df
+
+    ### Other big stuff
     detvars, detvar_pots = loaddf.match_common_evts(detvarsmatch, detvars, detvar_pots)
 
     for i in range(len(detvars)):
@@ -160,17 +195,19 @@ def remake_detvar_maps(detector, DF_DIR="/exp/sbnd/data/users/gputnam/GUMP/sbn-r
     detvars.extend([syst.v_chi2smear(df), syst.v_chi2hi(df), syst.v_chi2alpha(df), syst.v_chi2beta(df), syst.v_chi2R(df), syst.v_flashscale(df, 1), syst.v_flashscale(df, -1)])
     DETVAR_NAMES.extend(["Smeared dE/dx", "Gain Hi", "EMB Alpha", "EMB Beta", "EMB R", "TrigEffPls", "TrigEffMin"]) 
 
-    b = [np.array([0.3, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.25, 1.5]), [0.0, 0.2, 0.4, 0.6]]
-    hists = []
 
-    selection = gc.all_cuts
+    hists = []
 
     for d in detvars:
         d['selected'] = selection(d)
-        hists.append(np.histogram2d(*d.loc[d['selected'], ['nu_E_calo', 'del_p']].to_numpy().T, bins=b)[0])
+        hists.append(np.histogram2d(*d.loc[d['selected'], ['nu_E_calo', 'del_p']].to_numpy().T, bins=b, weights=d.loc[d['selected'], 'glob_scale'].to_numpy())[0])
 
     for name, h in zip(DETVAR_NAMES[1:], hists[1:]):
-        save_histogram(f"rwt_outputs/{detector.replace(' ','')}_{name.replace('/', '').replace(' ','')}.txt", h/hists[0], b[0], b[1])
+        cv = hists[0]
+        if name == "Smeared dE/dx" and detector == "SBND":
+            save_histogram(f"{outdir}/{detector.replace(' ','')}_{name.replace('/', '').replace(' ','')}.txt", (2*(h-cv)+cv)/cv, b[0], b[1])
+        else:
+            save_histogram(f"{outdir}/{detector.replace(' ','')}_{name.replace('/', '').replace(' ','')}.txt", h/cv, b[0], b[1])
 
     ## SBND SCE now uses a different CV file than the WM samples, this is really cool and not annoying at all
     if detector == "SBND":
@@ -184,12 +221,52 @@ def remake_detvar_maps(detector, DF_DIR="/exp/sbnd/data/users/gputnam/GUMP/sbn-r
         hists = []
         for d in detvars:
             d['selected'] = selection(d)
-            hists.append(np.histogram2d(*d.loc[d['selected'], ['nu_E_calo', 'del_p']].to_numpy().T, bins=b)[0])
+            hists.append(np.histogram2d(*d.loc[d['selected'], ['nu_E_calo', 'del_p']].to_numpy().T, bins=b, weights=d.loc[d['selected'], 'glob_scale'].to_numpy())[0])
 
         for name, h in zip(DETVAR_NAMES_SMALL[1:], hists[1:]):
-            save_histogram(f"rwt_outputs/{detector.replace(' ','')}_{name.replace('/', '').replace(' ','')}.txt", h/hists[0], b[0], b[1])
+            save_histogram(f"{outdir}/{detector.replace(' ','')}_{name.replace('/', '').replace(' ','')}.txt", h/hists[0], b[0], b[1])
+
+def resolve_function(func_string):
+    """
+    Resolves strings like 'gc.all_cuts', 'gc.coworker_cuts', or 
+    'my_cuts_module.custom_cut' into callable Python functions.
+    """
+    if "." not in func_string:
+        # Fall back to checking inside the local gump_cuts module if no module prefix given
+        if hasattr(gc, func_string):
+            return getattr(gc, func_string)
+        raise ValueError(f"Function name must be 'module.function' (e.g. 'gc.all_cuts'), got '{func_string}'")
+
+    module_name, func_name = func_string.rsplit(".", 1)
+
+    # Handle common alias 'gc' automatically
+    if module_name == "gc":
+        module_name = "analysis_village.gump.gump_cuts"  # Or your actual module import path
+
+    try:
+        mod = importlib.import_module(module_name)
+        return getattr(mod, func_name)
+    except (ImportError, AttributeError) as e:
+        raise argparse.ArgumentTypeError(f"Could not import '{func_string}': {e}")
 
 if __name__ == "__main__":
-    remake_detvar_maps("SBND")
-    remake_detvar_maps("ICARUS Run2")
-    remake_detvar_maps("ICARUS Run4")
+
+    parser = argparse.ArgumentParser(description="Run reweighting maps with selection cuts.")
+    parser.add_argument(
+        "-s", "--selection",
+        type=resolve_function,
+        default=gc.all_cuts,
+        help="Selection function to run (e.g., 'gc.all_cuts' or 'gc.coworker_cuts')"
+    )
+    parser.add_argument(
+        "-o", "--outdir",
+        type=str,
+        default="rwt_outputs",
+        help="Output directory for reweight maps"
+    )
+   
+    args = parser.parse_args()
+
+    remake_detvar_maps("SBND", selection=args.selection, outdir=args.outdir)
+    remake_detvar_maps("ICARUS Run2", selection=args.selection, outdir=args.outdir)
+    remake_detvar_maps("ICARUS Run4", selection=args.selection, outdir=args.outdir)
