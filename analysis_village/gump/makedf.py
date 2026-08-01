@@ -376,6 +376,10 @@ def make_pandora_no_cuts_df(f, do_calo_syst=False):
         'mu_T': mu_E - MUON_MASS,
         'p_E': p_E,
         'p_T': p_E - PROTON_MASS,
+        'mu_dist_to_vertex': slcdf.mu.pfp.dist_to_vertex,
+        'p_dist_to_vertex': slcdf.p.pfp.dist_to_vertex,
+        'mu_track_score': slcdf.mu.pfp.trackScore,
+        'p_track_score': slcdf.p.pfp.trackScore,
         'mu_end_x': slcdf.mu.pfp.trk.end.x,
         'mu_end_y': slcdf.mu.pfp.trk.end.y,
         'mu_end_z': slcdf.mu.pfp.trk.end.z,
@@ -715,7 +719,13 @@ extra_weights = [
     "GENIEReWeight_SBN_v3_FrKin_PiProBias_N",
 ]
 
-gump_genie_reknob_systematics = gump_ar23_weights + gump_ar23p_weights + extra_weights
+g4_weights = [
+    "reinteractions_piminus_Geant4",
+    "reinteractions_piplus_Geant4",
+    "reinteractions_proton_Geant4"
+]
+
+gump_genie_reknob_systematics = gump_ar23_weights + gump_ar23p_weights + extra_weights + g4_weights
 
 def make_gump_nuslimwgtdf(f):
     return make_mcnudf(f, include_weights=True, slim=True, genie_systematics=gump_genie_systematics)
