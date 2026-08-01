@@ -314,6 +314,12 @@ class StatSampleSystematic(object):
         # Poisson variance of weighted events is square of weights
         w = self.df.loc[self.df[cut], self.scale]**2
         var = np.histogramdd([self.df.loc[self.df[cut], v].fillna(fillna) for v in var], bins=bins, weights=w)[0].flatten()*self.norm
+
+        if shapeonly:
+            diff = outern([b[1:] - b[:-1] for b in bins])
+            norm = np.sum(NCV*diff)
+            return np.diag(var)/norm**2
+
         return np.diag(var)
 
 class CorrelatedSystematic(Systematic):
@@ -429,6 +435,90 @@ class SelectionSystematic(Systematic):
         return np.histogramdd([self.df.loc[self.df[c], v].fillna(fillna) for v in var],
                               bins=bins,
                               weights=self.df.loc[self.df[c], self.scale])[0].flatten()
+
+def split_tracks(df, dim, coord, runs=None):
+    """Build the split-track universe for muons crossing a detector plane.
+
+    A muon "crosses" the plane at `coord` along dimension `dim` ("x"/"y"/"z")
+    when its start and end sit on opposite sides; slc_vtx_* is the established
+    stand-in for the track start (the flat GUMP df has no mu_start_*). Crossing
+    muons are truncated at the plane: mu_len, mu_end_*, and the muon momentum
+    (via muon_range_momentum -- the same length->momentum mapping that filled
+    the range-based reco momentum in the CAFs) are recomputed, and the
+    downstream kinematics (nu_E_calo, del_p, del_Tp, del_phi, mu_E, mu_T) are
+    recalculated with kinematics.py.
+
+    `runs` restricts the split to those run periods (e.g. [4] for the east
+    cathode, which lies outside the Run 2 muon fiducial volume).
+
+    Returns (splitdf, crosses): the truncated copy of the crossing rows, and
+    the positional boolean mask of those rows in `df`. The caller must
+    re-evaluate the selection on splitdf before use.
+    """
+    import pandas as pd
+
+    vtx = df["slc_vtx_" + dim].to_numpy()
+    end = df["mu_end_" + dim].to_numpy()
+    crosses = np.isfinite(vtx) & np.isfinite(end) & \
+        (np.sign(vtx - coord) != np.sign(end - coord))
+    if runs is not None:
+        crosses = crosses & df.Run.isin(runs).to_numpy()
+
+    s = df.loc[crosses].copy()
+
+    # fraction of the way along the (straight) vtx->end segment at which the
+    # track crosses the plane; 0 < t < 1 by construction for crossers
+    t = (coord - s["slc_vtx_" + dim]) / (s["mu_end_" + dim] - s["slc_vtx_" + dim])
+
+    for d in "xyz":
+        s["mu_end_" + d] = s["slc_vtx_" + d] + t*(s["mu_end_" + d] - s["slc_vtx_" + d])
+    s["mu_len"] = t*s.mu_len
+
+    mu_p = pd.Series(muon_range_momentum(s.mu_len.to_numpy()), index=s.index)
+    recompute_kinematics(s, mu_p=mu_p)
+
+    return s, crosses
+
+class TrackSplittingSystematic(Systematic):
+    """Systematic where muons crossing a detector plane are split with
+    probability `frac`.
+
+    The single universe is the deterministic f-weighted mixture: each crossing
+    muon enters at (1 - frac) x its nominal kinematics plus frac x its split
+    (truncated) kinematics, with the selection re-evaluated on the split rows
+    (the `cut` column must exist in splitdf). One one-sided universe, treated
+    as a symmetrized 1-sigma variation (as in SelectionSystematic).
+
+    `crosses` is the positional boolean mask of the crossing rows in `df`
+    (NOT index-based -- the notebook CV dfs carry duplicate index labels).
+    Build the inputs with split_tracks().
+    """
+    def __init__(self, df, splitdf, crosses, frac, scale="glob_scale"):
+        self.df = df
+        self.splitdf = splitdf
+        self.crosses = np.asarray(crosses, dtype=bool)
+        self.frac = frac
+        self.scale = scale
+
+    def nuniv(self):
+        return 1
+
+    def univ(self, var, cut, bins, i_univ, fillna=np.nan):
+        assert(i_univ == 0)
+        if not isinstance(var, list):
+            var = [var]
+            bins = [bins]
+
+        m = self.df[cut].to_numpy()
+        w = self.df[self.scale].to_numpy()*(1 - self.frac*self.crosses)
+        N = np.histogramdd([self.df[v].fillna(fillna).to_numpy()[m] for v in var],
+                           bins=bins, weights=w[m])[0].flatten()
+
+        ms = self.splitdf[cut].to_numpy()
+        ws = self.splitdf[self.scale].to_numpy()[ms]*self.frac
+        N += np.histogramdd([self.splitdf[v].fillna(fillna).to_numpy()[ms] for v in var],
+                            bins=bins, weights=ws)[0].flatten()
+        return N
 
 class WeightSystematic(Systematic):
     def __init__(self, df, wgts, avg=True, scale="glob_scale"):
