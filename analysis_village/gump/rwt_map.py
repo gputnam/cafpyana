@@ -141,49 +141,41 @@ def remake_detvar_maps(detector, DF_DIR="/exp/sbnd/data/users/gputnam/GUMP/sbn-r
 
         DETVAR_FILES_SMALL = [DF_DIR + "SBND_SpringMC_Nom.df", 
                               DF_DIR + "SBND_SpringMC_2xSCE.df", 
-                              DF_DIR + "SBND_SpringMC_0xSCE.df"]
+                              DF_DIR + "SBND_SpringMC_0xSCE.df",
+                              DF_DIR + "SBND_SpringMC_DENT.df"]
 
-        DETVAR_NAMES_SMALL = ["Nominal", "2xSCE", "0xSCE"]
-   
-    cols_to_drop = ['is_clear_cosmic', 'crlongtrkdiry', 'p_len', 'mu_E', 'mu_T', 'p_E', 'p_T', 'del_Tp', 'del_phi', 'has_stub',
-                    'true_pcand_pdg', 'true_p_dir_x', 'true_p_dir_y', 'true_p_dir_z', 'true_pcand_dir_x', 'true_pcand_dir_y', 
-                    'true_pcand_dir_z', 'true_pcand_end_x', 'true_pcand_end_y', 'true_pcand_end_z', 'true_mucand_pdg', 'true_mu_dir_x', 
-                    'true_mu_dir_y', 'true_mu_dir_z', 'true_mucand_dir_x', 'true_mucand_dir_y', 'true_mucand_dir_z', 
-                    'true_mucand_end_x', 'true_mucand_end_y', 'true_mucand_end_z', 'stub_l0_5cm_dedx','stub_l0_5cm_charge',
-                    'stub_l1cm_dedx','stub_l1cm_charge','stub_l2cm_dedx','stub_l2cm_charge','stub_l3cm_dedx','stub_l3cm_charge',
-                    'stub_l4cm_dedx','stub_l4cm_charge', 'prot_chi2smear5_of_prot_cand', 'prot_chi2smear5_of_mu_cand', 
-                    'mu_chi2smear5_of_mu_cand', 'mu_chi2smear5_of_prot_cand', 'tmatch_pur', 'tmatch_eff', 'true_baseline', 
-                    'true_nu_pdg_x', 'true_nu_pdg_y', 'true_nmu_27MeV', 'true_np_20MeV', 'true_np_50MeV', 'true_npi_30MeV', 
-                    'is_cosmic', 'flash_sumpe', 'true_mucand_p', 'true_pcand_p', 'mu_true_p', 'p_true_p', 'true_mu_end_x', 
-                    'true_p_end_x', 'true_mu_end_y', 'true_p_end_y', 'true_mu_end_z', 'true_p_end_z','crthit', 'true_nu_E', 
-                    'p_true_pdg', 'mu_true_pdg', 'mu_chi22lo_of_mu_cand', 'mu_chi22hi_of_mu_cand', 
-                    'prot_chi22lo_of_mu_cand', 'prot_chi22hi_of_mu_cand', 'mu_chi22lo_of_prot_cand', 'mu_chi22hi_of_prot_cand', 
-                    'prot_chi22lo_of_prot_cand', 'prot_chi22hi_of_prot_cand', 'true_mu_p', 'true_p_p', 'pot_univ']
-
+        DETVAR_NAMES_SMALL = ["Nominal", "2xSCE", "0xSCE", "DENT"]
+  
 
     b = [np.array([0.3, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.25, 1.5]), [0.0, 0.2, 0.4, 0.6]]
 
-    dent_df, _, dent_pot = loaddf.load(DF_DIR + "SBND_SpringMC_DENT.df", preselection=gc.slcfv_cut, include_syst=False, detector=detector, lightmem=True, drops=cols_to_drop)
+    detvars, detvarsmatch, detvar_pots = zip(*tqdm([loaddf.loadl(f, preselection=gc.slcfv_cut, include_syst=False, detector=detector, lightmem=True, drops=loaddf.get_std_drops()) for f in DETVAR_FILES]))
+    ## Binding E, track splitting req separate loads 
+    bind_df, _, bind_pot = loaddf.loadl(DETVAR_FILES[0], preselection=gc.slcfv_cut, include_syst=False, detector=detector, lightmem=True, shift_binding_E=True, drops=loaddf.get_std_drops())
 
-    detvars, detvarsmatch, detvar_pots = zip(*tqdm([loaddf.loadl(f, preselection=gc.slcfv_cut, include_syst=False, detector=detector, lightmem=True, drops=cols_to_drop) for f in DETVAR_FILES]))
+    cv_df = detvars[0].copy()
+    cv_pot = detvar_pots[0].copy()
 
-    ### DENT stuff is separate ###
-    if detector == "SBND":
-        cv_df = detvars[0].copy()
-        cv_pot = detvar_pots[0].copy()
+    loaddf.scale_pot(cv_df, cv_pot, GOAL_POT)
+    loaddf.scale_pot(bind_df, bind_pot, GOAL_POT)
 
-        loaddf.scale_pot(cv_df, cv_pot, GOAL_POT)
-        loaddf.scale_pot(dent_df, dent_pot, GOAL_POT)
+    cv_df['selected'] = selection(cv_df)
+    bind_df['selected'] = selection(bind_df)
 
-        cv_df['selected'] = selection(cv_df)
-        dent_df['selected'] = selection(dent_df)
+    cv_hist = np.histogram2d(*cv_df.loc[cv_df['selected'], ['nu_E_calo', 'del_p']].to_numpy().T, bins=b, weights=cv_df.loc[cv_df['selected'], 'glob_scale'].to_numpy())[0]
+    bind_hist = np.histogram2d(*bind_df.loc[bind_df['selected'], ['nu_E_calo', 'del_p']].to_numpy().T, bins=b, weights=bind_df.loc[bind_df['selected'], 'glob_scale'].to_numpy())[0]
+    save_histogram(f"{outdir}/{detector.replace(' ','')}_BIND.txt", bind_hist/cv_hist, b[0], b[1])
+    del bind_df
 
-        cv_hist = np.histogram2d(*cv_df.loc[cv_df['selected'], ['nu_E_calo', 'del_p']].to_numpy().T, bins=b, weights=cv_df.loc[cv_df['selected'], 'glob_scale'].to_numpy())[0]
-        dent_hist = np.histogram2d(*dent_df.loc[dent_df['selected'], ['nu_E_calo', 'del_p']].to_numpy().T, bins=b, weights=dent_df.loc[dent_df['selected'], 'glob_scale'].to_numpy())[0]
-        save_histogram(f"{outdir}/SBND_DENT.txt", dent_hist/cv_hist, b[0], b[1])
-
-        del cv_df
-        del dent_df
+    ### track splitting
+    if "ICARUS" in detector:
+        for split_region in ["Z=0","East Cathode","West Cathode"]:
+            trksplt_df, _, trksplt_pot = loaddf.loadl(DETVAR_FILES[0], preselection=gc.slcfv_cut, include_syst=False, detector=detector, lightmem=True, split_tracks=split_region, drops=loaddf.get_std_drops())
+            loaddf.scale_pot(trksplt_df, trksplt_pot, GOAL_POT)
+            trksplt_df['selected'] = selection(trksplt_df)
+            trksplt_hist = np.histogram2d(*trksplt_df.loc[trksplt_df['selected'], ['nu_E_calo', 'del_p']].to_numpy().T, bins=b, weights=trksplt_df.loc[trksplt_df['selected'], 'glob_scale'].to_numpy())[0]
+            save_histogram(f"{outdir}/{detector.replace(' ','')}_{split_region.replace(' ','')}_TRKSPLT.txt", trksplt_hist/cv_hist, b[0], b[1])
+            del trksplt_df
 
     ### Other big stuff
     detvars, detvar_pots = loaddf.match_common_evts(detvarsmatch, detvars, detvar_pots)
@@ -199,6 +191,7 @@ def remake_detvar_maps(detector, DF_DIR="/exp/sbnd/data/users/gputnam/GUMP/sbn-r
     hists = []
 
     for d in detvars:
+        print("detvars loop", d)
         d['selected'] = selection(d)
         hists.append(np.histogram2d(*d.loc[d['selected'], ['nu_E_calo', 'del_p']].to_numpy().T, bins=b, weights=d.loc[d['selected'], 'glob_scale'].to_numpy())[0])
 

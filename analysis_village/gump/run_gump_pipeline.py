@@ -134,6 +134,7 @@ def main():
         xsec_univ=False,
         flux_univ=False,
         sep_flux_univ=is_mc,  # Enable multisim loops only for MC configurations
+        sep_g4_univ=is_mc,  # Enable multisim loops only for MC configurations
         xsec_spline=is_mc,
         pot_spline=is_mc,
         detvar_spline=is_mc,

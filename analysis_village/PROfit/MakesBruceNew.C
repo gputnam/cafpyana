@@ -46,7 +46,7 @@ void MakesBruceNew(const char* fileName = "input.root", const char* output_filen
         std::map<std::string, std::vector<double>> sigma_storage; //
 
         std::string multisigma_keyword = "multisigma"; //
-        std::string multisim_keyword = "Flux"; //
+        std::string multisim_keyword = "multisim"; //
 
         // 1. Dynamic Branch Booking Loop
         for(int b = 0; b < nBranches; b++) {
