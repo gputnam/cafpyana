@@ -14,7 +14,7 @@ echo "@@ git clone cafpyana"
 git clone https://github.com/gputnam/cafpyana.git
 echo "@@ cd to cafpyana dir"
 cd cafpyana
-git checkout remotes/origin/N8Dev
+git checkout remotes/origin/GUMP
 echo "@@ git branch -a"
 echo "@@ ls -alh"
 ls -alh
@@ -45,8 +45,8 @@ echo "@@ check filesFromSender dir"
 ls -alh ${filesFromSender}
 
 #echo "@@ Setup xrootd"
-cp -r ${filesFromSender}/XRootD $VIRTUAL_ENV/lib/python3.9/site-packages/
-cp -r ${filesFromSender}/pyxrootd $VIRTUAL_ENV/lib/python3.9/site-packages/
+cp -r ${filesFromSender}/XRootD $VIRTUAL_ENV/lib/python3.10/site-packages/
+cp -r ${filesFromSender}/pyxrootd $VIRTUAL_ENV/lib/python3.10/site-packages/
 
 export IFDH_CP_MAXRETRIES=2
 
