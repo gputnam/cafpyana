@@ -5,10 +5,10 @@ NicolaICARUS/MAPLE_GUMP/icarus/helper_eff_cf_FINAL_..._Trigger.h
 and the SpillMultiVar output variables in helper_variables.h.
 
 PID modes:
-  "gump"   -- chi2 recomputed from hit dQ/dx via makedf.chi2pid with ICARUS
-              gains + calibration (the gump-cafpyana way).  Physics default.
-  "cafana" -- chi2 replicating chi2_ALG on the CAF-stored dedx
-              (chi2pid_cafana).  Used for validation against CAFANA-MAPLE.
+  "cafpyana" -- chi2 recomputed from hit dQ/dx via makedf.chi2pid with ICARUS
+                gains + calibration (the gump-cafpyana way).  Physics default.
+  "cafana"   -- chi2 replicating chi2_ALG on the CAF-stored dedx
+                (chi2pid_cafana).  Used for validation against CAFANA-MAPLE.
 
 Both flavors of chi2 are always stored; `pid_mode` picks which one drives
 the muon/proton candidate identification, the cut booleans, and the sBruce
@@ -285,7 +285,7 @@ def _cut_chain(S, counts, has_mu):
 # =====================================================================
 # Main evt builder
 # =====================================================================
-def make_maple_evt_df(f, selection="none", pid_mode="gump", do_calo_syst=True):
+def make_maple_evt_df(f, selection="none", pid_mode="cafpyana", do_calo_syst=True):
     det = loadbranches(f["recTree"], ["rec.hdr.det"]).rec.hdr.det
     if det.empty:
         return pd.DataFrame()
@@ -375,8 +375,8 @@ def make_maple_evt_df(f, selection="none", pid_mode="gump", do_calo_syst=True):
 
     # gump-style chi2 on recomputed dE/dx (ICARUS gains + calibration)
     trkhitdf["dedx_redo"] = chi2pid.dedx(trkhitdf, gain="ICARUS", calibrate="ICARUS", isMC=ismc)
-    P["chi2u_gump"] = chi2pid.chi2u(trkhitdf, dedxname="dedx_redo")[0]
-    P["chi2p_gump"] = chi2pid.chi2p(trkhitdf, dedxname="dedx_redo")[0]
+    P["chi2u_cafpyana"] = chi2pid.chi2u(trkhitdf, dedxname="dedx_redo")[0]
+    P["chi2p_cafpyana"] = chi2pid.chi2p(trkhitdf, dedxname="dedx_redo")[0]
 
     # calorimetric variations (ported from gump make_pandora_no_cuts_df)
     if do_calo_syst:
@@ -399,8 +399,8 @@ def make_maple_evt_df(f, selection="none", pid_mode="gump", do_calo_syst=True):
         # Don't apply variations to (Overlay) cosmics
         cosmic = P.true_genp_x.isna()
         for var in SCALE_SMEAR_VARIATIONS + CALO_VARIATIONS:
-            P.loc[cosmic, "chi2u_%s" % var] = P.loc[cosmic, "chi2u_gump"]
-            P.loc[cosmic, "chi2p_%s" % var] = P.loc[cosmic, "chi2p_gump"]
+            P.loc[cosmic, "chi2u_%s" % var] = P.loc[cosmic, "chi2u_cafpyana"]
+            P.loc[cosmic, "chi2p_%s" % var] = P.loc[cosmic, "chi2p_cafpyana"]
 
     # ------------------------------------------------------------------
     # spill-level inputs
@@ -463,14 +463,14 @@ def make_maple_evt_df(f, selection="none", pid_mode="gump", do_calo_syst=True):
     # ------------------------------------------------------------------
     # PID-dependent selection: primary + alternate flavor
     # ------------------------------------------------------------------
-    if pid_mode == "gump":
-        chi_pri = ("chi2u_gump", "chi2p_gump")
+    if pid_mode == "cafpyana":
+        chi_pri = ("chi2u_cafpyana", "chi2p_cafpyana")
         chi_alt = ("chi2u_cafana", "chi2p_cafana")
     elif pid_mode == "cafana":
         chi_pri = ("chi2u_cafana", "chi2p_cafana")
-        chi_alt = ("chi2u_gump", "chi2p_gump")
+        chi_alt = ("chi2u_cafpyana", "chi2p_cafpyana")
     else:
-        raise ValueError("pid_mode must be 'gump' or 'cafana'")
+        raise ValueError("pid_mode must be 'cafpyana' or 'cafana'")
 
     mu_ilocs, pid_s, counts = _run_selection(P, P[chi_pri[0]], P[chi_pri[1]])
     counts = counts.reindex(S.index).fillna(0).astype(int)
@@ -498,7 +498,7 @@ def make_maple_evt_df(f, selection="none", pid_mode="gump", do_calo_syst=True):
     # sBruce variables (from the primary-flavor candidates)
     # ------------------------------------------------------------------
     mucols = ["len", "end_x", "end_y", "end_z", "dir_x", "dir_y", "dir_z",
-              "p_muon", "trackScore", "chi2u_gump", "chi2p_gump",
+              "p_muon", "trackScore", "chi2u_cafpyana", "chi2p_cafpyana",
               "chi2u_cafana", "chi2p_cafana"]
     if do_calo_syst:
         mucols += ["chi2u_%s" % v for v in SCALE_SMEAR_VARIATIONS + CALO_VARIATIONS]
@@ -514,7 +514,7 @@ def make_maple_evt_df(f, selection="none", pid_mode="gump", do_calo_syst=True):
     # leading proton: longest pid==Proton pfp with len > 0 (find_longest_proton)
     prodf = P[(pid_s == PID_PROTON) & (P.len > 0)]
     pcols = ["len", "end_x", "end_y", "end_z", "dir_x", "dir_y", "dir_z",
-             "p_proton", "ke_proton", "trackScore", "chi2u_gump", "chi2p_gump",
+             "p_proton", "ke_proton", "trackScore", "chi2u_cafpyana", "chi2p_cafpyana",
              "chi2u_cafana", "chi2p_cafana"]
     if do_calo_syst:
         pcols += ["chi2u_%s" % v for v in SCALE_SMEAR_VARIATIONS + CALO_VARIATIONS]
@@ -601,8 +601,8 @@ def make_maple_evt_df(f, selection="none", pid_mode="gump", do_calo_syst=True):
     S["Muon_trackScore"] = mu.trackScore
     S["Muon_chi2mu"] = mu[chi_pri[0]]
     S["Muon_chi2pro"] = mu[chi_pri[1]]
-    S["Muon_chi2mu_gump"] = mu.chi2u_gump
-    S["Muon_chi2pro_gump"] = mu.chi2p_gump
+    S["Muon_chi2mu_cafpyana"] = mu.chi2u_cafpyana
+    S["Muon_chi2pro_cafpyana"] = mu.chi2p_cafpyana
     S["Muon_chi2mu_cafana"] = mu.chi2u_cafana
     S["Muon_chi2pro_cafana"] = mu.chi2p_cafana
     S["Proton_length_leading"] = pro.len
@@ -613,8 +613,8 @@ def make_maple_evt_df(f, selection="none", pid_mode="gump", do_calo_syst=True):
     S["Proton_trackScore"] = pro.trackScore
     S["Proton_chi2mu"] = pro[chi_pri[0]]
     S["Proton_chi2pro"] = pro[chi_pri[1]]
-    S["Proton_chi2mu_gump"] = pro.chi2u_gump
-    S["Proton_chi2pro_gump"] = pro.chi2p_gump
+    S["Proton_chi2mu_cafpyana"] = pro.chi2u_cafpyana
+    S["Proton_chi2pro_cafpyana"] = pro.chi2p_cafpyana
     S["Proton_chi2mu_cafana"] = pro.chi2u_cafana
     S["Proton_chi2pro_cafana"] = pro.chi2p_cafana
     S["Transverse_angle"] = transverse_angle
@@ -654,13 +654,13 @@ def make_maple_evt_df(f, selection="none", pid_mode="gump", do_calo_syst=True):
 
 # thin wrappers for configs -----------------------------------------------
 def make_maple_evt_nosel_df(f):
-    return make_maple_evt_df(f, selection="none", pid_mode="gump", do_calo_syst=True)
+    return make_maple_evt_df(f, selection="none", pid_mode="cafpyana", do_calo_syst=True)
 
 def make_maple_evt_presel_df(f):
-    return make_maple_evt_df(f, selection="presel", pid_mode="gump", do_calo_syst=True)
+    return make_maple_evt_df(f, selection="presel", pid_mode="cafpyana", do_calo_syst=True)
 
 def make_maple_evt_fullsel_df(f):
-    return make_maple_evt_df(f, selection="full", pid_mode="gump", do_calo_syst=True)
+    return make_maple_evt_df(f, selection="full", pid_mode="cafpyana", do_calo_syst=True)
 
 def make_maple_evt_nosel_cafanapid_df(f):
     return make_maple_evt_df(f, selection="none", pid_mode="cafana", do_calo_syst=False)

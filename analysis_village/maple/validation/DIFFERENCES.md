@@ -48,7 +48,7 @@ reason the evt dataframe carries **two chi2 flavors**:
    cvmfs `larsoft_data v1_02_02` copy) are **byte-identical** (same md5:
    `f06e5a0bc60dae2eae0dbb615a70702f`).
 
-2. **`*_gump` (gump-cafpyana mode, physics default)** — the PID used by the
+2. **`*_cafpyana` ("cafpyana" mode, physics default)** — the PID used by the
    GUMP analysis: dE/dx is **recomputed from the hit-level dQ/dx**
    (`integral/pitch`) with ICARUS gains, YZ / electron-lifetime / TPC-scale
    calibration databases, and ellipsoidal-modified-box recombination
@@ -62,11 +62,11 @@ reason the evt dataframe carries **two chi2 flavors**:
 On the validation sample (cutting at the same GUMP-tuned working points
 χ²µ ≤ 111 / χ²p ≥ 74 / χ²p-π boundary 92):
 
-- muon-candidate count per slice: 8612 (cafana-PID) vs 8684 (gump-PID),
+- muon-candidate count per slice: 8612 (cafana-PID) vs 8684 (cafpyana-PID),
   8606 in common;
-- full 1muNp selection: 40 (cafana-PID) vs 40 (gump-PID), **38 in common
+- full 1muNp selection: 40 (cafana-PID) vs 40 (cafpyana-PID), **38 in common
   (2 lost + 2 gained, ~5% migration)**;
-- on muon candidates, `χ²µ(gump) − χ²µ(cafana)` has mean ≈ +1.2, rms ≈ 3.8.
+- on muon candidates, `χ²µ(cafpyana) − χ²µ(cafana)` has mean ≈ +1.2, rms ≈ 3.8.
 
 ### Workarounds / recommendations
 
@@ -74,10 +74,10 @@ On the validation sample (cutting at the same GUMP-tuned working points
   (or `pid_mode="cafana"`): validated identical above.
 - For physics with the gump calibration treatment (and the calorimetric
   systematic variations, which are only defined for the recomputed dE/dx),
-  use the default `pid_mode="gump"` configs. If the ~5% selection migration
+  use the default `pid_mode="cafpyana"` configs. If the ~5% selection migration
   matters, the χ² working points (111/74/92) could be re-tuned on the
-  gump-recomputed χ² distributions; both flavors are stored in every evt
-  dataframe (`*_gump` / `*_cafana` columns, plus `*_alt` cut booleans) so
+  cafpyana-recomputed χ² distributions; both flavors are stored in every evt
+  dataframe (`*_cafpyana` / `*_cafana` columns, plus `*_alt` cut booleans) so
   the migration can be measured in any production.
 
 ## Other implementation notes (no observable difference, but worth knowing)
