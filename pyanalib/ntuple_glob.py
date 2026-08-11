@@ -123,8 +123,8 @@ def _loaddf(applyfs, preprocess, g):
             dfs.append(df_histpot)
 
             df_histgenevt = make_histgenevtdf(f)
-            # if "TotalGenEvents" not in f:
-            #     print(f"File ({fname}) missing TotalGenEvents histogram. Using empty DataFrame.")
+            if "TotalGenEvents" not in f:
+                print(f"File ({fname}) missing TotalGenEvents histogram. Using empty DataFrame.")
             df_histgenevt["__ntuple"] = index
             df_histgenevt.set_index("__ntuple", append=True, inplace=True)
             new_order = [df_histgenevt.index.nlevels - 1] + list(range(df_histgenevt.index.nlevels - 1))

@@ -1,8 +1,9 @@
 #!/bin/bash
 # Grid (jobsub) MAPLE dataframe production over ALL available samples.
 #
-# !! PREREQUISITE: the `maple` branch of this repository must be pushed to
-# !! github.com/gputnam/cafpyana -- grid jobs clone the repo at run time
+# !! PREREQUISITE: this MAPLE code must be pushed to the GUMP branch of
+# !! github.com/gputnam/cafpyana -- grid jobs clone the repo and check out
+# !! origin/GUMP at run time
 # !! (see bin/grid_executable.sh). DO NOT submit before pushing.
 #
 # Usage:

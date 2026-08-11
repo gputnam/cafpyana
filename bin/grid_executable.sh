@@ -14,7 +14,7 @@ echo "@@ git clone cafpyana"
 git clone https://github.com/gputnam/cafpyana.git
 echo "@@ cd to cafpyana dir"
 cd cafpyana
-git checkout remotes/origin/maple
+git checkout remotes/origin/GUMP
 echo "@@ git branch -a"
 echo "@@ ls -alh"
 ls -alh
