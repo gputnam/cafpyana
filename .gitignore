@@ -10,3 +10,5 @@ envs/xrootd-5.6.1/
 #*
 .#
 *~
+envs/venv_py310_cafpyana/
+envs/logs/
