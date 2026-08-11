@@ -34,9 +34,9 @@ from makedf import chi2pid
 
 from analysis_village.maple.maple_cuts import *
 from analysis_village.maple import chi2pid_cafana
-from analysis_village.maple.branches import (
-    crtpmtbranches, slcchargecenterbranches, shwenergybranches,
-    mapleprimbranches, mapletruepartbranches, maplemcbranches,
+from makedf.branches import (
+    crtpmtbranches, shwbranches,
+    mcbranches, mcprimbranches, mcprimvisEbranches, trueparticlebranches,
 )
 
 # PFPID enum from the helper header
@@ -71,7 +71,7 @@ def maple_truth_classdf(f):
       slice-level concept, handled in the evt df), n_mu, mu_length,
       n_p_above40, veto, uncontained, true_visible_Enu
     """
-    mc = _flatcols(loadbranches(f["recTree"], maplemcbranches).rec.mc.nu)
+    mc = _flatcols(loadbranches(f["recTree"], mcbranches).rec.mc.nu)
     if mc.empty:
         out = pd.DataFrame(columns=["maple_class", "n_mu", "mu_length", "n_p_above40",
                                     "veto", "uncontained", "true_visible_Enu"])
@@ -79,9 +79,9 @@ def maple_truth_classdf(f):
 
     nuidx = mc.index
 
-    prim = _flatcols(loadbranches(f["recTree"], mapleprimbranches).rec.mc.nu.prim)
+    prim = _flatcols(loadbranches(f["recTree"], mcprimbranches + mcprimvisEbranches).rec.mc.nu.prim)
     prim.index.names = ["entry", "inu", "iprim"]
-    tp = _flatcols(loadbranches(f["recTree"], mapletruepartbranches).rec.true_particles)
+    tp = _flatcols(loadbranches(f["recTree"], trueparticlebranches).rec.true_particles)
     tp.index.names = ["entry", "itp"]
 
     # Only primaries with G4ID >= 0 and cryostat >= 0 participate (C++ `continue`)
@@ -299,14 +299,12 @@ def make_maple_evt_df(f, selection="none", pid_mode="cafpyana", do_calo_syst=Tru
     # slice frame
     # ------------------------------------------------------------------
     slcdf = make_slcdf(f)
-    ccdf = loadbranches(f["recTree"], slcchargecenterbranches).rec.slc.charge_center
-    ccdf.index.names = slcdf.index.names
 
     S = pd.DataFrame({
         "vtx_x": slcdf.slc.vertex.x,
         "vtx_y": slcdf.slc.vertex.y,
         "vtx_z": slcdf.slc.vertex.z,
-        "charge_center_z": ccdf.z,
+        "charge_center_z": slcdf.slc.charge_center.z,
         "nu_score": slcdf.slc.nu_score,
         "tmatch_idx": slcdf.slc.tmatch.idx,
         "tmatch_eff": slcdf.slc.tmatch.eff,
@@ -325,7 +323,10 @@ def make_maple_evt_df(f, selection="none", pid_mode="cafpyana", do_calo_syst=Tru
     # per-pfp frame
     # ------------------------------------------------------------------
     trkdf = make_trkdf(f, False)  # NO vertex-distance pre-filter: MAPLE needs all pfps
-    shwdf = loadbranches(f["recTree"], shwenergybranches).rec.slc.reco.pfp.shw.plane.I2
+    # core shwbranches, restricted to what the file carries (ICARUS flat CAFs
+    # lack the SBND-only bestplane_for_* branches)
+    keys = set(f["recTree"].keys())
+    shwdf = loadbranches(f["recTree"], [b for b in shwbranches if b in keys]).rec.slc.reco.pfp.shw
     shwdf.index.names = trkdf.index.names
 
     P = pd.DataFrame({
@@ -344,7 +345,7 @@ def make_maple_evt_df(f, selection="none", pid_mode="cafpyana", do_calo_syst=Tru
         "p_proton": trkdf.pfp.trk.rangeP.p_proton,
         "trackScore": trkdf.pfp.trackScore,
         "true_genp_x": trkdf.pfp.trk.truth.p.genp.x,
-        "shw_energy2": shwdf.energy,
+        "shw_energy2": shwdf.plane.I2.energy,
     })
     P["prim_pfp"] = trkdf.pfp.parent_is_primary.fillna(False).astype(bool)
 
@@ -670,7 +671,7 @@ def make_maple_evt_nosel_cafanapid_df(f):
 # mcnu builder
 # =====================================================================
 def make_maple_nudf(f):
-    mc = _flatcols(loadbranches(f["recTree"], maplemcbranches).rec.mc.nu)
+    mc = _flatcols(loadbranches(f["recTree"], mcbranches).rec.mc.nu)
     if mc.empty:
         return pd.DataFrame()
 

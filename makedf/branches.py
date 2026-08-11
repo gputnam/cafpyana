@@ -100,6 +100,7 @@ trueparticlenames = [
 
 trueparticlebranches = [
     *["rec.true_particles.%s" % s for s in trueparticlenames],
+    "rec.true_particles.cryostat",
     "rec.true_particles.plane.0.2.visE",
     "rec.true_particles.plane.1.2.visE",
 ]
@@ -131,6 +132,15 @@ crthitbranches = [
   "rec.crt_hits.pe",
   "rec.crt_hits.plane",
   "rec.crt_hits.truth.bestmatch_id",
+]
+
+crtpmtbranches = [
+    "rec.crtpmt_matches.flashGateTime",
+    "rec.crtpmt_matches.flashPE",
+    "rec.crtpmt_matches.flashPosition.x",
+    "rec.crtpmt_matches.flashPosition.y",
+    "rec.crtpmt_matches.flashPosition.z",
+    "rec.crtpmt_matches.flashClassification",
 ]
 
 
@@ -270,6 +280,9 @@ for n in trueparticlenames: shwbranches.append(shwbranch + "truth.p." + n)
 
 slcbranches = [
     "rec.slc.is_clear_cosmic",
+    "rec.slc.charge_center.x",
+    "rec.slc.charge_center.y",
+    "rec.slc.charge_center.z",
     "rec.slc.vertex.x", "rec.slc.vertex.y", "rec.slc.vertex.z",
     "rec.slc.self",
     "rec.slc.tmatch.eff",
@@ -324,6 +337,8 @@ mcprimbranches = [
     "rec.mc.nu.prim.genE",
     "rec.mc.nu.prim.length",
     "rec.mc.nu.prim.pdg",
+    "rec.mc.nu.prim.G4ID",
+    "rec.mc.nu.prim.cryostat",
     "rec.mc.nu.prim.genp.x",
     "rec.mc.nu.prim.genp.y",
     "rec.mc.nu.prim.genp.z",
