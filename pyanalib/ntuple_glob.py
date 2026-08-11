@@ -77,10 +77,14 @@ def _loaddf(applyfs, preprocess, g):
             fname = temp_file_name
 
     try:
-        # Open AND close strictly within the context manager
         with _open_with_retries(fname) as f:
             dfs = []
-            totevt = f['TotalEvents'].values()[0]
+            if("TotalEvents" in f):
+                totevt = f['TotalEvents'].values()[0]
+            else:
+                print("File (%s) missing TotalEvents. Skipping empty file!" % fname)
+                return None
+                
             if "recTree" not in f:
                 print("File (%s) missing recTree. Try only histpotdf & histgenevtdf and skipping other dfs..." % fname)
             elif totevt < 1e-6:
@@ -119,8 +123,8 @@ def _loaddf(applyfs, preprocess, g):
             dfs.append(df_histpot)
 
             df_histgenevt = make_histgenevtdf(f)
-            if "TotalGenEvents" not in f:
-                print(f"File ({fname}) missing TotalGenEvents histogram. Using empty DataFrame.")
+            # if "TotalGenEvents" not in f:
+            #     print(f"File ({fname}) missing TotalGenEvents histogram. Using empty DataFrame.")
             df_histgenevt["__ntuple"] = index
             df_histgenevt.set_index("__ntuple", append=True, inplace=True)
             new_order = [df_histgenevt.index.nlevels - 1] + list(range(df_histgenevt.index.nlevels - 1))
@@ -170,8 +174,8 @@ class NTupleGlob(object):
         ret = []
 
         try:
-            with Pool(processes=nproc) as pool:
-                for i, dfs in enumerate(tqdm(pool.imap_unordered(partial(_loaddf, fs, preprocess), enumerate(thisglob)), total=len(thisglob), unit="file", delay=5, smoothing=0.2)):
+            with Pool(processes=nproc, maxtasksperchild=1) as pool:
+                for i, dfs in enumerate(tqdm(pool.imap_unordered(partial(_loaddf, fs, preprocess), enumerate(thisglob), chunksize=1), total=len(thisglob), unit="file", delay=5, smoothing=0.2)):
                     if dfs is not None:
                         ret.append(dfs)
         # Ctrl-C handling
