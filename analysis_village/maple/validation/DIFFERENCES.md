@@ -21,6 +21,12 @@ Result — with the CAFANA-compat PID mode, the two frameworks are **identical**
 | all 31 `selectedReco` variables | | | 0 (max diff 3×10⁻⁶) |
 | all 8 `selectedNu` variables (incl. `Pass_cut`, efficiency rasters) | | | 0 (max diff 3×10⁻⁷) |
 
+The same comparison was repeated on 196 ICARUS **Run2** ReCAF2026 overlay
+files (`Run2_ReCAF2026/flatcaf/000000/000000/`, ~10k events), covering the
+Run2 fiducial-volume/run-period code path: 78/78 selected slices, 101/101
+truth 1muNp interactions, all variables identical (max diff 6×10⁻⁶), zero
+mismatches.
+
 The residual ≲3×10⁻⁶ differences are pure floating-point rounding: CAFANA
 computes in C++ double/float mixtures, cafpyana in numpy float64, both from
 the same float32 CAF branches.
