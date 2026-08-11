@@ -125,15 +125,6 @@ crtspbranches = [
     "rec.crt_spacepoints.time_err"
 ]
 
-crthitbranches = [
-  "rec.crt_hits.time",
-  "rec.crt_hits.t1",
-  "rec.crt_hits.t0",
-  "rec.crt_hits.pe",
-  "rec.crt_hits.plane",
-  "rec.crt_hits.truth.bestmatch_id",
-]
-
 crtpmtbranches = [
     "rec.crtpmt_matches.flashGateTime",
     "rec.crtpmt_matches.flashPE",
@@ -141,6 +132,15 @@ crtpmtbranches = [
     "rec.crtpmt_matches.flashPosition.y",
     "rec.crtpmt_matches.flashPosition.z",
     "rec.crtpmt_matches.flashClassification",
+]
+
+crthitbranches = [
+  "rec.crt_hits.time",
+  "rec.crt_hits.t1",
+  "rec.crt_hits.t0",
+  "rec.crt_hits.pe",
+  "rec.crt_hits.plane",
+  "rec.crt_hits.truth.bestmatch_id",
 ]
 
 
