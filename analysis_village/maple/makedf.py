@@ -1,8 +1,18 @@
-"""MAPLE (1mu + N>1 p, ICARUS) dataframe builders for cafpyana.
+"""MAPLE (1mu + N>1 p) dataframe builders for cafpyana.
 
 Port of the CAFANA selection in
 NicolaICARUS/MAPLE_GUMP/icarus/helper_eff_cf_FINAL_..._Trigger.h
 and the SpillMultiVar output variables in helper_variables.h.
+
+Detector support:
+  ICARUS -- the original selection, bit-compatible with the CAFANA port.
+  SBND   -- generalization: SBND geometry for FV (high-YZ volume dropped,
+            same 10 cm insets / 50 cm zback) and containment; the
+            ICARUS-only cosmic rejection (CRT top veto, cryo-light,
+            bar-flash) passes trivially; the GUMP cathode-crossing veto
+            (no track in the slice may cross the x=0 cathode) joins the
+            containment stage; PID uses SBND-calibrated chi2 with the
+            same MAPLE thresholds as ICARUS.
 
 PID modes:
   "cafpyana" -- chi2 recomputed from hit dQ/dx via makedf.chi2pid with ICARUS
@@ -64,7 +74,7 @@ def _reindex(series, index, fill):
 # =====================================================================
 # Truth classification (classification_type_MC port)
 # =====================================================================
-def maple_truth_classdf(f):
+def maple_truth_classdf(f, det="ICARUS"):
     """Per-(entry, mc.nu index) MAPLE truth classification.
 
     Returns a DataFrame with columns:
@@ -116,7 +126,7 @@ def maple_truth_classdf(f):
         # daughter containment check: skip cryostat<0 or end == -9999
         d_valid_cont = (m.cryostat_d >= 0) & m.d_charged & \
             ~((m.end_x == -9999) | (m.end_y == -9999) | (m.end_z == -9999))
-        m["d_uncont"] = d_valid_cont & ~maple_isInContained(m.end_x, m.end_y, m.end_z)
+        m["d_uncont"] = d_valid_cont & ~maple_isInContained(m.end_x, m.end_y, m.end_z, det=det)
         # note: for the pi0-gamma veto and visE sums, C++ has no cryostat check
         # on the daughter itself
         g = m.groupby(["entry", "inu", "iprim"])
@@ -142,7 +152,7 @@ def maple_truth_classdf(f):
     prim_veto = cpi_veto | pi0_veto | gamma_veto | p_below
 
     # ---- containment (all_contained_mc): charged primaries, no -9999 skip ----
-    prim_uncont = is_charged & ~maple_isInContained(prim.end_x, prim.end_y, prim.end_z)
+    prim_uncont = is_charged & ~maple_isInContained(prim.end_x, prim.end_y, prim.end_z, det=det)
 
     # ---- per-nu aggregation ----
     grp = prim.groupby(level=["entry", "inu"])
@@ -180,8 +190,8 @@ def maple_truth_classdf(f):
     # ---- classification ----
     pos_nan = mc.position_x.isna() | mc.position_y.isna() | mc.position_z.isna()
     not_numucc = (np.abs(mc.pdg) != 14) | (mc.iscc == 0)
-    not_av = ~maple_isInActive(mc.position_x, mc.position_y, mc.position_z)
-    not_fv = ~maple_isInFV(mc.position_x, mc.position_y, mc.position_z)
+    not_av = ~maple_isInActive(mc.position_x, mc.position_y, mc.position_z, det=det)
+    not_fv = ~maple_isInFV(mc.position_x, mc.position_y, mc.position_z, det=det)
     good_mu = (n_mu == 1) & (mu_length > MIN_MUON_LENGTH) & (mu_length < MAX_MUON_LENGTH)
 
     maple_class = np.select(
@@ -270,10 +280,12 @@ def _cut_chain(S, counts, has_mu):
     maple_sel = S.maple_presel & cut_muon & cut_np & cut_0pi & cut_0shwother
 
     # MaxCutPassed replication (cutflow order: sanity, FV, CRT veto,
-    # cryo-light ["barycenter"], containment, muon, proton, pion, shower)
+    # cryo-light ["barycenter"], containment [+ SBND cathode veto], muon,
+    # proton, pion, shower). cut_cathode is always True on ICARUS, so the
+    # numbering there is unchanged from the CAFANA port.
     maxcut = np.select(
         [~S.cut_sanity, ~S.cut_fv, ~S.cut_crtveto, ~S.cut_cryo,
-         ~S.cut_contained, ~cut_muon, ~cut_np, ~cut_0pi, ~cut_0shwother],
+         ~(S.cut_contained & S.cut_cathode), ~cut_muon, ~cut_np, ~cut_0pi, ~cut_0shwother],
         [1, 2, 3, 4, 5, 6, 7, 8, 9], default=10)
 
     return pd.DataFrame({
@@ -290,10 +302,14 @@ def make_maple_evt_df(f, selection="none", pid_mode="cafpyana", do_calo_syst=Tru
     det = loadbranches(f["recTree"], ["rec.hdr.det"]).rec.hdr.det
     if det.empty:
         return pd.DataFrame()
-    if 2 != det.unique():
-        raise ValueError("MAPLE is an ICARUS selection (rec.hdr.det == 2); got %s" % det.unique())
+    if 1 == det.unique():
+        DETECTOR = "SBND"
+    elif 2 == det.unique():
+        DETECTOR = "ICARUS"
+    else:
+        raise ValueError("MAPLE needs rec.hdr.det == 1 (SBND) or 2 (ICARUS); got %s" % det.unique())
     run = loadbranches(f["recTree"], ["rec.hdr.run"]).rec.hdr.run
-    RUN = 2 if run.iloc[0] < 12960 else 4
+    RUN = 1 if DETECTOR == "SBND" else (2 if run.iloc[0] < 12960 else 4)
     ismc = bool(loadbranches(f["recTree"], ["rec.hdr.ismc"]).rec.hdr.ismc.iloc[0])
 
     # ------------------------------------------------------------------
@@ -357,7 +373,7 @@ def make_maple_evt_df(f, selection="none", pid_mode="cafpyana", do_calo_syst=Tru
     dist_end = np.sqrt((P.end_x - P.vtx_x)**2 + (P.end_y - P.vtx_y)**2 + (P.end_z - P.vtx_z)**2)
     # std::min(a, b) semantics: b if b < a else a  (NaN b -> a; NaN a -> NaN)
     P["min_dist"] = np.where(np.isnan(dist_end), P.dist_start, np.minimum(P.dist_start, dist_end))
-    P["contained10"] = maple_isInContained(P.end_x, P.end_y, P.end_z)
+    P["contained10"] = maple_isInContained(P.end_x, P.end_y, P.end_z, det=DETECTOR)
     P["ke_pion"] = kinetic_energy(PION_MASS, np.sqrt((P.dir_x * P.p_pion)**2 + (P.dir_y * P.p_pion)**2 + (P.dir_z * P.p_pion)**2))
     P["ke_proton"] = kinetic_energy(PROTON_MASS, np.sqrt((P.dir_x * P.p_proton)**2 + (P.dir_y * P.p_proton)**2 + (P.dir_z * P.p_proton)**2))
 
@@ -375,24 +391,31 @@ def make_maple_evt_df(f, selection="none", pid_mode="cafpyana", do_calo_syst=Tru
     P["chi2u_cafana"] = cafana.chi2_mu
     P["chi2p_cafana"] = cafana.chi2_pro
 
-    # gump-style chi2 on recomputed dE/dx (ICARUS gains + calibration)
-    trkhitdf["dedx_redo"] = chi2pid.dedx(trkhitdf, gain="ICARUS", calibrate="ICARUS", isMC=ismc)
+    # gump-style chi2 on recomputed dE/dx (detector gains + calibration)
+    trkhitdf["dedx_redo"] = chi2pid.dedx(trkhitdf, gain=DETECTOR, calibrate=DETECTOR, isMC=ismc)
     P["chi2u_cafpyana"] = chi2pid.chi2u(trkhitdf, dedxname="dedx_redo")[0]
     P["chi2p_cafpyana"] = chi2pid.chi2p(trkhitdf, dedxname="dedx_redo")[0]
 
-    # calorimetric variations (ported from gump make_pandora_no_cuts_df)
+    # calorimetric variations (ported from gump make_pandora_no_cuts_df,
+    # including the gump detector-specific scale sizes)
     if do_calo_syst:
-        trkhitdf["dedx_lo"] = chi2pid.dedx(trkhitdf, gain="ICARUS", calibrate="ICARUS", isMC=ismc, scale=0.99)
-        trkhitdf["dedx_hi"] = chi2pid.dedx(trkhitdf, gain="ICARUS", calibrate="ICARUS", isMC=ismc, scale=1.01)
-        trkhitdf["dedx_2lo"] = chi2pid.dedx(trkhitdf, gain="ICARUS", calibrate="ICARUS", isMC=ismc, scale=0.98)
-        trkhitdf["dedx_2hi"] = chi2pid.dedx(trkhitdf, gain="ICARUS", calibrate="ICARUS", isMC=ismc, scale=1.02)
-        trkhitdf["dedx_smear5"] = chi2pid.dedx(trkhitdf, gain="ICARUS", calibrate="ICARUS", isMC=ismc, smear=0.05)
-        trkhitdf["dedx_smear13"] = chi2pid.dedx(trkhitdf, gain="ICARUS", calibrate="ICARUS", isMC=ismc, smear=0.13)
-        trkhitdf["dedx_sqsmear15"] = chi2pid.dedx(trkhitdf, gain="ICARUS", calibrate="ICARUS", isMC=ismc, sqrt_smear=0.15)
+        if DETECTOR == "ICARUS":
+            scale_lo, scale_hi, scale_2lo, scale_2hi = 0.99, 1.01, 0.98, 1.02
+            calo_var_params = chi2pid.ICARUS_CALO_VARIATIONS
+        else:
+            scale_lo, scale_hi, scale_2lo, scale_2hi = 0.98, 1.02, 0.96, 1.04
+            calo_var_params = chi2pid.SBND_CALO_VARIATIONS
+        trkhitdf["dedx_lo"] = chi2pid.dedx(trkhitdf, gain=DETECTOR, calibrate=DETECTOR, isMC=ismc, scale=scale_lo)
+        trkhitdf["dedx_hi"] = chi2pid.dedx(trkhitdf, gain=DETECTOR, calibrate=DETECTOR, isMC=ismc, scale=scale_hi)
+        trkhitdf["dedx_2lo"] = chi2pid.dedx(trkhitdf, gain=DETECTOR, calibrate=DETECTOR, isMC=ismc, scale=scale_2lo)
+        trkhitdf["dedx_2hi"] = chi2pid.dedx(trkhitdf, gain=DETECTOR, calibrate=DETECTOR, isMC=ismc, scale=scale_2hi)
+        trkhitdf["dedx_smear5"] = chi2pid.dedx(trkhitdf, gain=DETECTOR, calibrate=DETECTOR, isMC=ismc, smear=0.05)
+        trkhitdf["dedx_smear13"] = chi2pid.dedx(trkhitdf, gain=DETECTOR, calibrate=DETECTOR, isMC=ismc, smear=0.13)
+        trkhitdf["dedx_sqsmear15"] = chi2pid.dedx(trkhitdf, gain=DETECTOR, calibrate=DETECTOR, isMC=ismc, sqrt_smear=0.15)
         for c_var in CALO_VARIATIONS:
             trkhitdf["dedx_%s" % c_var] = chi2pid.dedx(
-                trkhitdf, gain="ICARUS", calibrate="ICARUS", isMC=ismc,
-                new_calo_params=chi2pid.ICARUS_CALO_VARIATIONS[c_var])
+                trkhitdf, gain=DETECTOR, calibrate=DETECTOR, isMC=ismc,
+                new_calo_params=calo_var_params[c_var])
 
         for var in SCALE_SMEAR_VARIATIONS + CALO_VARIATIONS:
             P["chi2u_%s" % var] = chi2pid.chi2u(trkhitdf, dedxname="dedx_%s" % var)[0]
@@ -409,37 +432,49 @@ def make_maple_evt_df(f, selection="none", pid_mode="cafpyana", do_calo_syst=Tru
     # ------------------------------------------------------------------
     entries = S.index.get_level_values(0)
 
-    crtpmt = loadbranches(f["recTree"], crtpmtbranches).rec.crtpmt_matches
+    if DETECTOR == "ICARUS":
+        crtpmt = loadbranches(f["recTree"], crtpmtbranches).rec.crtpmt_matches
 
-    # cryo_selection_from_light
-    inwin = (crtpmt.flashGateTime > CRYO_LIGHT_TMIN) & (crtpmt.flashGateTime < CRYO_LIGHT_TMAX)
-    haspe = ~(crtpmt.flashPE < CRYO_LIGHT_PE_THRESHOLD)
-    west = (inwin & haspe & (crtpmt.flashPosition.x > 0)).groupby(level=0).any()
-    east = (inwin & haspe & (crtpmt.flashPosition.x < 0)).groupby(level=0).any()
-    perentry = pd.DataFrame(index=pd.Index(entries.unique(), name="entry"))
-    perentry["west"] = _reindex(west, perentry.index, False).astype(bool)
-    perentry["east"] = _reindex(east, perentry.index, False).astype(bool)
-    perentry["cryo_light"] = np.select(
-        [perentry.west & perentry.east, perentry.west, perentry.east],
-        [2, 1, 0], default=-1)
+        # cryo_selection_from_light
+        inwin = (crtpmt.flashGateTime > CRYO_LIGHT_TMIN) & (crtpmt.flashGateTime < CRYO_LIGHT_TMAX)
+        haspe = ~(crtpmt.flashPE < CRYO_LIGHT_PE_THRESHOLD)
+        west = (inwin & haspe & (crtpmt.flashPosition.x > 0)).groupby(level=0).any()
+        east = (inwin & haspe & (crtpmt.flashPosition.x < 0)).groupby(level=0).any()
+        perentry = pd.DataFrame(index=pd.Index(entries.unique(), name="entry"))
+        perentry["west"] = _reindex(west, perentry.index, False).astype(bool)
+        perentry["east"] = _reindex(east, perentry.index, False).astype(bool)
+        perentry["cryo_light"] = np.select(
+            [perentry.west & perentry.east, perentry.west, perentry.east],
+            [2, 1, 0], default=-1)
 
-    # k_pe: max flash PE in the cryo-light window, no PE threshold, default 0
-    maxpe = crtpmt.flashPE[inwin].groupby(level=0).max()
-    perentry["flash_maxpe"] = _reindex(maxpe, perentry.index, 0.0)
+        # k_pe: max flash PE in the cryo-light window, no PE threshold, default 0
+        maxpe = crtpmt.flashPE[inwin].groupby(level=0).max()
+        perentry["flash_maxpe"] = _reindex(maxpe, perentry.index, 0.0)
 
-    # bar_flash: first in-window match on each side (MC/data window differs)
-    btmin, btmax = (BAR_FLASH_TMIN_MC, BAR_FLASH_TMAX_MC) if ismc else (BAR_FLASH_TMIN_DATA, BAR_FLASH_TMAX_DATA)
-    barwin = (crtpmt.flashGateTime > btmin) & (crtpmt.flashGateTime < btmax)
-    for side, cond in [("west", crtpmt.flashPosition.x > 0), ("east", crtpmt.flashPosition.x < 0)]:
-        first = crtpmt[barwin & cond].groupby(level=0).first()
-        perentry["bar_z_" + side] = first.flashPosition.z.reindex(perentry.index)
-        perentry["bar_x_" + side] = first.flashPosition.x.reindex(perentry.index)
+        # bar_flash: first in-window match on each side (MC/data window differs)
+        btmin, btmax = (BAR_FLASH_TMIN_MC, BAR_FLASH_TMAX_MC) if ismc else (BAR_FLASH_TMIN_DATA, BAR_FLASH_TMAX_DATA)
+        barwin = (crtpmt.flashGateTime > btmin) & (crtpmt.flashGateTime < btmax)
+        for side, cond in [("west", crtpmt.flashPosition.x > 0), ("east", crtpmt.flashPosition.x < 0)]:
+            first = crtpmt[barwin & cond].groupby(level=0).first()
+            perentry["bar_z_" + side] = first.flashPosition.z.reindex(perentry.index)
+            perentry["bar_x_" + side] = first.flashPosition.x.reindex(perentry.index)
 
-    # kCRTNeutrino: top-CRT veto
-    crt = make_crthitdf(f)
-    vetohit = ((crt.time > CRT_VETO_TMIN) & (crt.time < CRT_VETO_TMAX) &
-               (crt.plane > CRT_VETO_PLANE_MIN) & (crt.plane < CRT_VETO_PLANE_MAX)).groupby(level=0).any()
-    perentry["crtveto"] = _reindex(vetohit, perentry.index, False).astype(bool)
+        # kCRTNeutrino: top-CRT veto
+        crt = make_crthitdf(f)
+        vetohit = ((crt.time > CRT_VETO_TMIN) & (crt.time < CRT_VETO_TMAX) &
+                   (crt.plane > CRT_VETO_PLANE_MIN) & (crt.plane < CRT_VETO_PLANE_MAX)).groupby(level=0).any()
+        perentry["crtveto"] = _reindex(vetohit, perentry.index, False).astype(bool)
+    else:
+        # SBND: the ICARUS-only cosmic rejection is dropped; fill sentinels
+        # (cryo_light=-1, no bar flash, no CRT veto) so the evt schema is
+        # identical across detectors. The cut booleans are forced True below.
+        perentry = pd.DataFrame(index=pd.Index(entries.unique(), name="entry"))
+        perentry["cryo_light"] = -1
+        perentry["flash_maxpe"] = np.nan
+        for side in ("west", "east"):
+            perentry["bar_z_" + side] = np.nan
+            perentry["bar_x_" + side] = np.nan
+        perentry["crtveto"] = False
 
     S = S.join(perentry[["cryo_light", "flash_maxpe", "bar_z_west", "bar_x_west",
                          "bar_z_east", "bar_x_east", "crtveto"]])
@@ -448,19 +483,36 @@ def make_maple_evt_df(f, selection="none", pid_mode="cafpyana", do_calo_syst=Tru
     # PID-free cut chain
     # ------------------------------------------------------------------
     S["cut_sanity"] = S.vtx_x.notna() & S.vtx_y.notna() & S.vtx_z.notna() & S.charge_center_z.notna()
-    S["cut_fv"] = maple_isInFV(S.vtx_x, S.vtx_y, S.vtx_z)
-    S["cut_crtveto"] = ~S.crtveto
-
-    slice_cryo = np.select([S.vtx_x < 0, S.vtx_x > 0], [0, 1], default=-1)
-    S["slice_cryo"] = slice_cryo
-    S["cut_cryo"] = (S.cryo_light != -1) & ((S.cryo_light == 2) | (slice_cryo == S.cryo_light))
+    S["cut_fv"] = maple_isInFV(S.vtx_x, S.vtx_y, S.vtx_z, det=DETECTOR)
+    if DETECTOR == "ICARUS":
+        S["cut_crtveto"] = ~S.crtveto
+        slice_cryo = np.select([S.vtx_x < 0, S.vtx_x > 0], [0, 1], default=-1)
+        S["slice_cryo"] = slice_cryo
+        S["cut_cryo"] = (S.cryo_light != -1) & ((S.cryo_light == 2) | (slice_cryo == S.cryo_light))
+    else:
+        # SBND: CRT veto and cryo-light cuts pass trivially (see above)
+        S["cut_crtveto"] = True
+        S["slice_cryo"] = -1
+        S["cut_cryo"] = True
 
     valid_c = P.start_x.notna() & P.end_x.notna() & P.len.notna()
     bad_contain = valid_c & ((P.end_x * P.vtx_x < 0) | ~P.contained10)
     any_bad = bad_contain.groupby(level=[0, 1]).any()
     S["cut_contained"] = ~_reindex(any_bad, S.index, False).astype(bool)
 
-    S["maple_presel"] = S.cut_sanity & S.cut_fv & S.cut_crtveto & S.cut_cryo & S.cut_contained
+    # SBND cathode-crossing veto (GUMP cathode_cut, extended to all tracks in
+    # the slice); always True on ICARUS so the cut chain is unchanged there
+    if DETECTOR == "SBND":
+        cross = maple_sbnd_cathode_crossing(
+            P.vtx_x[valid_c], P.vtx_y[valid_c], P.vtx_z[valid_c],
+            P.end_x[valid_c], P.end_y[valid_c], P.end_z[valid_c])
+        any_cross = pd.Series(cross, index=P.index[valid_c]).groupby(level=[0, 1]).any()
+        S["cut_cathode"] = ~_reindex(any_cross, S.index, False).astype(bool)
+    else:
+        S["cut_cathode"] = True
+
+    S["maple_presel"] = S.cut_sanity & S.cut_fv & S.cut_crtveto & S.cut_cryo & \
+        S.cut_contained & S.cut_cathode
 
     # ------------------------------------------------------------------
     # PID-dependent selection: primary + alternate flavor
@@ -573,7 +625,7 @@ def make_maple_evt_df(f, selection="none", pid_mode="cafpyana", do_calo_syst=Tru
     # ------------------------------------------------------------------
     # Reco_class (classification_type_debug port, via mcnu-level classification)
     # ------------------------------------------------------------------
-    clsdf = maple_truth_classdf(f)
+    clsdf = maple_truth_classdf(f, det=DETECTOR)
     cls_lookup = clsdf.maple_class if len(clsdf) else pd.Series(dtype=float)
     key = pd.MultiIndex.from_arrays([S.index.get_level_values(0), S.tmatch_idx.fillna(-1).astype(int)])
     nu_class = pd.Series(cls_lookup.reindex(key).values, index=S.index)
@@ -582,7 +634,7 @@ def make_maple_evt_df(f, selection="none", pid_mode="cafpyana", do_calo_syst=Tru
         [S.tmatch_idx < 0,
          nu_class == CLS_1MU1P,
          nu_class == CLS_1MUNP,
-         ~maple_isInFV(S.true_vtx_x, S.true_vtx_y, S.true_vtx_z),
+         ~maple_isInFV(S.true_vtx_x, S.true_vtx_y, S.true_vtx_z, det=DETECTOR),
          np.abs(S.true_pdg) == 12,
          S.true_iscc == 0,
          (S.true_iscc == 1) & (S.true_genie_mode == 0),
@@ -634,7 +686,7 @@ def make_maple_evt_df(f, selection="none", pid_mode="cafpyana", do_calo_syst=Tru
             S["Proton_chi2mu_%s" % v] = pro["chi2u_%s" % v]
             S["Proton_chi2pro_%s" % v] = pro["chi2p_%s" % v]
 
-    S["detector"] = "ICARUS"
+    S["detector"] = DETECTOR
     S["Run"] = RUN
     S["ismc"] = ismc
     S["pid_mode"] = pid_mode
@@ -667,6 +719,9 @@ def make_maple_evt_fullsel_df(f):
 def make_maple_evt_nosel_cafanapid_df(f):
     return make_maple_evt_df(f, selection="none", pid_mode="cafana", do_calo_syst=False)
 
+def make_maple_evt_fullsel_data_df(f):
+    return make_maple_evt_df(f, selection="full", pid_mode="cafpyana", do_calo_syst=False)
+
 
 # =====================================================================
 # mcnu builder
@@ -676,10 +731,12 @@ def make_maple_nudf(f):
     if mc.empty:
         return pd.DataFrame()
 
+    det = loadbranches(f["recTree"], ["rec.hdr.det"]).rec.hdr.det
+    DETECTOR = "SBND" if 1 == det.unique() else "ICARUS"
     run = loadbranches(f["recTree"], ["rec.hdr.run"]).rec.hdr.run
-    RUN = 2 if run.iloc[0] < 12960 else 4
+    RUN = 1 if DETECTOR == "SBND" else (2 if run.iloc[0] < 12960 else 4)
 
-    cls = maple_truth_classdf(f)
+    cls = maple_truth_classdf(f, det=DETECTOR)
 
     nudf = pd.DataFrame({
         "nu_E": mc.E,
@@ -703,10 +760,10 @@ def make_maple_nudf(f):
         "uncontained_truth": cls.uncontained,
         "true_visible_Enu": cls.true_visible_Enu,
     })
-    nudf["is_fv"] = maple_isInFV(nudf.pos_x, nudf.pos_y, nudf.pos_z)
-    nudf["is_av"] = maple_isInActive(nudf.pos_x, nudf.pos_y, nudf.pos_z)
+    nudf["is_fv"] = maple_isInFV(nudf.pos_x, nudf.pos_y, nudf.pos_z, det=DETECTOR)
+    nudf["is_av"] = maple_isInActive(nudf.pos_x, nudf.pos_y, nudf.pos_z, det=DETECTOR)
     nudf["ind"] = nudf.index.get_level_values(1)
-    nudf["detector"] = "ICARUS"
+    nudf["detector"] = DETECTOR
     nudf["Run"] = RUN
 
     return nudf
@@ -732,6 +789,17 @@ def make_maple_wgtdf(f):
     if missing:
         print("make_maple_wgtdf: %d requested GENIE systematics absent in file, using %d" % (missing, len(systs)))
     return make_mcnudf(f, include_weights=True, multisim_nuniv=100, genie_systematics=systs)
+
+
+def make_maple_rewgtdf(f):
+    """Systematic-weight dataframe with the GUMP CV reweight knob set.
+
+    Same weight request as gump make_gump_nurewgtdf, so the wgt table is
+    column-compatible with the GUMP sbn-rewgted CV productions.
+    """
+    from analysis_village.gump.makedf import gump_genie_reknob_systematics
+    return make_mcnudf(f, include_weights=True, slim=False,
+                       genie_systematics=gump_genie_reknob_systematics)
 
 
 # =====================================================================

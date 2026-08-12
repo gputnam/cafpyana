@@ -53,9 +53,28 @@ _XW_LO, _XW_HI = 61.94, 358.49     # west cryostat
 _Y_LO, _Y_HI = -181.86, 134.96
 _Z_LO, _Z_HI = -894.95, 894.95
 
+# SBND active-volume boundaries
+_S_X_LO, _S_X_HI = -200.0, 200.0
+_S_Y_LO, _S_Y_HI = -200.0, 200.0
+_S_Z_LO, _S_Z_HI = 0.0, 500.0
 
-def maple_isInFV(x, y, z):
-    """isInFV: 10 cm insets (50 cm downstream z), dangling-cable exclusion."""
+# SBND cathode prism for the cathode-crossing veto (GUMP gump_cuts.cathode_cut)
+SBND_CATHODE_PRISM_MIN = (-5.0, -200.0, 0.0)
+SBND_CATHODE_PRISM_MAX = (5.0, 200.0, 500.0)
+
+
+def maple_isInFV(x, y, z, det="ICARUS"):
+    """isInFV: 10 cm insets (50 cm downstream z).
+
+    ICARUS adds the dangling-cable exclusion; SBND drops the high-YZ volume
+    (y < 100 for z > 250, matching InFV(det="SBND_nohighyz") in makedf/util.py).
+    """
+    if det == "SBND":
+        pass_xz = (x > _S_X_LO + 10) & (x < _S_X_HI - 10) & \
+                  (z > _S_Z_LO + 10) & (z < _S_Z_HI - 50)
+        pass_y = ((z < 250) & (y > _S_Y_LO + 10) & (y < _S_Y_HI - 10)) | \
+                 ((z > 250) & (y > _S_Y_LO + 10) & (y < 100.0))
+        return pass_xz & pass_y
     ok = (((x < _XE_HI - 10) & (x > _XE_LO + 10)) |
           ((x > _XW_LO + 10) & (x < _XW_HI - 10))) & \
          ((y > _Y_LO + 10) & (y < _Y_HI - 10)) & \
@@ -64,8 +83,12 @@ def maple_isInFV(x, y, z):
     return ok & ~cable
 
 
-def maple_isInContained(x, y, z, dist=CONTAINMENT_CUT):
-    """isInContained: `dist` insets plus removal of Y-Z corner triangles."""
+def maple_isInContained(x, y, z, dist=CONTAINMENT_CUT, det="ICARUS"):
+    """isInContained: `dist` insets; ICARUS also removes Y-Z corner triangles."""
+    if det == "SBND":
+        return (x > _S_X_LO + dist) & (x < _S_X_HI - dist) & \
+               (y > _S_Y_LO + dist) & (y < _S_Y_HI - dist) & \
+               (z > _S_Z_LO + dist) & (z < _S_Z_HI - dist)
     tri = (y < (1.732007 * z - 1687.5114)) | \
           (y > (-1.732007 * z + 1640.6114)) | \
           (y > (1.732007 * z + 1640.6114)) | \
@@ -77,11 +100,31 @@ def maple_isInContained(x, y, z, dist=CONTAINMENT_CUT):
     return ok & ~tri
 
 
-def maple_isInActive(x, y, z):
+def maple_isInActive(x, y, z, det="ICARUS"):
+    if det == "SBND":
+        return (x > _S_X_LO) & (x < _S_X_HI) & \
+               (y > _S_Y_LO) & (y < _S_Y_HI) & \
+               (z > _S_Z_LO) & (z < _S_Z_HI)
     return (((x < _XE_HI) & (x > _XE_LO)) |
             ((x > _XW_LO) & (x < _XW_HI))) & \
            ((y > _Y_LO) & (y < _Y_HI)) & \
            ((z > _Z_LO) & (z < _Z_HI))
+
+
+def maple_sbnd_cathode_crossing(vtx_x, vtx_y, vtx_z, end_x, end_y, end_z):
+    """Per-track SBND cathode-crossing flag (GUMP cathode_cut semantics).
+
+    True where the segment (slice vertex -> track end) intersects the cathode
+    prism x in (-5, 5). NaN coordinates yield False.
+    """
+    from analysis_village.gump.gump_cuts import intersects_prism_vectorized
+    p1 = np.stack([np.asarray(vtx_x, dtype=float),
+                   np.asarray(vtx_y, dtype=float),
+                   np.asarray(vtx_z, dtype=float)], axis=1)
+    p2 = np.stack([np.asarray(end_x, dtype=float),
+                   np.asarray(end_y, dtype=float),
+                   np.asarray(end_z, dtype=float)], axis=1)
+    return intersects_prism_vectorized(p1, p2, SBND_CATHODE_PRISM_MIN, SBND_CATHODE_PRISM_MAX)
 
 
 def kinetic_energy(mass_MeV, momentum_GeV):
