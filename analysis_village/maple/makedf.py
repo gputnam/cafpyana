@@ -29,6 +29,7 @@ from makedf.util import *
 from makedf.makedf import (
     loadbranches, make_slcdf, make_trkdf, make_trkhitdf, make_crthitdf,
     make_hdrdf, make_triggerdf, make_potdf_bnb, make_mcnudf,
+    make_genie_evtrec_df, _build_genie_evtrec_df,
 )
 from makedf import chi2pid
 
@@ -690,6 +691,8 @@ def make_maple_nudf(f):
         "pos_z": mc.position_z,
         "baseline": mc.baseline,
         "time": mc.time,
+        # link to the GENIE event record (evtrec table entry index)
+        "genie_evtrec_idx": mc.genie_evtrec_idx,
         "maple_class": cls.maple_class,
         "is_1mu1p_maple": cls.maple_class == CLS_1MU1P,
         "is_1muNp_maple": cls.maple_class == CLS_1MUNP,
@@ -729,3 +732,69 @@ def make_maple_wgtdf(f):
     if missing:
         print("make_maple_wgtdf: %d requested GENIE systematics absent in file, using %d" % (missing, len(systs)))
     return make_mcnudf(f, include_weights=True, multisim_nuniv=100, genie_systematics=systs)
+
+
+# =====================================================================
+# GENIE event record (evtrec) builder
+# =====================================================================
+def _read_genie_evtrec_subprocess(path, timeout=900):
+    """Run genie_evtrec.read_genie_evtrec in a fresh python interpreter.
+
+    pyROOT deadlocks when first used inside a forked multiprocessing Pool
+    worker (as spawned by NTupleGlob.dataframes): the worker either hangs at
+    recycling (maxtasksperchild=1) or dies without delivering its result,
+    stalling the pool forever.  A fresh exec'd interpreter has none of the
+    inherited fork state and exits cleanly, so the raw-object read is done
+    there and the numpy arrays are shipped back via pickle.
+
+    Raises on subprocess failure or if the read exceeds `timeout` seconds
+    (a stuck read must fail loudly rather than hang the production).
+    """
+    import os
+    import pickle
+    import subprocess
+    import sys
+    import tempfile
+
+    with tempfile.NamedTemporaryFile(suffix=".pkl") as tf:
+        code = (
+            "import pickle\n"
+            "from makedf import genie_evtrec\n"
+            "d = genie_evtrec.read_genie_evtrec(%r)\n"
+            "with open(%r, 'wb') as f:\n"
+            "    pickle.dump(d, f)\n" % (str(path), tf.name)
+        )
+        # repo root on sys.path so `makedf` is importable regardless of cwd
+        repo = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        env = dict(os.environ)
+        env["PYTHONPATH"] = repo + os.pathsep + env.get("PYTHONPATH", "")
+        res = subprocess.run(
+            [sys.executable, "-c", code],
+            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+            timeout=timeout, env=env)
+        if res.returncode != 0:
+            raise IOError(
+                "GENIE event-record subprocess failed (exit %d) for %s:\n%s"
+                % (res.returncode, path, res.stderr.decode(errors="replace")[-2000:]))
+        with open(tf.name, "rb") as f:
+            return pickle.load(f)
+
+
+def make_maple_evtrec_df(f):
+    """GENIE event record (evtrec) table; same schema as make_genie_evtrec_df.
+
+    The flat-StdHep path is pure uproot and pool-safe, so it goes through the
+    core builder unchanged.  The raw genie::NtpMCEventRecord path (used e.g.
+    by the ICARUS ReCAF2026 files) needs pyROOT + the GENIE libraries, which
+    deadlock inside forked Pool workers -- that read is isolated in a fresh
+    interpreter via _read_genie_evtrec_subprocess.
+    """
+    if "GenieEvtRecTree" not in f:
+        return pd.DataFrame([])
+    if "GenieEvtRec.StdHepPdg" in f["GenieEvtRecTree"].keys():
+        return make_genie_evtrec_df(f)
+    path = getattr(f, "file_path", None)
+    if path is None:
+        path = f._file.file_path
+    d = _read_genie_evtrec_subprocess(path)
+    return _build_genie_evtrec_df(d)
