@@ -16,6 +16,10 @@
 # Run from the cafpyana root AFTER `source setup.sh`.
 
 OUTDIR=/exp/sbnd/data/users/gputnam/MAPLE/sbn-rewgted-13
+# Only consider grid-output dirs from this MAPLE campaign onward: the GUMP
+# sbn-rewgted-13 campaign used the same scratch area and the SAME sample
+# names, so older complete GUMP dirs must never be picked up.
+MINTS=2026_08_12_1149
 
 CAFPYANA=${CAFPYANA_WD:?"source setup.sh in the cafpyana root first"}
 GRIDOUT=${CAFPYANA_GRID_OUT_DIR:?"CAFPYANA_GRID_OUT_DIR not set; source setup.sh"}
@@ -28,7 +32,7 @@ ONLY=("$@")
 
 ALL_SAMPLES="SBNDMCCV ICARUSRun2_SpringMCOverlay_rewgt ICARUSRun4_SpringMCOverlay_rewgt
 SBND_SpringMC_Nom SBND_SpringMC_WMNom SBND_SpringMC_0xSCE SBND_SpringMC_2xSCE
-SBND_SpringMC_WMXThetaXW SBND_SpringMC_WMYZ SBND_SpringMC_DENT SBND_SpringLowEMC SBNDIntimeMC
+SBND_SpringMC_WMXThetaXW SBND_SpringMC_WMYZ SBND_SpringMC_DENT SBND_SpringLowEMC SBNDIntimeMC SBNDAr25
 ICARUSRun2_Spring_Overlay_WMXThXW ICARUSRun2_Spring_Overlay_WMYZ ICARUSRun2_Spring_Overlay_SCE
 ICARUSRun4_Spring_Overlay_WMXThXW ICARUSRun4_Spring_Overlay_WMYZ ICARUSRun4_Spring_Overlay_SCE
 ICARUSRun4_Spring_Overlay_Dirt ICARUS_Spring_Overlay_Dirt
@@ -50,9 +54,12 @@ for NAME in $ALL_SAMPLES; do
 
     # newest production dir whose basename ends exactly in __<NAME>
     # (anchored match: SBNDMCCV must not pick up e.g. ..._rewgt dirs)
+    # and whose timestamp is within this campaign (>= MINTS)
     DFDIR=""
     for d in "$GRIDOUT"/dfs4/*__"$NAME"; do
         [ -d "$d" ] || continue
+        TS=$(basename "$d"); TS=${TS%__$NAME}
+        [[ "$TS" < "$MINTS" ]] && continue
         case "$(basename "$d")" in *__"$NAME") DFDIR=$d ;; esac
     done
     if [ -z "$DFDIR" ]; then

@@ -70,6 +70,7 @@ submit SBND_SpringMC_WMYZ         SBNDMCWMYZ      maple_evt_fullsel 200
 submit SBND_SpringMC_DENT         SBNDMCDENT      maple_evt_fullsel 200
 submit SBND_SpringLowEMC          SBNDMCDirt      maple_evt_fullsel 200
 submit SBNDIntimeMC               SBNDIntimeMC    maple_evt_fullsel 200
+submit SBNDAr25                   SBNDAr25        maple_evt_fullsel 200
 
 ### ICARUS MC variations (full sel) ###
 submit ICARUSRun2_Spring_Overlay_WMXThXW  ICARUSRun2WMXThXW maple_evt_fullsel 200
