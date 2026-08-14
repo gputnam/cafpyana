@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Define the absolute input storage directories
-gray_prefix='/exp/sbnd/data/users/gputnam/GUMP/sbn-rewgted-11/'
-output='/exp/sbnd/data/users/nrowe/GUMP/sbn-rewgted-11/'
+gray_prefix='/exp/sbnd/data/users/gputnam/GUMP/sbn-rewgted-12/'
+output='/exp/sbnd/data/users/nrowe/GUMP/sbn-rewgted-12-1/'
 MAX_JOBS=8
 
 # Navigate to the working directory context
@@ -14,7 +14,7 @@ echo "Remaking det var maps..."
 selection="gc.all_cuts"
 splinedir="${selection#*.}"
 
-#python3 rwt_map.py -s ${selection} -o ${splinedir}
+python3 rwt_map.py -s ${selection} -o ${splinedir}
 
 ## 1. SBND MC (20 files, 0 to 19)
 echo "--> Staging SBND Spring MC Files..."
@@ -134,4 +134,3 @@ python3 run_gump_pipeline.py \
 while [ $(jobs -rp | wc -l) -ge $MAX_JOBS ]; do
     sleep 10 # Check every 2 seconds
 done
-
