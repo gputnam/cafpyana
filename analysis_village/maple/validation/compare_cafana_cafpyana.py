@@ -1,9 +1,12 @@
 #!/usr/bin/env python
-"""Compare CAFANA-MAPLE output (SB_GUMP*.root) with a cafpyana-maple .df.
+"""LEGACY: compare CAFANA-MAPLE output (SB_GUMP*.root) with a cafpyana-maple .df.
 
-The .df must have been produced with the CAFANA-compat PID config
-(analysis_village/maple/configs/maple_evt_cafanapid.py) so that candidate
-identification uses the same chi2 inputs as the CAFANA macro.
+This script validated the original chi2-in-candidate MAPLE port against the
+CAFANA macro (see DIFFERENCES.md, 2026-08-11).  The evt-df builder has since
+moved to chi2-free candidate finding with post-hoc chi2 cuts (maple_sel.py)
+and GUMP column names, which intentionally breaks bit-compatibility with
+CAFANA and removed the maple_evt_cafanapid.py config this script requires.
+It can only be run against dataframes produced before that rework.
 
 Usage:
   python compare_cafana_cafpyana.py <SB_GUMP.root> <maple.df> [--rtol 1e-4] [--atol 1e-4]
