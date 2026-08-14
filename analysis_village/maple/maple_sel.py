@@ -33,7 +33,7 @@ from analysis_village.maple.maple_cuts import (
 # All chi2 variation suffixes stored in the evt df (when do_calo_syst=True),
 # plus the CAFANA-compat chi2 stored under the same scheme.
 SCALE_SMEAR_VARIATIONS = ["lo", "hi", "2lo", "2hi", "smear5", "smear13", "sqsmear15"]
-CALO_VARIATIONS = ["cv", "alpha_p", "alpha_m", "beta_p", "beta_m", "R_p", "R_m"]
+CALO_VARIATIONS = ["cv", "alpha_p", "alpha_m", "beta_p", "beta_m", "R_p", "R_m", "dedxbias"]
 CHI2_VARIATIONS = SCALE_SMEAR_VARIATIONS + CALO_VARIATIONS + ["cafana"]
 
 # The four per-slice chi2 candidate columns, GUMP naming ("%s" is the

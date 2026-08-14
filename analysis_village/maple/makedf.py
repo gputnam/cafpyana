@@ -73,7 +73,7 @@ PID_UNKNOWN, PID_PROTON, PID_PION, PID_SHOWER, PID_OTHER = 0, 1, 2, 3, 4
 # TruthClass: 0=1mu1p, 1=1muNp, 2=Other, 3=Cosmic, 4=Invalid
 CLS_1MU1P, CLS_1MUNP, CLS_OTHER, CLS_COSMIC, CLS_INVALID = 0, 1, 2, 3, 4
 
-CALO_VARIATIONS = ["cv", "alpha_p", "alpha_m", "beta_p", "beta_m", "R_p", "R_m"]
+CALO_VARIATIONS = ["cv", "alpha_p", "alpha_m", "beta_p", "beta_m", "R_p", "R_m", "dedxbias"]
 SCALE_SMEAR_VARIATIONS = ["lo", "hi", "2lo", "2hi", "smear5", "smear13", "sqsmear15"]
 
 
@@ -435,9 +435,19 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
         trkhitdf["dedx_smear13"] = chi2pid.dedx(trkhitdf, gain=DETECTOR, calibrate=DETECTOR, isMC=ismc, smear=0.13)
         trkhitdf["dedx_sqsmear15"] = chi2pid.dedx(trkhitdf, gain=DETECTOR, calibrate=DETECTOR, isMC=ismc, sqrt_smear=0.15)
         for c_var in CALO_VARIATIONS:
-            trkhitdf["dedx_%s" % c_var] = chi2pid.dedx(
-                trkhitdf, gain=DETECTOR, calibrate=DETECTOR, isMC=ismc,
-                new_calo_params=calo_var_params[c_var])
+            if c_var == "dedxbias":
+                # dedxbias is ICARUS-only: scale corrected dE/dx up by the dE/dx
+                # spline. In SBND it is a no-op equal to CV.
+                if DETECTOR == "ICARUS":
+                    trkhitdf["dedx_dedxbias"] = chi2pid.dedx(
+                        trkhitdf, gain=DETECTOR, calibrate=DETECTOR, isMC=ismc,
+                        dedx_bias=True)
+                else:
+                    trkhitdf["dedx_dedxbias"] = trkhitdf["dedx_cv"]
+            else:
+                trkhitdf["dedx_%s" % c_var] = chi2pid.dedx(
+                    trkhitdf, gain=DETECTOR, calibrate=DETECTOR, isMC=ismc,
+                    new_calo_params=calo_var_params[c_var])
 
         for var in SCALE_SMEAR_VARIATIONS + CALO_VARIATIONS:
             P["chi2u_%s" % var] = chi2pid.chi2u(trkhitdf, dedxname="dedx_%s" % var)[0]

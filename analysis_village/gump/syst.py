@@ -139,6 +139,16 @@ def v_chi2R(df):
     ]
     return v_variation(df, setvars)
 
+def v_chi2dedxbias(df):
+    # ICARUS-only dE/dx bias variation (no-op in SBND, where the columns equal CV)
+    setvars = [
+        ("mu_chi2_of_mu_cand", "mu_chi2dedxbias_of_mu_cand"),
+        ("mu_chi2_of_prot_cand",  "mu_chi2dedxbias_of_prot_cand"),
+        ("prot_chi2_of_mu_cand", "prot_chi2dedxbias_of_mu_cand"),
+        ("prot_chi2_of_prot_cand",  "prot_chi2dedxbias_of_prot_cand"),
+    ]
+    return v_variation(df, setvars)
+
 def v_flashscale(df, updn):
     TRIG_PE_SCALE     = {1: 0.642, 2: 0.632, 4: 0.358}  # Run -> best-fit s
     TRIG_PE_SCALE_UNC = {1: 0.005, 2: 0.024, 4: 0.017}  # Run -> unc. on s
