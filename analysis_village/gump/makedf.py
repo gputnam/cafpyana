@@ -55,7 +55,7 @@ def make_spine_no_cuts_df(f):
     df = df[~np.isnan(df.mu.pid) & ~np.isnan(df.p.pid)]
 
     # require fiducial verex
-    df = df[slcfv_cut(df.vertex)]
+    df = df[vtxfv_cut(df.vertex, DETECTOR)]
 
     # lookup stuff
     true_pdg = df.truth.pdg
