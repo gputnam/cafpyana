@@ -503,7 +503,40 @@ def load_one(fname, idf,
         for setv, load in truthvars.items():
             mc_tosave[setv] = mcdf[load]
         mcdf = pd.DataFrame(mc_tosave, mcdf.index)
-        df = df.merge(mcdf, left_on=["__ntuple", "entry", "tmatch_idx"], right_index=True, how="left") 
+        df = df.merge(mcdf, left_on=["__ntuple", "entry", "tmatch_idx"], right_index=True, how="left")
+
+    # LOAD GENIE EVENT RECORD
+    # Pre-FSI truth kinematics from the raw GHEP stack, joined on tmatch_idx exactly
+    # like the truth block above: tmatch_idx names the mcnu row, and _evtrec_kinematics
+    # returns its columns on the mcnu index. Slices with no truth match (cosmics) fall
+    # out of the left join as NaN, as they already do for truthvars.
+    if load_evtrec:
+        with h5py.File(fname, "r") as f:
+            has_evtrec = (evtrecname % idf) in f
+        if has_evtrec:
+            er = pd.read_hdf(fname, evtrecname % idf)
+            mcdf = pd.read_hdf(fname, mcname % idf)
+            gdf, gstats = _evtrec_kinematics(er, mcdf)
+            del er
+            # The evtrec link is reconstructed, not stored (see _evtrec_link), so say
+            # out loud how much of the sample it reached and shout if the vertex
+            # cross-check fails -- a broken link would silently attach another
+            # neutrino's kinematics rather than raise.
+            frac = gstats["n_resolved"] / max(gstats["n_mcnu"], 1)
+            print(f"[{os.path.basename(fname)} idf={idf}] evtrec: "
+                  f"{gstats['n_resolved']}/{gstats['n_mcnu']} neutrinos resolved "
+                  f"({100*frac:.1f}%), vertex check {gstats['vtx_ok']:.5f}")
+            if gstats["n_resolved"] > 0 and not (gstats["vtx_ok"] > 0.999):
+                print(f"WARNING: {os.path.basename(fname)} idf={idf}: the GENIE event "
+                      f"record link does not reproduce the mcnu vertex "
+                      f"({gstats['vtx_ok']:.5f} agree) -- genie_* columns are NOT "
+                      f"trustworthy for this file.")
+        else:
+            # No evtrec in this file (data, detvar, dirt, ...). Emit the columns as NaN
+            # so a mixed file list still concatenates to one schema.
+            gdf = pd.DataFrame(np.nan, index=pd.read_hdf(fname, mcname % idf).index,
+                               columns=GENIE_COLS)
+        df = df.merge(gdf, left_on=["__ntuple", "entry", "tmatch_idx"], right_index=True, how="left")
 
     # LOAD CRT
     if load_crt:

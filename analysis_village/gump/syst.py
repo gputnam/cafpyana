@@ -32,8 +32,8 @@ def muon_range_momentum(trkrange):
     return np.where(np.isfinite(trkrange) & (trkrange >= 0) & (KE >= 0), p, np.nan)
 
 def recompute_kinematics(s, mu_p=None, BE=None):
-    """Recompute the downstream reco kinematics (nu_E_calo, del_p, del_Tp,
-    del_phi, mu_E, mu_T) on the flat df `s`, in place.
+    """Recompute the downstream reco kinematics (nu_E_calo, nu_E_ccqe, del_p,
+    del_Tp, del_phi, mu_E, mu_T) on the flat df `s`, in place.
 
     mu_p defaults to sqrt(mu_E^2 - m_mu^2) -- exact, since the reco momentum
     is range-based; BE defaults to kinematics.BE. Pass either to build a
@@ -54,6 +54,11 @@ def recompute_kinematics(s, mu_p=None, BE=None):
 
     tki = kinematics.transverse_kinematics(mu_p, mu_dir, p_p, p_dir, BE=BE)
     s["nu_E_calo"] = kinematics.neutrino_energy(mu_p, mu_dir, p_p, p_dir, BE=BE)
+    # muon-only CCQE energy estimator. Recomputed here (not just carried over as
+    # a derived column) so both universes built on this function are consistent:
+    # the binding-energy shift moves it via BE, and the track-splitting universe
+    # moves it via the truncated mu_p.
+    s["nu_E_ccqe"] = kinematics.neutrino_energy_ccqe(mu_p, s.mu_dir_z, BE=BE)
     s["del_p"] = tki["del_p"]
     s["del_Tp"] = tki["del_Tp"]
     s["del_phi"] = tki["del_phi"]
@@ -232,6 +237,131 @@ def outern(arrs):
 
     return ret
 
+class ConcatBins(list):
+    """Marker for a per-variable list of bin edges that must be histogrammed
+    SEPARATELY and concatenated, instead of forming a joint N-D histogram.
+
+    Pass it as the `bins` argument of Systematic.cov together with a list of
+    variables. The universe vector is then [N(var0), N(var1), ...] and the
+    covariance comes out in the block form
+
+        [[Cov(x,x), Cov(x,y)],
+         [Cov(y,x), Cov(y,y)]]
+
+    which is what conditional_constraint() consumes. This is the two-VARIABLE
+    analogue of CorrelatedSystematic, which concatenates two dataframes sharing
+    one variable.
+
+    Every systematic class routes its histogramming through histflat(), so the
+    concatenated mode works for all of them without per-class handling.
+    Area normalization (shapeonly=True) is not meaningful on a concatenated
+    vector -- it would normalize the two variables jointly -- and is rejected.
+    """
+
+def block_masks(df, cut, nblock):
+    """Positional row masks, one per concatenated block.
+
+    `cut` is normally a single column name shared by every block. With
+    ConcatBins it may instead be a per-block list of column names, so each block
+    selects its own rows -- e.g. one del_p slice per block. Masks are positional
+    (.to_numpy()) because the CV frames carry duplicate index labels.
+    """
+    if isinstance(cut, (list, tuple)):
+        if len(cut) != nblock:
+            raise ValueError("got %d cut columns for %d blocks" % (len(cut), nblock))
+        return [np.asarray(df[c], dtype=bool) for c in cut]
+
+    return [np.asarray(df[cut], dtype=bool)]*nblock
+
+
+def histflat(df, var, cut, bins, weights, fillna=np.nan):
+    """Flat histogram vector for one universe of `df`.
+
+    `weights` is aligned with the whole frame; rows are selected by `cut`.
+    Normally this is the joint N-D histogram, flattened. With a ConcatBins each
+    variable is histogrammed on its own and the 1-D results are concatenated,
+    and `cut` may then be a per-block list (see block_masks).
+    """
+    w = np.asarray(weights)
+
+    if isinstance(bins, ConcatBins):
+        ms = block_masks(df, cut, len(bins))
+        return np.concatenate([
+            np.histogram(np.asarray(df[var[i]].fillna(fillna))[ms[i]], bins=bins[i],
+                         weights=w[ms[i]])[0]
+            for i in range(len(bins))])
+
+    m = block_masks(df, cut, 1)[0]
+    return np.histogramdd([np.asarray(df[v].fillna(fillna))[m] for v in var],
+                          bins=bins, weights=w[m])[0].flatten()
+
+def _binwidths(bins):
+    """Per-bin widths of the flattened histogram vector (shapeonly support).
+
+    NB the flatten(): outern() returns the N-D outer product, but the histogram
+    it normalizes has been flattened, so the widths must be flattened to match.
+    A no-op for a single variable (the only case previously exercised, which is
+    why the N-D shapeonly path used to raise a broadcast error).
+    """
+    if isinstance(bins, ConcatBins):
+        raise ValueError("shapeonly area normalization is not defined for "
+                         "ConcatBins: it would normalize the concatenated "
+                         "variables jointly. Use absolute normalization.")
+
+    return outern([b[1:] - b[:-1] for b in bins]).flatten()
+
+def conditional_constraint(cov, nx):
+    """Gaussian conditional constraint: the covariance of the second block of a
+    joint covariance, given a measurement of the first.
+
+        cov_cond = Cyy - Cyx Cxx^-1 Cxy
+
+    i.e. the standard Schur-complement / near-detector-style conditional
+    constraint (promoted here out of nb/SignalBoxSystematics-ReCAF.ipynb, and
+    generalized to unequal block sizes). The conditional covariance depends
+    only on the covariance blocks, not on the central values; the returned gain
+    matrix K is what shifts the central value,
+
+        mu_y|x = mu_y + K (x_obs - mu_x)
+
+    Parameters
+    ----------
+    cov : array-like, shape (nx + ny, nx + ny)
+        Full joint covariance of (x, y), ordered
+        [[Cov(x,x), Cov(x,y)], [Cov(y,x), Cov(y,y)]].
+    nx : int
+        Size of the constraining (x) block.
+
+    Returns
+    -------
+    (cov_cond, K, cond_number) : the (ny, ny) conditional covariance, the
+        (ny, nx) gain matrix, and the condition number of Cxx. Cxx is inverted
+        with np.linalg.pinv when it is ill-conditioned; callers should log
+        cond_number.
+    """
+    cov = np.asarray(cov, dtype=float)
+    n = cov.shape[0]
+    assert cov.shape == (n, n), "joint covariance must be square"
+    assert 0 < nx < n, "nx must split the joint covariance"
+
+    Cxx = cov[:nx, :nx]
+    Cxy = cov[:nx, nx:]
+    Cyx = cov[nx:, :nx]
+    Cyy = cov[nx:, nx:]
+
+    cond_number = np.linalg.cond(Cxx)
+    if not np.isfinite(cond_number) or cond_number > 1e12:
+        Cxx_inv = np.linalg.pinv(Cxx)
+    else:
+        Cxx_inv = np.linalg.inv(Cxx)
+
+    K = Cyx @ Cxx_inv
+
+    cov_cond = Cyy - K @ Cxy
+    cov_cond = 0.5 * (cov_cond + cov_cond.T)  # enforce symmetry vs. roundoff
+
+    return cov_cond, K, cond_number
+
 class Systematic(object):
     def __init__(self):
         pass
@@ -252,16 +382,16 @@ class Systematic(object):
             bins = [bins]
 
         if shapeonly:
-            diff = outern([b[1:] - b[:-1] for b in bins])
+            diff = _binwidths(bins)
             norm = np.sum(NCV*diff)
             if norm > 1e-5:
                 NCV = NCV / norm
-        
+
         N_univ = []
         for i_univ in range(self.nuniv()):
             N = self.univ(var, cut, bins, i_univ, fillna=fillna)
             if shapeonly:
-                diff = outern([b[1:] - b[:-1] for b in bins])
+                diff = _binwidths(bins)
                 norm = np.sum(N*diff)
                 if norm > 1e-5:
                     N = N / norm
@@ -308,7 +438,8 @@ class SystSampleSystematic(Systematic):
             var = [var]
             bins = [bins]
 
-        return np.histogramdd([self.df.loc[self.df[cut], v].fillna(fillna) for v in var], bins=bins, weights=self.df.loc[self.df[cut], self.scale])[0].flatten()*self.norm + self.CV
+        return histflat(self.df, var, cut, bins, self.df[self.scale],
+                        fillna=fillna)*self.norm + self.CV
 
 class StatSampleSystematic(object):
     def __init__(self, df, scale="glob_scale", norm=1):
@@ -322,15 +453,38 @@ class StatSampleSystematic(object):
             bins = [bins]
 
         # Poisson variance of weighted events is square of weights
-        w = self.df.loc[self.df[cut], self.scale]**2
-        var = np.histogramdd([self.df.loc[self.df[cut], v].fillna(fillna) for v in var], bins=bins, weights=w)[0].flatten()*self.norm
+        w2 = np.asarray(self.df[self.scale])**2
+
+        if isinstance(bins, ConcatBins):
+            if shapeonly:
+                _binwidths(bins)  # raises: not defined for concatenated bins
+            # The same MC events fill every block, so the MC statistical
+            # uncertainty is CORRELATED across them: element (a, b) of block
+            # (i, j) is sum(w^2) over the events falling in bin a of var i AND
+            # bin b of var j -- exactly the 2-D weighted histogram, over the
+            # events passing BOTH blocks' cuts. For i == j that reduces to the
+            # diagonal sum(w^2) of the 1-D case, so the one loop covers both the
+            # blocks and their cross terms.
+            ms = block_masks(self.df, cut, len(bins))
+            vals = [np.asarray(self.df[v].fillna(fillna)) for v in var]
+            edges = np.cumsum([0] + [len(b) - 1 for b in bins])
+            c = np.zeros((edges[-1], edges[-1]))
+            for i in range(len(bins)):
+                for j in range(len(bins)):
+                    m = ms[i] & ms[j]
+                    c[edges[i]:edges[i+1], edges[j]:edges[j+1]] = np.histogramdd(
+                        [vals[i][m], vals[j][m]], bins=[bins[i], bins[j]],
+                        weights=w2[m])[0]
+            return c*self.norm
+
+        v2 = histflat(self.df, var, cut, bins, w2, fillna=fillna)*self.norm
 
         if shapeonly:
-            diff = outern([b[1:] - b[:-1] for b in bins])
+            diff = _binwidths(bins)
             norm = np.sum(NCV*diff)
-            return np.diag(var)/norm**2
+            return np.diag(v2)/norm**2
 
-        return np.diag(var)
+        return np.diag(v2)
 
 class CorrelatedSystematic(Systematic):
     def __init__(self, a, b):
@@ -396,7 +550,8 @@ class SampleSystematic(Systematic):
             if not isinstance(var, list):
                 var = [var]
                 bins = [bins]
-            NCV_lcl = np.histogramdd([self.cvdf.loc[self.cvdf[cut], v].fillna(fillna) for v in var], bins=bins, weights=self.cvdf.loc[self.cvdf[cut], self.scale])[0].flatten()
+            NCV_lcl = histflat(self.cvdf, var, cut, bins, self.cvdf[self.scale],
+                               fillna=fillna)
             c = super().cov(var, cut, bins, NCV_lcl, shapeonly=shapeonly, fillna=fillna)
             # then, scale up the covariance by the ratio of our CV to the _actual_ CV
             scale = NCV/NCV_lcl
@@ -412,7 +567,8 @@ class SampleSystematic(Systematic):
             var = [var]
             bins = [bins]
 
-        return np.histogramdd([self.dfs[i_univ].loc[self.dfs[i_univ][cut], v].fillna(fillna) for v in var], bins=bins, weights=self.dfs[i_univ].loc[self.dfs[i_univ][cut], self.scale])[0].flatten()
+        d = self.dfs[i_univ]
+        return histflat(d, var, cut, bins, d[self.scale], fillna=fillna)
 
 class SelectionSystematic(Systematic):
     """Systematic evaluated by re-histogramming the SAME dataframe with
@@ -441,10 +597,9 @@ class SelectionSystematic(Systematic):
         if not isinstance(var, list):
             var = [var]
             bins = [bins]
+        # this universe's own cut column (or per-block list of them)
         c = self.cuts[i_univ]
-        return np.histogramdd([self.df.loc[self.df[c], v].fillna(fillna) for v in var],
-                              bins=bins,
-                              weights=self.df.loc[self.df[c], self.scale])[0].flatten()
+        return histflat(self.df, var, c, bins, self.df[self.scale], fillna=fillna)
 
 def split_tracks(df, dim, coord, runs=None):
     """Build the split-track universe for muons crossing a detector plane.
@@ -519,15 +674,11 @@ class TrackSplittingSystematic(Systematic):
             var = [var]
             bins = [bins]
 
-        m = self.df[cut].to_numpy()
         w = self.df[self.scale].to_numpy()*(1 - self.frac*self.crosses)
-        N = np.histogramdd([self.df[v].fillna(fillna).to_numpy()[m] for v in var],
-                           bins=bins, weights=w[m])[0].flatten()
+        N = histflat(self.df, var, cut, bins, w, fillna=fillna)
 
-        ms = self.splitdf[cut].to_numpy()
-        ws = self.splitdf[self.scale].to_numpy()[ms]*self.frac
-        N += np.histogramdd([self.splitdf[v].fillna(fillna).to_numpy()[ms] for v in var],
-                            bins=bins, weights=ws)[0].flatten()
+        ws = self.splitdf[self.scale].to_numpy()*self.frac
+        N += histflat(self.splitdf, var, cut, bins, ws, fillna=fillna)
         return N
 
 class WeightSystematic(Systematic):
@@ -550,5 +701,5 @@ class WeightSystematic(Systematic):
             bins = [bins]
 
         wgt_v = self.df[self.scale] * self.df[self.wgts[i_univ]].fillna(fillna)
-        return np.histogramdd([self.df.loc[self.df[cut], v].fillna(fillna) for v in var], bins=bins, weights=wgt_v[self.df[cut]])[0].flatten()
+        return histflat(self.df, var, cut, bins, wgt_v, fillna=fillna)
 
