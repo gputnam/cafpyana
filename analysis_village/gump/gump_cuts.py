@@ -485,4 +485,3 @@ def all_cuts(recodf, DETECTOR=None, det_run=None):
     pid_mask = pid_cut(recodf)
 
     return presel_mask & cosmic_mask & flash_mask & two_prong_mask & pid_mask
-

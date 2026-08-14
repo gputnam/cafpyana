@@ -12,6 +12,7 @@ import pyanalib.pandas_helpers as ph
 from multiprocess import Pool
 from functools import partial
 import syst
+import rwt_map as rw
 
 import gump_cuts as gc
 
@@ -200,6 +201,7 @@ truthvars = {
   "true_npi": ("npi", ""),
   "true_npi0": ("npi0", ""),
 }
+
 
 # ---------------------------------------------------------------------------
 # GENIE event record (evtrec) -> pre-FSI truth kinematics
@@ -398,6 +400,109 @@ def _evtrec_kinematics(er, mcdf):
 
     return res, stats
 
+detvar_rwt_files = [
+  'SBND_WMXThetaXW.txt',
+  'SBND_WMYZ.txt',
+  'SBND_DENT.txt',
+  ['SBND_0xSCE.txt', 'SBND_2xSCE.txt'],
+  'ICARUSRun2_SCE.txt',
+  'ICARUSRun4_SCE.txt',
+  'SBND_SmeareddEdx.txt',
+  'ICARUSRun2_SmeareddEdx.txt',
+  'ICARUSRun2_WMXThetaXW.txt',
+  'ICARUSRun4_SmeareddEdx.txt',
+  'ICARUSRun4_WMXThetaXW.txt',
+  'SBND_GainHi.txt',
+  'ICARUSRun2_GainHi.txt',
+  'ICARUSRun4_GainHi.txt',
+  'SBND_EMBAlpha.txt',
+  'ICARUSRun2_EMBAlpha.txt',
+  'ICARUSRun4_EMBAlpha.txt',
+  'SBND_EMBBeta.txt',
+  'ICARUSRun2_EMBBeta.txt',
+  'ICARUSRun4_EMBBeta.txt',
+  'SBND_EMBR.txt',
+  'ICARUSRun2_EMBR.txt',
+  'ICARUSRun4_EMBR.txt',
+  ['SBND_TrigEffMin.txt', 'SBND_TrigEffPls.txt'],
+  ['ICARUSRun2_TrigEffMin.txt', 'ICARUSRun2_TrigEffPls.txt'],
+  ['ICARUSRun4_TrigEffMin.txt', 'ICARUSRun4_TrigEffPls.txt'],
+  'SBND_BIND.txt',
+  'ICARUSRun2_BIND.txt',
+  'ICARUSRun4_BIND.txt',
+  'ICARUSRun2_Z=0_TRKSPLT.txt',
+  'ICARUSRun4_Z=0_TRKSPLT.txt',
+  'ICARUSRun2_EastCathode_TRKSPLT.txt',
+  'ICARUSRun4_EastCathode_TRKSPLT.txt',
+  'ICARUSRun2_WestCathode_TRKSPLT.txt',
+  'ICARUSRun4_WestCathode_TRKSPLT.txt',
+]
+
+detvar_rwt_lbls = [
+  'WireMod_SBND_multisigma_WMXThetaXW',
+  'WireMod_SBND_multisigma_WMYZ',
+  'DENT_SBND_multisigma_DENT',
+  'SCE_SBND_multisigma_SCE',
+  'SCE_ICARUSRun2_multisigma_SCE',
+  'SCE_ICARUSRun4_multisigma_SCE',
+  'SBND_PID_Smear',
+  'ICARUSRun2_PID_Smear',
+  'WireMod_ICARUSRun2_multisigma_WMXThetaXW',
+  'ICARUSRun4_PID_Smear',
+  'WireMod_ICARUSRun4_multisigma_WMXThetaXW',
+  'SBND_PID_Gain',
+  'ICARUSRun2_PID_Gain',
+  'ICARUSRun4_PID_Gain',
+  'SBND_PID_Alpha',
+  'ICARUSRun2_PID_Alpha',
+  'ICARUSRun4_PID_Alpha',
+  'SBND_PID_Beta',
+  'ICARUSRun2_PID_Beta',
+  'ICARUSRun4_PID_Beta',
+  'SBND_PID_R',
+  'ICARUSRun2_PID_R',
+  'ICARUSRun4_PID_R',
+  'SBND_TrigEff',
+  'ICARUSRun2_TrigEff',
+  'ICARUSRun4_TrigEff',
+  'BIND',
+  'BIND',
+  'BIND',
+  'ICARUSRun2_Z=0_TRKSPLT',
+  'ICARUSRun4_Z=0_TRKSPLT',
+  'ICARUSRun2_EastCathode_TRKSPLT',
+  'ICARUSRun4_EastCathode_TRKSPLT',
+  'ICARUSRun2_WestCathode_TRKSPLT',
+  'ICARUSRun4_WestCathode_TRKSPLT',
+]
+
+std_drops = ['is_clear_cosmic', 'crlongtrkdiry', 'p_len', 'has_stub',
+             'true_pcand_pdg', 'true_p_dir_x', 'true_p_dir_y', 'true_p_dir_z', 
+             'true_pcand_dir_x', 'true_pcand_dir_y', 'true_pcand_dir_z', 
+             'true_pcand_end_x', 'true_pcand_end_y', 'true_pcand_end_z',
+             'true_mucand_pdg', 'true_mucand_dir_x', 'true_mucand_dir_y', 
+             'true_mucand_dir_z', 'true_mucand_end_x', 'true_mucand_end_y', 
+             'true_mucand_end_z', 'stub_l0_5cm_dedx','stub_l0_5cm_charge',
+             'stub_l1cm_dedx','stub_l1cm_charge','stub_l2cm_dedx',
+             'stub_l2cm_charge','stub_l3cm_dedx','stub_l3cm_charge',
+             'stub_l4cm_dedx','stub_l4cm_charge','prot_chi2smear5_of_prot_cand', 
+             'prot_chi2smear5_of_mu_cand', 'mu_chi2smear5_of_mu_cand', 
+             'mu_chi2smear5_of_prot_cand', 'tmatch_pur', 'tmatch_eff', 
+             'true_baseline', 'true_nu_pdg_x', 'true_nu_pdg_y',
+             'true_nmu_27MeV', 'true_np_20MeV', 'true_np_50MeV', 
+             'true_npi_30MeV', 'is_cosmic', 'flash_sumpe', 'true_mucand_p', 
+             'true_pcand_p', 'p_true_p', 'true_mu_end_x', 
+             'true_p_end_x', 'true_mu_end_y', 'true_p_end_y', 'true_mu_end_z', 
+             'true_p_end_z','crthit', 'true_nu_E', 'p_true_pdg', 'mu_true_pdg', 
+             'mu_chi22lo_of_mu_cand', 'mu_chi22hi_of_mu_cand', 
+             'prot_chi22lo_of_mu_cand', 'prot_chi22hi_of_mu_cand',
+             'mu_chi22lo_of_prot_cand', 'mu_chi22hi_of_prot_cand', 
+             'prot_chi22lo_of_prot_cand', 'prot_chi22hi_of_prot_cand', 
+             'true_mu_p', 'true_p_p', 'pot_univ']
+
+def get_std_drops():
+    return std_drops
+
 def scale_pot(df, pot, desired_pot):
     """Scale DataFrame by desired POT."""
     scale = desired_pot / pot
@@ -546,11 +651,10 @@ def _apply_variations(df, shift_binding_E, split_tracks,
         df = syst.shift_binding_energy(df, BE_SHIFT, fraction=f, scale=_weight_col(df))
     return df
 
-#@profile
 def load_one(fname, idf,
     detector=None, # One of SBND, ICARUS, ICARUS Run4
     include_syst=True, nuniv=100, spline=False, xsec_univ=False, xsec_spline=False,# systematic handling
-    reweight_aFF=False, pot_univ=False, flux_univ=True, sep_flux_univ=False, g4_univ=True,
+    reweight_aFF=False, pot_univ=False, flux_univ=True, sep_flux_univ=False, g4_univ=True, sep_g4_univ=False,
     pot_spline=False, detvar_spline=False, spline_dir="rwt_outputs",
     load_truth=True, load_crt=False, load_evtrec=False, match_Enu=True, # load extra information
     offbeampot=False, # POT handling
@@ -561,7 +665,6 @@ def load_one(fname, idf,
     flashname=FLASH, hdrname=HDR, evtname=EVT, wgtname=WGT, mcname=MC, crtname=CRT, evtrecname=EVTREC, drops=None, lightmem=False): # override default table names
 
     assert(detector == "SBND" or detector == "ICARUS Run2" or detector == "ICARUS Run4")
-
     # Check cache
     if cache_dir is not None:
         cache_hash = _cache_key(fname, idf, detector=detector, include_syst=include_syst,
@@ -592,12 +695,15 @@ def load_one(fname, idf,
     if "SBND" in fname:
         df["Run"] = 1
         Run = 1
+        det = "SBND"
     elif "ICARUS" in fname and "Run4" in fname:
         df["Run"] = 4
         Run = 4
+        det = "ICARUS Run4"
     elif "ICARUS" in fname:
         df["Run"] = 2
         Run = 2
+        det = "ICARUS Run2"
     else: assert(False)
 
     # apply the scaled pe flash
@@ -747,6 +853,10 @@ def load_one(fname, idf,
 
     df["crthit"] = df.crthit.fillna(False).astype(bool) 
 
+    # LOAD WEIGHTS
+    if include_syst:
+        wgt = pd.read_hdf(fname, wgtname % idf) 
+
     # LOAD AXIAL FORM FACTOR REWEIGHT
     if reweight_aFF:
         rewgt = pd.read_hdf(fname, wgtname % idf)[xsec_cv_rwgt]
@@ -786,9 +896,21 @@ def load_one(fname, idf,
     # LOAD WEIGHTS
     wgt = pd.read_hdf(fname, wgtname % idf) 
     skim = {}
+
     if flux_univ:
-        for i in range(min(100, nuniv)):
-            skim["flux_univ%i" % i] = np.prod([wgt[s]["univ_%i" % i] for s in flux_syst], axis=0)
+        num_to_process = min(100, nuniv)
+        
+        # Pre-cache the system lookups to avoid doing it inside the inner loops
+        system_data = [wgt[s] for s in flux_syst]
+        
+        new_columns_dict = {}
+        for i in range(num_to_process):
+            univ_key = "univ_%i" % i
+            # np.prod over the pre-cached systems list
+            new_columns_dict["flux_univ%i" % i] = np.prod([sys[univ_key] for sys in system_data], axis=0)
+            
+        # --- FIX HERE: Merging two dictionaries ---
+        skim.update(new_columns_dict)
 
     if g4_univ:
         for i in range(min(100, nuniv)):
@@ -824,17 +946,42 @@ def load_one(fname, idf,
     multisim_cols = []
     multisigma_cols = []
 
+    if pot_spline:
+        for d in ["SBND", "ICARUS Run2", "ICARUS Run4"]:
+            col_str = f"multisigma_{d.replace(' ', '')}_POT"
+            multisigma_cols.append(col_str)
+            if det == d:
+                skim[f"{col_str}"] = [list(pot_syst.values()) for _ in range(len(wgt))]
+            else:
+                skim[f"{col_str}"] = [[1.0]*7 for _ in range(len(wgt))]
+
     if sep_flux_univ:
         for j, s in enumerate(flux_syst):
-            multisim_cols.append(s)
-            w = wgt[s]#.fillna(1).replace([np.inf, -np.inf], 1)
+            if not 'multisim' in s:
+                col_str = 'multisim_'+s
+            else:
+                col_str = s
+            multisim_cols.append(col_str)
+            w = wgt[s]
             if lightmem:
-                w[w.select_dtypes(include=["float64"]).columns] = w.select_dtypes(include=["float64"]).astype("float32")
+                float64_cols = w.select_dtypes(include=["float64"]).columns
+                w.loc[:, float64_cols] = w.loc[:, float64_cols].astype("float32")
             stacked_variants = np.vstack([np.nan_to_num(w["univ_%i" % i].to_numpy(), nan=1.0, posinf=1.0, neginf=1.0) for i in range(min(100, nuniv))])
-            skim[s] = stacked_variants.T.tolist()
-            for d in stacked_variants.T.tolist():
-                if len(d) != 100:
-                    print(d)
+            skim[col_str] = stacked_variants.T.tolist()
+
+    if sep_g4_univ:
+        for j, s in enumerate(g4_syst):
+            if not 'multisim' in s:
+                col_str = 'multisim_'+s
+            else:
+                col_str = s
+            multisim_cols.append(col_str)
+            w = wgt[s]
+            if lightmem:
+                float64_cols = w.select_dtypes(include=["float64"]).columns
+                w.loc[:, float64_cols] = w.loc[:, float64_cols].astype("float32")
+            stacked_variants = np.vstack([np.nan_to_num(w["univ_%i" % i].to_numpy(), nan=1.0, posinf=1.0, neginf=1.0) for i in range(min(100, nuniv))])
+            skim[col_str] = stacked_variants.T.tolist()
 
     if xsec_univ:
         rng = np.random.default_rng(seed=24601) # repeatable random numbers
@@ -864,7 +1011,6 @@ def load_one(fname, idf,
 
     if xsec_spline:
         for j, s in enumerate(xsec_syst):
-            multisigma_cols.append(s)
             if "ps1" in wgt[s]:
                 w = wgt[s].fillna(1).replace([np.inf, -np.inf], 1)
                 stacked_variants = np.vstack([
@@ -876,23 +1022,40 @@ def load_one(fname, idf,
                     np.clip((w["ps2"] / w["cv"]).to_numpy(), 0, 10),
                     np.clip((w["ps3"] / w["cv"]).to_numpy(), 0, 10)
                 ])
-
-                # 2. Transpose to shape (n_events, 7) so each row represents an event,
-                # then convert to a list of lists for uproot/awkward ingestion later
-                skim[s] = stacked_variants.T.tolist()
+                if not 'multisigma' in s:
+                    col_str = 'multisigma_'+s
+                else:
+                    col_str = s
+                skim[col_str] = stacked_variants.T.tolist()
+                multisigma_cols.append(col_str)
             elif "morph" in wgt[s]:
                 w = wgt[s].fillna(1).replace([np.inf, -np.inf], 1)
                 if lightmem:
-                    w[w.select_dtypes(include=["float64"]).columns] = w.select_dtypes(include=["float64"]).astype("float32")
+                    float64_cols = w.select_dtypes(include=["float64"]).columns
+                    w.loc[:, float64_cols] = w.loc[:, float64_cols].astype("float32")
 
                 stacked_variants = np.vstack([
                     np.ones(len(w)),  # Central value ratio is exactly 1.0
                     np.clip((w["morph"]).to_numpy(), 0, 10)
                 ])
-
-                # 2. Transpose to shape (n_events, 7) so each row represents an event,
-                # then convert to a list of lists for uproot/awkward ingestion later
+                if not 'multisigma' in s:
+                    col_str = 'multisigma_'+s
+                else:
+                    col_str = s
+                skim[col_str] = stacked_variants.T.tolist()
+                multisigma_cols.append(col_str)
+            elif "multisim" in s:
+                w = wgt[s]#.fillna(1).replace([np.inf, -np.inf], 1)
+                if lightmem:
+                    float64_cols = w.select_dtypes(include=["float64"]).columns
+                    w.loc[:, float64_cols] = w.loc[:, float64_cols].astype("float32")
+                stacked_variants = np.vstack([np.nan_to_num(w["univ_%i" % i].to_numpy(), nan=1.0, posinf=1.0, neginf=1.0) for i in range(min(100, nuniv))])
                 skim[s] = stacked_variants.T.tolist()
+                if not 'multisim' in s:
+                    col_str = 'multisim_'+s
+                else:
+                    col_str = s
+                multisim_cols.append(s)
 
     else:
         for i, s in enumerate(xsec_syst):
@@ -907,22 +1070,66 @@ def load_one(fname, idf,
 
     skim = pd.DataFrame(skim, index=wgt.index)
 
-
     mrg = df.merge(skim,
             left_on=["__ntuple", "entry", "tmatch_idx"],
             right_index=True,
             how="left") ## -- save all sllices
 
+    if detvar_spline:
+        for s, f in zip(detvar_rwt_lbls, detvar_rwt_files):
+            if isinstance(f, (str, bytes)):
+                fs = [spline_dir + '/' + f]
+            else:
+                fs = [spline_dir + '/' + fi for fi in f]
+            
+            allowed_substrings = ["ICARUSRun4", "ICARUSRun2", "SBND"]
+
+            if not all(any(sub in s for sub in allowed_substrings) for s in fs):
+                # Find the specific offender to make the error message helpful
+                invalid_string = next(s for s in fs if not any(sub in s for sub in allowed_substrings))
+                raise ValueError(f"Validation failed: '{invalid_string}' is invalid. Check that your reweight files are all for the same detector.")
+
+            if not 'multisigma' in s:
+                col_str = 'multisigma_' + s
+            else:
+                col_str = s
+
+            # allow for f 
+            if det.replace(' ', '') in fs[0]:
+                s_df = rw.apply_map(mrg, fs, s)
+                mrg[col_str] = s_df
+            elif not col_str in mrg.columns:
+            # Don't overwrite existing columns with defaults (eg BIND)
+                mrg[col_str] = [[1.0]*(len(fs)+1) for _ in range(len(mrg))]
+
+            multisigma_cols.append(col_str)
+
     univ_cols = [col for col in skim.columns if "univ" in col]
     if len(multisigma_cols) > 0:
         nan_mask = mrg[multisigma_cols[0]].isna()
+        n_missing = nan_mask.sum()
         for col in multisigma_cols:
-            mrg.loc[nan_mask, col] = mrg.loc[nan_mask, col].apply(lambda x: [1.0] * len(mrg.loc[~nan_mask, col].iloc[0]))
+            valid_rows = mrg.loc[~nan_mask, col]
+            if len(valid_rows) > 0:
+                col_len = len(valid_rows.iloc[0])
+            else:
+                col_len = 7  # Fallback to standard 7-knot default if the whole block is NaN
+            
+            # 2. Vectorized assignment: Create the block of lists all at once
+            default_val = [1.0] * col_len
+            mrg.loc[nan_mask, col] = pd.Series([default_val] * n_missing, index=mrg.index[nan_mask])
 
     if len(multisim_cols) > 0:
-        nan_mask = mrg[multisim_cols[0]].isna()
+
         for col in multisim_cols:
-            mrg.loc[nan_mask, col] = mrg.loc[nan_mask, col].apply(lambda x: [1.0] * 100)
+            nan_mask = mrg[col].isna()
+            n_missing = nan_mask.sum()
+            valid_rows = mrg.loc[~nan_mask, col]
+            col_len = 100#len(mrg[col].iloc[0]) 
+
+            # 2. Vectorized assignment: Create the block of lists all at once
+            default_val = [1.0] * col_len
+            mrg.loc[nan_mask, col] = pd.Series([default_val] * n_missing, index=mrg.index[nan_mask])
 
     if len(univ_cols) > 0:
         mrg.loc[np.isnan(mrg[univ_cols[0]]), univ_cols] = 1.0 
@@ -1080,5 +1287,3 @@ class XSecSystematic(syst.WeightSystematic):
 class POTSystematic(syst.WeightSystematic):
     def __init__(self, df, scale="glob_scale"):
         super().__init__(df, ["pot_univ"], avg=False, scale=scale)
-
-

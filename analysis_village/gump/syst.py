@@ -1,4 +1,6 @@
 import numpy as np
+import kinematics
+import pandas as pd
 
 # Muon range->momentum, replicating the calculator that filled rangeP.p_muon in
 # the CAFs: sbncode TrackMomentumCalculator.cxx @35baeab (LArReco). CSDA range
@@ -39,8 +41,6 @@ def recompute_kinematics(s, mu_p=None, BE=None):
     is range-based; BE defaults to kinematics.BE. Pass either to build a
     shifted-kinematics universe from the CV.
     """
-    import pandas as pd
-    import kinematics
 
     if BE is None:
         BE = kinematics.BE
@@ -67,7 +67,7 @@ def recompute_kinematics(s, mu_p=None, BE=None):
 
     return s
 
-def shift_binding_energy(df, dBE, fraction=1.0, scale="glob_scale"):
+def shift_binding_energy(df, dBE, fraction=0.5, scale="glob_scale"):
     """Universe df for a binding-energy shift: copy of the CV with the reco
     kinematics recomputed under BE -> BE + dBE, scaled per interaction mode:
     the nominal dBE for QE/RES/DIS (genie_mode 0/1/2), dBE*sqrt(2) for MEC
@@ -82,8 +82,6 @@ def shift_binding_energy(df, dBE, fraction=1.0, scale="glob_scale"):
     The selection cuts use no recomputed column, so 'selected' etc. carry over
     from the CV unchanged.
     """
-    import pandas as pd
-    import kinematics
 
     mode = df.genie_mode.to_numpy()
     mode_scl = np.where(np.isin(mode, [0, 1, 2]), 1.,
@@ -390,12 +388,12 @@ class Systematic(object):
         N_univ = []
         for i_univ in range(self.nuniv()):
             N = self.univ(var, cut, bins, i_univ, fillna=fillna)
+
             if shapeonly:
                 diff = _binwidths(bins)
                 norm = np.sum(N*diff)
                 if norm > 1e-5:
                     N = N / norm
-                
             N_univ.append(N)
     
         cov =  np.sum([np.outer(N - NCV, N - NCV) for N in N_univ], axis=0)
@@ -620,7 +618,6 @@ def split_tracks(df, dim, coord, runs=None):
     the positional boolean mask of those rows in `df`. The caller must
     re-evaluate the selection on splitdf before use.
     """
-    import pandas as pd
 
     vtx = df["slc_vtx_" + dim].to_numpy()
     end = df["mu_end_" + dim].to_numpy()
