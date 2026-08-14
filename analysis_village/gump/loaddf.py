@@ -266,9 +266,9 @@ detvar_rwt_lbls = [
   'SBND_TrigEff',
   'ICARUSRun2_TrigEff',
   'ICARUSRun4_TrigEff',
-  'SBND_BIND',
-  'ICARUSRun2_BIND',
-  'ICARUSRun4_BIND',
+  'BIND',
+  'BIND',
+  'BIND',
   'ICARUSRun2_Z=0_TRKSPLT',
   'ICARUSRun4_Z=0_TRKSPLT',
   'ICARUSRun2_EastCathode_TRKSPLT',
@@ -866,7 +866,8 @@ def load_one(fname, idf,
             if det.replace(' ', '') in fs[0]:
                 s_df = rw.apply_map(mrg, fs, s)
                 mrg[col_str] = s_df
-            else:
+            elif not col_str in mrg.columns:
+            # Don't overwrite existing columns with defaults (eg BIND)
                 mrg[col_str] = [[1.0]*(len(fs)+1) for _ in range(len(mrg))]
 
             multisigma_cols.append(col_str)
