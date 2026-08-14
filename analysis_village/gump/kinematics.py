@@ -27,6 +27,41 @@ def neutrino_energy(mu_p, mu_dir, p_p, p_dir, BE=BE):
 
     return mu_E + p_E - PROTON_MASS + ET + BE
 
+def neutrino_energy_ccqe(mu_p, mu_costh, BE=BE):
+    """Reconstructed neutrino energy under the CCQE assumption, from the muon
+    kinematics alone (nu_mu n -> mu- p on a nucleon at rest):
+
+        E_nu^QE = [2(M_n - E_B)E_mu - ((M_n - E_B)^2 + m_mu^2 - M_p^2)]
+                  / [2(M_n - E_B - E_mu + p_mu cos(theta_mu))]
+
+    This is the MiniBooNE form (Phys. Rev. D 81, 092005); the numerator is
+    often written as E_B^2 - 2 M_n E_B + m_mu^2 + (M_n^2 - M_p^2), which is
+    algebraically the same thing.
+
+    NB: E_B defaults to this module's BE (29.5 MeV) rather than MiniBooNE's
+    34 MeV, so that E_nu^QE and neutrino_energy() share one binding energy and
+    the binding-energy systematic moves both together.
+
+    Unlike neutrino_energy(), this uses no proton information at all -- that is
+    the point of it: it is the estimator that is biased by any non-QE (MEC,
+    RES, FSI) contribution, so comparing it against the calorimetric energy
+    probes that modelling.
+
+    The denominator vanishes as the muon approaches the kinematic edge; rows
+    where it is non-positive are unphysical under the QE assumption and are
+    returned as NaN rather than as a large negative energy.
+    """
+    Mn = NEUTRON_MASS - BE
+    mu_E = mag2d(mu_p, MUON_MASS)
+
+    num = 2*Mn*mu_E - (Mn**2 + MUON_MASS**2 - PROTON_MASS**2)
+    den = 2*(Mn - mu_E + mu_p*mu_costh)
+
+    # Series / ndarray keeps the Series index, so this preserves whatever
+    # container came in. NB: do NOT re-wrap in pd.Series(..., index=...) --
+    # the CV frames carry duplicate index labels and that would try to align.
+    return num/np.where(den > 0, den, np.nan)
+
 def transverse_kinematics(mu_p, mu_dir, p_p, p_dir, BE=BE):
     mass_Ap = MASS_A - NEUTRON_MASS + BE
     mu_E = mag2d(mu_p, MUON_MASS)

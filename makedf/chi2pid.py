@@ -60,6 +60,34 @@ ICARUS_CALO_VARIATIONS = {
 }
 
 
+# dE/dx bias variation (ICARUS-only): scale the corrected dE/dx up by a
+# spline of dE/dx, taken from a TSpline3 stored under key "Spline3".
+# Domain x = dE/dx [MeV/cm] in [0, 40]; value y = multiplicative scale.
+DEDX_BIAS_SPLINE_F = "/pnfs/sbn/persistent/users/gputnam/gen1-osc-files/spline_dedx_variation.root"
+_dedx_bias_knots = None
+
+def _load_dedx_bias_spline():
+    # load the TSpline3 knots (fX, fY, fB, fC, fD) once, lazily, so SBND-only
+    # or no-calo-syst runs never touch the pnfs file
+    global _dedx_bias_knots
+    if _dedx_bias_knots is None:
+        poly = uproot.open(DEDX_BIAS_SPLINE_F)["Spline3"].member("fPoly")
+        X = np.array([p.member("fX") for p in poly])
+        Y = np.array([p.member("fY") for p in poly])
+        B = np.array([p.member("fB") for p in poly])
+        C = np.array([p.member("fC") for p in poly])
+        D = np.array([p.member("fD") for p in poly])
+        _dedx_bias_knots = (X, Y, B, C, D)
+    return _dedx_bias_knots
+
+def dedx_bias_scale(dedx):
+    # evaluate the TSpline3 exactly as a piecewise cubic, clipping to its domain
+    X, Y, B, C, D = _load_dedx_bias_spline()
+    x = np.clip(np.asarray(dedx, dtype=float), X[0], X[-1])
+    i = np.clip(np.searchsorted(X, x) - 1, 0, len(X) - 2)
+    dx = x - X[i]
+    return Y[i] + dx*(B[i] + dx*(C[i] + dx*D[i]))
+
 def chi2(hitdf, exprr, expdedx, experr, dedxname="dedx"):
     dedx_exp = pd.cut(hitdf.rr, exprr, labels=expdedx).astype(float)
     dedx_err = pd.cut(hitdf.rr, exprr, labels=experr).astype(float)
@@ -192,7 +220,7 @@ def dqdx(dqdxdf, gain=None, calibrate=None, isMC=False):
 
     return dqdx*gain_perhit
 
-def dedx(dqdxdf, gain=None, calibrate=None, plane=2, isMC=False, smear=-1, sqrt_smear=-1, scale=1, new_calo_params=None):
+def dedx(dqdxdf, gain=None, calibrate=None, plane=2, isMC=False, smear=-1, sqrt_smear=-1, scale=1, new_calo_params=None, dedx_bias=False):
     dqdx_v = dqdx(dqdxdf, gain=gain, calibrate=calibrate, isMC=isMC)
     if gain == "SBND":
 
@@ -223,6 +251,10 @@ def dedx(dqdxdf, gain=None, calibrate=None, plane=2, isMC=False, smear=-1, sqrt_
     else:
         scalegain = 1.
         dedx = calo.recombination_cor(scale*dqdx_v/scalegain, dqdxdf.phi, dqdxdf.efield, dqdxdf.rho)
+
+    # dE/dx bias variation: scale the corrected dE/dx up by the spline of dE/dx
+    if dedx_bias:
+        dedx = dedx * dedx_bias_scale(dedx)
 
     if smear > 0:
         dedx = dedx*np.clip(np.random.normal(loc=1., scale=smear, size=dedx.size), 0, 2)

@@ -14,22 +14,39 @@ Detector support:
             containment stage; PID uses SBND-calibrated chi2 with the
             same MAPLE thresholds as ICARUS.
 
-PID modes:
-  "cafpyana" -- chi2 recomputed from hit dQ/dx via makedf.chi2pid with ICARUS
-                gains + calibration (the gump-cafpyana way).  Physics default.
-  "cafana"   -- chi2 replicating chi2_ALG on the CAF-stored dedx
-                (chi2pid_cafana).  Used for validation against CAFANA-MAPLE.
+Post-hoc (chi2-free) candidate scheme:
+  Candidate finding is chi2-free so that the chi2 cuts can be re-applied
+  after df production under any calorimetric chi2 variation (the GUMP
+  SignalBoxSystematics pattern; see maple_sel.maple_selection).
+    - Muon candidate: longest track passing the chi2-free MAPLE muon cuts
+      (trackScore, dist_start, length, primary, containment, direction);
+      the chi2 cuts on it are applied post-hoc.
+    - Candidate protons: every other pfp passing the id_pfp gates with
+      dist_start < 10 -- exactly the set the old id_pfp split into
+      pion/proton by chi2.  Kinematics (recoE, ...) assume all of them are
+      protons; the evt df stores the worst-case cut variable over them
+      (mu_chi2{v}_of_prot_cand = min chi2u, prot_chi2{v}_of_prot_cand =
+      max chi2p, min_proton_ke, min_proton_track_score) so the post-hoc
+      selection can require that every candidate is a proton.
+  Column naming follows GUMP (slc_vtx_*, nu_E, mu_*/p_* candidate
+  variables, {mu,prot}_chi2{v}_of_{mu,prot}_cand for the nominal chi2, all
+  calorimetric variations, and the CAFANA-compat chi2 under v="cafana").
 
-Both flavors of chi2 are always stored; `pid_mode` picks which one drives
-the muon/proton candidate identification, the cut booleans, and the sBruce
-variables.  The cut chain for the *other* mode is also stored, with a
-"_alt" suffix, so migration between the two PIDs can be studied.
+  Intentional differences from the old (chi2-in-candidate) selection:
+    - A vertex-attached track with ke_proton < 40 MeV was previously
+      classified by its shower energy (possibly UNKNOWN -> ignored); now it
+      is a candidate proton and fails the min_proton_ke cut.
+    - A slice whose longest chi2-free muon candidate fails the chi2 cuts is
+      rejected instead of falling back to a shorter track.
+    - The pid_mode/_alt machinery is gone: cafana-PID selection is
+      maple_sel.maple_selection(df, "cafana").
 
 Selection option:
   selection="none"   -- keep all slices, with all cut booleans (default)
   selection="presel" -- keep slices passing the PID-free MAPLE preselection
                         (sanity + FV + CRT veto + cryo-light + containment)
   selection="full"   -- keep slices passing the full MAPLE selection
+                        (evaluated with the nominal chi2)
 """
 import numpy as np
 import pandas as pd
@@ -44,6 +61,7 @@ from makedf.makedf import (
 from makedf import chi2pid
 
 from analysis_village.maple.maple_cuts import *
+from analysis_village.maple.maple_sel import maple_selection
 from analysis_village.maple import chi2pid_cafana
 from makedf.branches import (
     crtpmtbranches, shwbranches,
@@ -55,7 +73,7 @@ PID_UNKNOWN, PID_PROTON, PID_PION, PID_SHOWER, PID_OTHER = 0, 1, 2, 3, 4
 # TruthClass: 0=1mu1p, 1=1muNp, 2=Other, 3=Cosmic, 4=Invalid
 CLS_1MU1P, CLS_1MUNP, CLS_OTHER, CLS_COSMIC, CLS_INVALID = 0, 1, 2, 3, 4
 
-CALO_VARIATIONS = ["cv", "alpha_p", "alpha_m", "beta_p", "beta_m", "R_p", "R_m"]
+CALO_VARIATIONS = ["cv", "alpha_p", "alpha_m", "beta_p", "beta_m", "R_p", "R_m", "dedxbias"]
 SCALE_SMEAR_VARIATIONS = ["lo", "hi", "2lo", "2hi", "smear5", "smear13", "sqsmear15"]
 
 
@@ -214,26 +232,32 @@ def maple_truth_classdf(f, det="ICARUS"):
 
 
 # =====================================================================
-# Per-pfp selection machinery
+# Per-pfp candidate machinery (chi2-free; chi2 cuts live in maple_sel)
 # =====================================================================
-def _run_selection(P, chi2mu, chi2p):
-    """find_muon + id_pfp + count_particles for one chi2 flavor.
+def _find_candidates(P):
+    """Chi2-free muon + candidate-proton finding and fixed pfp counting.
 
     P: flat per-pfp frame (index entry, slc, pfp).
-    Returns (mu_ilocs [per-slice Index of muon rows], pid [Series],
-             counts DataFrame per slice).
-    All masks mirror the C++ skip conditions, including NaN behavior.
+    Returns (mu_ilocs [per-slice Index of muon rows],
+             is_prot_cand [bool Series over P],
+             counts DataFrame per slice [n_proton, n_shower, n_other]).
+
+    The muon is the longest track passing the chi2-free part of the old
+    find_muon mask.  Candidate protons are every other pfp passing the
+    id_pfp gates with dist_start < 10 -- the set the old id_pfp split into
+    pion/proton by chi2.  The remaining pfps keep the chi2-independent
+    shower/other/unknown classification, so the counts are fixed under
+    calorimetric variations.  All masks mirror the C++ skip conditions,
+    including NaN behavior.
     """
-    # ---- find_muon ----
+    # ---- find_muon, chi2 cuts removed (applied post-hoc) ----
     keep = P.start_x.notna() & P.len.notna() \
         & ~(P.trackScore < PRIMARY_TRACK_SCORE) \
         & ~(P.dist_start > 10.0) \
         & ~((P.len < MIN_MUON_LENGTH) | (P.len > MAX_MUON_LENGTH)) \
         & P.prim_pfp \
         & P.contained10 \
-        & (P.end_x * P.vtx_x > 0) \
-        & chi2mu.notna() & chi2p.notna() \
-        & ~(chi2mu > MAX_CHI2_MUON) & ~(chi2p < MIN_CHI2_PROTON)
+        & (P.end_x * P.slc_vtx_x > 0)
 
     cand = P[keep]
     if len(cand):
@@ -241,64 +265,62 @@ def _run_selection(P, chi2mu, chi2p):
     else:
         mu_ilocs = pd.Series(dtype=object)
 
-    # ---- id_pfp (all pfps; the muon row is excluded from counts below) ----
+    is_mu = pd.Series(False, index=P.index)
+    if len(mu_ilocs):
+        is_mu.loc[pd.Index(mu_ilocs.values)] = True
+
+    # ---- id_pfp gates (the chi2-free skip conditions) ----
     unknown0 = (~P.prim_pfp) | P.start_x.isna() | P.end_x.isna() | P.len.isna()
     unknown1 = P.min_dist > VTX_MAX_DIST
     no_calo = P.ncalo == 0
-    is_pion = (chi2p >= CHI2_PROTON_PION) & (P.dist_start < 10.0) & (P.ke_pion >= PION_KE_MIN)
-    is_proton = (chi2p < CHI2_PROTON_PION) & (P.dist_start < 10.0) & (P.ke_proton >= PROTON_KE_MIN)
+    gate = ~unknown0 & ~unknown1 & ~no_calo
+
+    is_prot_cand = gate & (P.dist_start < 10.0) & ~is_mu
+
+    # remaining pfps: chi2-independent shower/other/unknown classification
     shw_unknown = P.shw_energy2.isna()
     is_shower = P.shw_energy2 * 1000.0 > PION_KE_MIN
-
-    pid = pd.Series(np.select(
-        [unknown0, unknown1, no_calo, is_pion, is_proton, shw_unknown, is_shower],
-        [PID_UNKNOWN, PID_UNKNOWN, PID_UNKNOWN, PID_PION, PID_PROTON, PID_UNKNOWN, PID_SHOWER],
+    pid_rest = pd.Series(np.select(
+        [~gate, shw_unknown, is_shower],
+        [PID_UNKNOWN, PID_UNKNOWN, PID_SHOWER],
         default=PID_OTHER), index=P.index)
-
-    # exclude the muon candidate from particle counting
-    pid_nomu = pid.copy()
-    if len(mu_ilocs):
-        pid_nomu.loc[pd.Index(mu_ilocs.values)] = -1
+    pid_rest[is_mu | is_prot_cand] = -1
 
     grp = lambda s: s.groupby(level=[0, 1]).sum()
     counts = pd.DataFrame({
-        "n_proton": grp((pid_nomu == PID_PROTON).astype(int)),
-        "n_pion": grp((pid_nomu == PID_PION).astype(int)),
-        "n_shower": grp((pid_nomu == PID_SHOWER).astype(int)),
-        "n_other": grp((pid_nomu == PID_OTHER).astype(int)),
+        "n_proton": grp(is_prot_cand.astype(int)),
+        "n_shower": grp((pid_rest == PID_SHOWER).astype(int)),
+        "n_other": grp((pid_rest == PID_OTHER).astype(int)),
     })
 
-    return mu_ilocs, pid_nomu, counts
+    return mu_ilocs, is_prot_cand, counts
 
 
-def _cut_chain(S, counts, has_mu):
-    """MAPLE cut booleans for one PID flavor, given slice frame S."""
-    cut_muon = has_mu
-    cut_np = counts.n_proton > 1 if NP_MODE else counts.n_proton > 0
-    cut_0pi = counts.n_pion == 0
-    cut_0shwother = (counts.n_shower == 0) & (counts.n_other == 0)
-    maple_sel = S.maple_presel & cut_muon & cut_np & cut_0pi & cut_0shwother
+def _proton_aggregates(P, is_prot_cand, mincols, maxcols):
+    """Per-slice worst-case cut variables over the candidate protons.
 
-    # MaxCutPassed replication (cutflow order: sanity, FV, CRT veto,
-    # cryo-light ["barycenter"], containment [+ SBND cathode veto], muon,
-    # proton, pion, shower). cut_cathode is always True on ICARUS, so the
-    # numbering there is unchanged from the CAFANA port.
-    maxcut = np.select(
-        [~S.cut_sanity, ~S.cut_fv, ~S.cut_crtveto, ~S.cut_cryo,
-         ~(S.cut_contained & S.cut_cathode), ~cut_muon, ~cut_np, ~cut_0pi, ~cut_0shwother],
-        [1, 2, 3, 4, 5, 6, 7, 8, 9], default=10)
+    mincols are aggregated with min (for lower-bound cuts), maxcols with
+    max (for upper-bound cuts).  skipna=False semantics: a NaN value on any
+    candidate makes the aggregate NaN, so the downstream cut fails (the old
+    per-pfp selection required chi2.notna()).
 
-    return pd.DataFrame({
-        "cut_muon": cut_muon, "cut_np": cut_np, "cut_0pi": cut_0pi,
-        "cut_0shwother": cut_0shwother, "maple_sel": maple_sel,
-        "maxcut": maxcut,
-    }, index=S.index)
+    Returns a DataFrame per slice with columns "min_<col>" / "max_<col>".
+    """
+    g = P[is_prot_cand].groupby(level=[0, 1])
+    out = {}
+    for cols, fn in ((mincols, "min"), (maxcols, "max")):
+        for col in cols:
+            cg = g[col]
+            agg = getattr(cg, fn)()
+            agg[cg.count() < cg.size()] = np.nan
+            out["%s_%s" % (fn, col)] = agg
+    return pd.DataFrame(out)
 
 
 # =====================================================================
 # Main evt builder
 # =====================================================================
-def make_maple_evt_df(f, selection="none", pid_mode="cafpyana", do_calo_syst=True):
+def make_maple_evt_df(f, selection="none", do_calo_syst=True):
     det = loadbranches(f["recTree"], ["rec.hdr.det"]).rec.hdr.det
     if det.empty:
         return pd.DataFrame()
@@ -318,15 +340,15 @@ def make_maple_evt_df(f, selection="none", pid_mode="cafpyana", do_calo_syst=Tru
     slcdf = make_slcdf(f)
 
     S = pd.DataFrame({
-        "vtx_x": slcdf.slc.vertex.x,
-        "vtx_y": slcdf.slc.vertex.y,
-        "vtx_z": slcdf.slc.vertex.z,
+        "slc_vtx_x": slcdf.slc.vertex.x,
+        "slc_vtx_y": slcdf.slc.vertex.y,
+        "slc_vtx_z": slcdf.slc.vertex.z,
         "charge_center_z": slcdf.slc.charge_center.z,
         "nu_score": slcdf.slc.nu_score,
         "tmatch_idx": slcdf.slc.tmatch.idx,
         "tmatch_eff": slcdf.slc.tmatch.eff,
         "tmatch_pur": slcdf.slc.tmatch.pur,
-        "E_nu_true": slcdf.slc.truth.E,
+        "nu_E": slcdf.slc.truth.E,
         "true_pdg": slcdf.slc.truth.pdg,
         "true_iscc": slcdf.slc.truth.iscc,
         "true_genie_mode": slcdf.slc.truth.genie_mode,
@@ -367,10 +389,10 @@ def make_maple_evt_df(f, selection="none", pid_mode="cafpyana", do_calo_syst=Tru
     P["prim_pfp"] = trkdf.pfp.parent_is_primary.fillna(False).astype(bool)
 
     # broadcast slice vertex onto pfps
-    P = P.join(S[["vtx_x", "vtx_y", "vtx_z"]])
+    P = P.join(S[["slc_vtx_x", "slc_vtx_y", "slc_vtx_z"]])
 
-    P["dist_start"] = np.sqrt((P.start_x - P.vtx_x)**2 + (P.start_y - P.vtx_y)**2 + (P.start_z - P.vtx_z)**2)
-    dist_end = np.sqrt((P.end_x - P.vtx_x)**2 + (P.end_y - P.vtx_y)**2 + (P.end_z - P.vtx_z)**2)
+    P["dist_start"] = np.sqrt((P.start_x - P.slc_vtx_x)**2 + (P.start_y - P.slc_vtx_y)**2 + (P.start_z - P.slc_vtx_z)**2)
+    dist_end = np.sqrt((P.end_x - P.slc_vtx_x)**2 + (P.end_y - P.slc_vtx_y)**2 + (P.end_z - P.slc_vtx_z)**2)
     # std::min(a, b) semantics: b if b < a else a  (NaN b -> a; NaN a -> NaN)
     P["min_dist"] = np.where(np.isnan(dist_end), P.dist_start, np.minimum(P.dist_start, dist_end))
     P["contained10"] = maple_isInContained(P.end_x, P.end_y, P.end_z, det=DETECTOR)
@@ -413,9 +435,19 @@ def make_maple_evt_df(f, selection="none", pid_mode="cafpyana", do_calo_syst=Tru
         trkhitdf["dedx_smear13"] = chi2pid.dedx(trkhitdf, gain=DETECTOR, calibrate=DETECTOR, isMC=ismc, smear=0.13)
         trkhitdf["dedx_sqsmear15"] = chi2pid.dedx(trkhitdf, gain=DETECTOR, calibrate=DETECTOR, isMC=ismc, sqrt_smear=0.15)
         for c_var in CALO_VARIATIONS:
-            trkhitdf["dedx_%s" % c_var] = chi2pid.dedx(
-                trkhitdf, gain=DETECTOR, calibrate=DETECTOR, isMC=ismc,
-                new_calo_params=calo_var_params[c_var])
+            if c_var == "dedxbias":
+                # dedxbias is ICARUS-only: scale corrected dE/dx up by the dE/dx
+                # spline. In SBND it is a no-op equal to CV.
+                if DETECTOR == "ICARUS":
+                    trkhitdf["dedx_dedxbias"] = chi2pid.dedx(
+                        trkhitdf, gain=DETECTOR, calibrate=DETECTOR, isMC=ismc,
+                        dedx_bias=True)
+                else:
+                    trkhitdf["dedx_dedxbias"] = trkhitdf["dedx_cv"]
+            else:
+                trkhitdf["dedx_%s" % c_var] = chi2pid.dedx(
+                    trkhitdf, gain=DETECTOR, calibrate=DETECTOR, isMC=ismc,
+                    new_calo_params=calo_var_params[c_var])
 
         for var in SCALE_SMEAR_VARIATIONS + CALO_VARIATIONS:
             P["chi2u_%s" % var] = chi2pid.chi2u(trkhitdf, dedxname="dedx_%s" % var)[0]
@@ -482,11 +514,11 @@ def make_maple_evt_df(f, selection="none", pid_mode="cafpyana", do_calo_syst=Tru
     # ------------------------------------------------------------------
     # PID-free cut chain
     # ------------------------------------------------------------------
-    S["cut_sanity"] = S.vtx_x.notna() & S.vtx_y.notna() & S.vtx_z.notna() & S.charge_center_z.notna()
-    S["cut_fv"] = maple_isInFV(S.vtx_x, S.vtx_y, S.vtx_z, det=DETECTOR)
+    S["cut_sanity"] = S.slc_vtx_x.notna() & S.slc_vtx_y.notna() & S.slc_vtx_z.notna() & S.charge_center_z.notna()
+    S["cut_fv"] = maple_isInFV(S.slc_vtx_x, S.slc_vtx_y, S.slc_vtx_z, det=DETECTOR)
     if DETECTOR == "ICARUS":
         S["cut_crtveto"] = ~S.crtveto
-        slice_cryo = np.select([S.vtx_x < 0, S.vtx_x > 0], [0, 1], default=-1)
+        slice_cryo = np.select([S.slc_vtx_x < 0, S.slc_vtx_x > 0], [0, 1], default=-1)
         S["slice_cryo"] = slice_cryo
         S["cut_cryo"] = (S.cryo_light != -1) & ((S.cryo_light == 2) | (slice_cryo == S.cryo_light))
     else:
@@ -496,7 +528,7 @@ def make_maple_evt_df(f, selection="none", pid_mode="cafpyana", do_calo_syst=Tru
         S["cut_cryo"] = True
 
     valid_c = P.start_x.notna() & P.end_x.notna() & P.len.notna()
-    bad_contain = valid_c & ((P.end_x * P.vtx_x < 0) | ~P.contained10)
+    bad_contain = valid_c & ((P.end_x * P.slc_vtx_x < 0) | ~P.contained10)
     any_bad = bad_contain.groupby(level=[0, 1]).any()
     S["cut_contained"] = ~_reindex(any_bad, S.index, False).astype(bool)
 
@@ -504,7 +536,7 @@ def make_maple_evt_df(f, selection="none", pid_mode="cafpyana", do_calo_syst=Tru
     # the slice); always True on ICARUS so the cut chain is unchanged there
     if DETECTOR == "SBND":
         cross = maple_sbnd_cathode_crossing(
-            P.vtx_x[valid_c], P.vtx_y[valid_c], P.vtx_z[valid_c],
+            P.slc_vtx_x[valid_c], P.slc_vtx_y[valid_c], P.slc_vtx_z[valid_c],
             P.end_x[valid_c], P.end_y[valid_c], P.end_z[valid_c])
         any_cross = pd.Series(cross, index=P.index[valid_c]).groupby(level=[0, 1]).any()
         S["cut_cathode"] = ~_reindex(any_cross, S.index, False).astype(bool)
@@ -515,18 +547,14 @@ def make_maple_evt_df(f, selection="none", pid_mode="cafpyana", do_calo_syst=Tru
         S.cut_contained & S.cut_cathode
 
     # ------------------------------------------------------------------
-    # PID-dependent selection: primary + alternate flavor
+    # chi2-free candidates; chi2 cuts are applied post-hoc (maple_sel)
     # ------------------------------------------------------------------
-    if pid_mode == "cafpyana":
-        chi_pri = ("chi2u_cafpyana", "chi2p_cafpyana")
-        chi_alt = ("chi2u_cafana", "chi2p_cafana")
-    elif pid_mode == "cafana":
-        chi_pri = ("chi2u_cafana", "chi2p_cafana")
-        chi_alt = ("chi2u_cafpyana", "chi2p_cafpyana")
-    else:
-        raise ValueError("pid_mode must be 'cafpyana' or 'cafana'")
+    # evt-df chi2 suffix -> per-pfp chi2 flavor ("" = nominal cafpyana)
+    chi2_suffixes = {"": "cafpyana", "cafana": "cafana"}
+    if do_calo_syst:
+        chi2_suffixes.update({v: v for v in SCALE_SMEAR_VARIATIONS + CALO_VARIATIONS})
 
-    mu_ilocs, pid_s, counts = _run_selection(P, P[chi_pri[0]], P[chi_pri[1]])
+    mu_ilocs, is_prot_cand, counts = _find_candidates(P)
     counts = counts.reindex(S.index).fillna(0).astype(int)
     has_mu = pd.Series(False, index=S.index)
     if len(mu_ilocs):
@@ -534,29 +562,31 @@ def make_maple_evt_df(f, selection="none", pid_mode="cafpyana", do_calo_syst=Tru
 
     for c in counts.columns:
         S[c] = counts[c]
-    chain = _cut_chain(S, counts, has_mu)
-    for c in chain.columns:
-        S[c] = chain[c]
+    S["has_muon"] = has_mu
+    S["cut_np"] = counts.n_proton > 1 if NP_MODE else counts.n_proton > 0
+    S["cut_0shwother"] = (counts.n_shower == 0) & (counts.n_other == 0)
 
-    mu_ilocs_alt, _, counts_alt = _run_selection(P, P[chi_alt[0]], P[chi_alt[1]])
-    counts_alt = counts_alt.reindex(S.index).fillna(0).astype(int)
-    has_mu_alt = pd.Series(False, index=S.index)
-    if len(mu_ilocs_alt):
-        has_mu_alt.loc[mu_ilocs_alt.index] = True
-    chain_alt = _cut_chain(S, counts_alt, has_mu_alt)
-    for c in chain_alt.columns:
-        S[c + "_alt"] = chain_alt[c]
-    S["n_proton_alt"] = counts_alt.n_proton
+    # worst-case cut variables over the candidate protons (min for cuts
+    # with direction >, max for cuts with direction <)
+    aggs = _proton_aggregates(
+        P, is_prot_cand,
+        mincols=["trackScore", "ke_proton"] + ["chi2u_%s" % fl for fl in chi2_suffixes.values()],
+        maxcols=["dist_start"] + ["chi2p_%s" % fl for fl in chi2_suffixes.values()])
+    aggs = aggs.reindex(S.index)
+    for suff, fl in chi2_suffixes.items():
+        S["mu_chi2%s_of_prot_cand" % suff] = aggs["min_chi2u_%s" % fl]
+        S["prot_chi2%s_of_prot_cand" % suff] = aggs["max_chi2p_%s" % fl]
+    S["min_proton_track_score"] = aggs.min_trackScore
+    S["min_proton_ke"] = aggs.min_ke_proton
+    S["max_proton_dist_start"] = aggs.max_dist_start
 
     # ------------------------------------------------------------------
-    # sBruce variables (from the primary-flavor candidates)
+    # candidate variables (muon + leading candidate proton)
     # ------------------------------------------------------------------
     mucols = ["len", "end_x", "end_y", "end_z", "dir_x", "dir_y", "dir_z",
-              "p_muon", "trackScore", "chi2u_cafpyana", "chi2p_cafpyana",
-              "chi2u_cafana", "chi2p_cafana"]
-    if do_calo_syst:
-        mucols += ["chi2u_%s" % v for v in SCALE_SMEAR_VARIATIONS + CALO_VARIATIONS]
-        mucols += ["chi2p_%s" % v for v in SCALE_SMEAR_VARIATIONS + CALO_VARIATIONS]
+              "p_muon", "trackScore"] + \
+        ["chi2u_%s" % fl for fl in chi2_suffixes.values()] + \
+        ["chi2p_%s" % fl for fl in chi2_suffixes.values()]
 
     if len(mu_ilocs):
         mu = P.loc[pd.Index(mu_ilocs.values), mucols].copy()
@@ -565,14 +595,10 @@ def make_maple_evt_df(f, selection="none", pid_mode="cafpyana", do_calo_syst=Tru
         mu = pd.DataFrame(columns=mucols, dtype=float)
     mu = mu.reindex(S.index)
 
-    # leading proton: longest pid==Proton pfp with len > 0 (find_longest_proton)
-    prodf = P[(pid_s == PID_PROTON) & (P.len > 0)]
+    # leading proton: longest candidate proton with len > 0 (find_longest_proton)
+    prodf = P[is_prot_cand & (P.len > 0)]
     pcols = ["len", "end_x", "end_y", "end_z", "dir_x", "dir_y", "dir_z",
-             "p_proton", "ke_proton", "trackScore", "chi2u_cafpyana", "chi2p_cafpyana",
-             "chi2u_cafana", "chi2p_cafana"]
-    if do_calo_syst:
-        pcols += ["chi2u_%s" % v for v in SCALE_SMEAR_VARIATIONS + CALO_VARIATIONS]
-        pcols += ["chi2p_%s" % v for v in SCALE_SMEAR_VARIATIONS + CALO_VARIATIONS]
+             "p_proton", "ke_proton", "trackScore", "chi2u_cafpyana", "chi2p_cafpyana"]
     if len(prodf):
         p_ilocs = prodf.len.groupby(level=[0, 1]).idxmax()
         pro = P.loc[pd.Index(p_ilocs.values), pcols].copy()
@@ -588,9 +614,9 @@ def make_maple_evt_df(f, selection="none", pid_mode="cafpyana", do_calo_syst=Tru
     p_mu_mag = np.sqrt(p_mu_x**2 + p_mu_y**2 + p_mu_z**2)
     E_mu = np.sqrt((p_mu_mag * 1000.0)**2 + MUON_MASS**2)
 
-    proton_ke_sum = (P.ke_proton[pid_s == PID_PROTON] + PROTON_BINDING_ENERGY).groupby(level=[0, 1]).sum()
+    proton_ke_sum = (P.ke_proton[is_prot_cand] + PROTON_BINDING_ENERGY).groupby(level=[0, 1]).sum()
     proton_ke_sum = _reindex(proton_ke_sum, S.index, np.nan)
-    found_proton = _reindex((pid_s == PID_PROTON).groupby(level=[0, 1]).any(), S.index, False).astype(bool)
+    found_proton = _reindex(is_prot_cand.groupby(level=[0, 1]).any(), S.index, False).astype(bool)
 
     recoE = np.where(has_mu & found_proton, (E_mu + proton_ke_sum) / 1000.0, -999.0)
 
@@ -606,9 +632,9 @@ def make_maple_evt_df(f, selection="none", pid_mode="cafpyana", do_calo_syst=Tru
     deltaPt = np.sqrt((p_mu_x + p_p_x)**2 + (p_mu_y + p_p_y)**2)
 
     # Barycenter_delta (bar_flash logic + sentinels)
-    bar_z = np.select([S.vtx_x > 0, S.vtx_x < 0], [S.bar_z_west, S.bar_z_east], default=np.nan)
+    bar_z = np.select([S.slc_vtx_x > 0, S.slc_vtx_x < 0], [S.bar_z_west, S.bar_z_east], default=np.nan)
     bar_z = np.where(np.isnan(bar_z), -10000.0, bar_z)
-    bar_x = np.select([S.vtx_x > 0, S.vtx_x < 0], [S.bar_x_west, S.bar_x_east], default=np.nan)
+    bar_x = np.select([S.slc_vtx_x > 0, S.slc_vtx_x < 0], [S.bar_x_west, S.bar_x_east], default=np.nan)
     bar_x = np.where(np.isnan(bar_x), 0.0, bar_x)
     delta = np.abs(bar_z - S.charge_center_z)
     S["Barycenter_delta"] = np.where((bar_z < -9999) & (np.abs(bar_x) < 1), -10.0, delta)
@@ -619,7 +645,7 @@ def make_maple_evt_df(f, selection="none", pid_mode="cafpyana", do_calo_syst=Tru
     light_east = (S.cryo_light == 2) | (S.cryo_light == 0)
     light_west = (S.cryo_light == 2) | (S.cryo_light == 1)
     S["CryoSel"] = np.select(
-        [S.cryo_light < 0, (S.vtx_x > 0) & light_west, (S.vtx_x < 0) & light_east],
+        [S.cryo_light < 0, (S.slc_vtx_x > 0) & light_west, (S.slc_vtx_x < 0) & light_east],
         [-1, 1, 0], default=-1)
 
     # ------------------------------------------------------------------
@@ -648,48 +674,48 @@ def make_maple_evt_df(f, selection="none", pid_mode="cafpyana", do_calo_syst=Tru
     # assemble sBruce columns
     # ------------------------------------------------------------------
     S["recoE"] = recoE
-    S["Muon_length"] = mu.len
-    S["Muon_endx"] = mu.end_x
-    S["Muon_endy"] = mu.end_y
-    S["Muon_endz"] = mu.end_z
-    S["Muon_trackScore"] = mu.trackScore
-    S["Muon_chi2mu"] = mu[chi_pri[0]]
-    S["Muon_chi2pro"] = mu[chi_pri[1]]
-    S["Muon_chi2mu_cafpyana"] = mu.chi2u_cafpyana
-    S["Muon_chi2pro_cafpyana"] = mu.chi2p_cafpyana
-    S["Muon_chi2mu_cafana"] = mu.chi2u_cafana
-    S["Muon_chi2pro_cafana"] = mu.chi2p_cafana
-    S["Proton_length_leading"] = pro.len
-    S["Proton_kinetic_leading"] = pro.ke_proton / 1000.0
-    S["Proton_endx"] = pro.end_x
-    S["Proton_endy"] = pro.end_y
-    S["Proton_endz"] = pro.end_z
-    S["Proton_trackScore"] = pro.trackScore
-    S["Proton_chi2mu"] = pro[chi_pri[0]]
-    S["Proton_chi2pro"] = pro[chi_pri[1]]
-    S["Proton_chi2mu_cafpyana"] = pro.chi2u_cafpyana
-    S["Proton_chi2pro_cafpyana"] = pro.chi2p_cafpyana
-    S["Proton_chi2mu_cafana"] = pro.chi2u_cafana
-    S["Proton_chi2pro_cafana"] = pro.chi2p_cafana
+    S["mu_len"] = mu.len
+    S["mu_end_x"] = mu.end_x
+    S["mu_end_y"] = mu.end_y
+    S["mu_end_z"] = mu.end_z
+    S["mu_dir_x"] = mu.dir_x
+    S["mu_dir_y"] = mu.dir_y
+    S["mu_dir_z"] = mu.dir_z
+    S["mu_track_score"] = mu.trackScore
+    for suff, fl in chi2_suffixes.items():
+        S["mu_chi2%s_of_mu_cand" % suff] = mu["chi2u_%s" % fl]
+        S["prot_chi2%s_of_mu_cand" % suff] = mu["chi2p_%s" % fl]
+    S["p_len"] = pro.len
+    S["p_ke"] = pro.ke_proton  # MeV (the old Proton_kinetic_leading was GeV)
+    S["p_end_x"] = pro.end_x
+    S["p_end_y"] = pro.end_y
+    S["p_end_z"] = pro.end_z
+    S["p_dir_x"] = pro.dir_x
+    S["p_dir_y"] = pro.dir_y
+    S["p_dir_z"] = pro.dir_z
+    S["p_track_score"] = pro.trackScore
+    S["mu_chi2_of_lead_prot"] = pro.chi2u_cafpyana
+    S["prot_chi2_of_lead_prot"] = pro.chi2p_cafpyana
     S["Transverse_angle"] = transverse_angle
     S["T3D_angle_mup"] = t3d_angle
     S["deltaPt"] = deltaPt
     S["Transverse_mom_reco_mu"] = norm_mu_T
     S["Transverse_mom_reco_pro"] = norm_p_T
-    S["Number_protons"] = S.n_proton
     S["FlashPE"] = S.flash_maxpe
-
-    if do_calo_syst:
-        for v in SCALE_SMEAR_VARIATIONS + CALO_VARIATIONS:
-            S["Muon_chi2mu_%s" % v] = mu["chi2u_%s" % v]
-            S["Muon_chi2pro_%s" % v] = mu["chi2p_%s" % v]
-            S["Proton_chi2mu_%s" % v] = pro["chi2u_%s" % v]
-            S["Proton_chi2pro_%s" % v] = pro["chi2p_%s" % v]
 
     S["detector"] = DETECTOR
     S["Run"] = RUN
     S["ismc"] = ismc
-    S["pid_mode"] = pid_mode
+
+    # ------------------------------------------------------------------
+    # nominal-chi2 cut chain, from the stored columns via the same
+    # function the analysis re-applies per calorimetric variation
+    # ------------------------------------------------------------------
+    chain = maple_selection(S)
+    S["cut_muon"] = chain.cut_muon
+    S["cut_protons"] = chain.cut_protons
+    S["maple_sel"] = chain.maple_sel
+    S["maxcut"] = chain.maxcut
 
     # ------------------------------------------------------------------
     # selection option
@@ -708,19 +734,16 @@ def make_maple_evt_df(f, selection="none", pid_mode="cafpyana", do_calo_syst=Tru
 
 # thin wrappers for configs -----------------------------------------------
 def make_maple_evt_nosel_df(f):
-    return make_maple_evt_df(f, selection="none", pid_mode="cafpyana", do_calo_syst=True)
+    return make_maple_evt_df(f, selection="none", do_calo_syst=True)
 
 def make_maple_evt_presel_df(f):
-    return make_maple_evt_df(f, selection="presel", pid_mode="cafpyana", do_calo_syst=True)
+    return make_maple_evt_df(f, selection="presel", do_calo_syst=True)
 
 def make_maple_evt_fullsel_df(f):
-    return make_maple_evt_df(f, selection="full", pid_mode="cafpyana", do_calo_syst=True)
-
-def make_maple_evt_nosel_cafanapid_df(f):
-    return make_maple_evt_df(f, selection="none", pid_mode="cafana", do_calo_syst=False)
+    return make_maple_evt_df(f, selection="full", do_calo_syst=True)
 
 def make_maple_evt_fullsel_data_df(f):
-    return make_maple_evt_df(f, selection="full", pid_mode="cafpyana", do_calo_syst=False)
+    return make_maple_evt_df(f, selection="full", do_calo_syst=False)
 
 
 # =====================================================================

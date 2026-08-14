@@ -64,6 +64,17 @@ ICARUSRun4FVCuts = {
     }
 }
 
+# Dangling cable in TPC WW (West cryostat, West TPC -- the high-x TPC of C1,
+# bounded below by the west cathode at 210.22). The high-y, downstream-z corner
+# is unusable and is removed from the FV in both Run 2 and Run 4.
+ICARUSCableCuts = {
+    "WW": {
+        "x": {"min": 210.22, "max": 358.49},
+        "y": {"min": 70.},
+        "z": {"min": 0.}
+    }
+}
+
 def vtxfv_cut(df):
     return _fv_cut(df, inzback=50)
 
@@ -178,15 +189,23 @@ def _fv_cut(df, inx=10, iny=10, inzfront=10, inzback=50):
             f"at dataframe rows {bad_rows}. Must be strictly 'SBND', 'ICARUS', 'ICARUS Run2', or 'ICARUS Run4'."
         )
 
+    # Dangling-cable region in TPC WW -- removed in both runs. The boundaries are
+    # absolute, so the inx/iny/inz insets are deliberately not applied here.
+    inCable = (df.x > ICARUSCableCuts['WW']['x']['min']) & (df.x < ICARUSCableCuts['WW']['x']['max']) &\
+              (df.y > ICARUSCableCuts['WW']['y']['min']) &\
+              (df.z > ICARUSCableCuts['WW']['z']['min'])
+
     FVRun2 = (((df.x < (ICARUSRun2FVCuts['C0']['x']['max'] - inx)) & (df.x > (ICARUSRun2FVCuts['C0']['x']['min'] + inx))) |\
             ((df.x < (ICARUSRun2FVCuts['C1']['x']['max'] - inx)) & (df.x > (ICARUSRun2FVCuts['C1']['x']['min'] + inx)))) &\
              (df.y < (ICARUSRun2FVCuts['C0']['y']['max'] - iny)) & (df.y > (ICARUSRun2FVCuts['C0']['y']['min'] + iny)) &\
-             (df.z < (ICARUSRun2FVCuts['C0']['z']['max'] - inzback)) & (df.z > (ICARUSRun2FVCuts['C0']['z']['min'] + inzfront))
+             (df.z < (ICARUSRun2FVCuts['C0']['z']['max'] - inzback)) & (df.z > (ICARUSRun2FVCuts['C0']['z']['min'] + inzfront)) &\
+             ~inCable
 
     FVRun4 = (((df.x < (ICARUSRun4FVCuts['C0']['x']['max'] - inx)) & (df.x > (ICARUSRun4FVCuts['C0']['x']['min'] + inx))) |\
             ((df.x < (ICARUSRun4FVCuts['C1']['x']['max'] - inx)) & (df.x > (ICARUSRun4FVCuts['C1']['x']['min'] + inx)))) &\
              (df.y < (ICARUSRun4FVCuts['C0']['y']['max'] - iny)) & (df.y > (ICARUSRun4FVCuts['C0']['y']['min'] + iny)) &\
-             (df.z < (ICARUSRun4FVCuts['C0']['z']['max'] - inzback)) & (df.z > (ICARUSRun4FVCuts['C0']['z']['min'] + inzfront))
+             (df.z < (ICARUSRun4FVCuts['C0']['z']['max'] - inzback)) & (df.z > (ICARUSRun4FVCuts['C0']['z']['min'] + inzfront)) &\
+             ~inCable
 
     FVSBND = ((df.x < SBNDFVCuts['lowYZ']['x']['max'] - inx) & (df.x > SBNDFVCuts['lowYZ']['x']['min'] + inx) &\
             (df.y < SBNDFVCuts['lowYZ']['y']['max'] - iny) & (df.y > SBNDFVCuts['lowYZ']['y']['min'] + iny) &\
