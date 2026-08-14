@@ -37,6 +37,7 @@ HDR = "hdr_%i"
 MC  = "mcnu_%i"
 CRT = "crt_%i"
 FLASH = "flash_%i"
+EVTREC = "evtrec_%i"
 
 pot_syst = {'ms3': 0.982714, 'ms2': 0.9887274, 'ms1': 0.99474195, 'cv': 1.0, 'ps1': 1.005, 'ps2': 1.01, 'ps3': 1.015}
 
@@ -200,6 +201,203 @@ truthvars = {
   "true_npi0": ("npi0", ""),
 }
 
+# ---------------------------------------------------------------------------
+# GENIE event record (evtrec) -> pre-FSI truth kinematics
+#
+# The evtrec table (makedf.makedf.make_genie_evtrec_df) is the raw GHEP particle
+# stack: one row per GENIE particle, index (__ntuple, entry, pindex), momenta and
+# energies in GeV, vtx_* in metres.
+# ---------------------------------------------------------------------------
+
+# genie::EGHepStatus codes used below
+_GHEP_INITIAL     = 0   # kIStInitialState        -- the probe and the target nucleus
+_GHEP_NUCLEON_TGT = 11  # kIStNucleonTarget       -- struck nucleon, or a 2p2h cluster
+_GHEP_PREFSI      = 14  # kIStHadronInTheNucleus  -- the hadrons that enter FSI
+
+_NEUTRON_MASS = 0.939565
+_PROTON_MASS = 0.938272
+
+# pre-FSI hadron species: output moniker -> pdg selection. Monikers follow the
+# make_mcdf convention (mu/p/p2/cpi/e). The photon is NOT here -- see below.
+_PREFSI_PDG = {
+    "p":   lambda pdg: pdg == 2212,
+    "cpi": lambda pdg: np.abs(pdg) == 211,
+    "pi0": lambda pdg: pdg == 111,
+}
+
+# Photons are a special case. They never carry status 14 -- measured on the -13
+# files, 0 of 42717 ICARUS Run2 events have one -- because a photon does not
+# rescatter and so never enters INTRANUKE; every photon in the record is status 1.
+# Their pre-FSI analogue is a photon born from a primary-vertex state, i.e. one
+# whose mother is a decayed resonance (status 3, e.g. the RDecBR1gamma radiative
+# Delta decay) or a pre-fragmentation hadronic state (status 12), or a pre-FSI
+# hadron itself. Photons whose mother is the target nucleus (status 0) are nuclear
+# de-excitation of the residual nucleus -- emitted after the interaction, not part
+# of the primary hadronic system -- and are excluded here. That cut matters: 98%
+# of the photons in the record (14388 of 14689) are de-excitation photons.
+_PREFSI_GAMMA_MOTHER = [3, 12, 14]
+
+# species carrying a momentum, in output order. "lep" is the primary lepton and
+# "p2" the sub-leading pre-FSI proton; both are handled specially below.
+_GENIE_SPECIES = ["lep", "p", "p2", "cpi", "g", "pi0"]
+
+_GENIE_SCALARS = ["genie_Enu", "genie_q0", "genie_q3", "genie_W",
+                  "genie_pmiss", "genie_emiss"]
+
+GENIE_COLS = _GENIE_SCALARS + ["genie_prefsi_%s_p%s" % (s, c)
+                               for s in _GENIE_SPECIES for c in "xyz"]
+
+def _p3(d):
+    """(N,3) momentum array from a frame with px/py/pz columns."""
+    return np.c_[d.px.to_numpy(float), d.py.to_numpy(float), d.pz.to_numpy(float)]
+
+def _evtrec_link(mcdf):
+    """Index of each mcnu row's entry in the GENIE event record.
+
+    Prefer the stored link (rec.mc.nu.genie_evtrec_idx) where the production kept
+    it -- maple does, gump's make_gump_nudf does not. Otherwise reconstruct it: the
+    GenieEvtRecTree entry number is a running counter over the neutrinos of the
+    input file, so it is the position of the mcnu row within its __ntuple.
+
+    That reconstruction is verified against the interaction vertex by
+    _evtrec_kinematics; on the -13 files it resolves every evtrec entry to exactly
+    one mcnu row, with the vertex and Enu agreeing exactly. NB the *recTree* entry
+    is NOT the evtrec entry -- assuming it is picks the wrong neutrino for 14% of
+    ICARUS and 90% of SBND records, because a record holding two neutrinos advances
+    the GENIE counter by two while advancing the recTree entry by one.
+    """
+    flat = [c[0] if isinstance(c, tuple) else c for c in mcdf.columns]
+    if "genie_evtrec_idx" in flat:
+        return mcdf[mcdf.columns[flat.index("genie_evtrec_idx")]]
+    srt = mcdf.sort_index()
+    return pd.Series(srt.groupby(level=0).cumcount().to_numpy(),
+                     index=srt.index).reindex(mcdf.index)
+
+def _evtrec_kinematics(er, mcdf):
+    """Pre-FSI GENIE truth kinematics, indexed like `mcdf` so it can be joined onto
+    the slice frame through tmatch_idx.
+
+    All momenta are given in an event-by-event frame built from the record itself:
+
+        z_hat = p_nu / |p_nu|                (the initial-state neutrino direction)
+        y_hat = the outgoing lepton's momentum transverse to z_hat, normalised
+        x_hat = y_hat x z_hat
+
+    so the neutrino is (0, 0, Enu) and the primary lepton is (0, +pT, pL) -- the
+    lepton px is identically zero and its py is positive by construction, and x is
+    the out-of-plane direction.
+
+    Returns (frame, stats) where stats carries the diagnostics load_one prints.
+    """
+    nan = pd.DataFrame(np.nan, index=mcdf.index, columns=GENIE_COLS)
+    stats = {"n_mcnu": len(mcdf), "n_resolved": 0, "vtx_ok": np.nan}
+    if er is None or not len(er) or not len(mcdf):
+        return nan, stats
+
+    # --- per-GENIE-event pieces, all indexed by (__ntuple, evtrec entry) ---------
+    # The probe sits at pindex 0 and its (single) daughter is the primary lepton.
+    probe = er[er.index.get_level_values("pindex") == 0].droplevel("pindex")
+    probe = probe[probe.status == _GHEP_INITIAL]
+
+    lidx = pd.MultiIndex.from_arrays(
+        [probe.index.get_level_values(0), probe.index.get_level_values(1),
+         probe.fdaughter.to_numpy()], names=er.index.names)
+    lep = er.reindex(lidx)
+    lep.index = probe.index
+
+    tgt = er[er.status == _GHEP_NUCLEON_TGT].groupby(level=[0, 1]).first().reindex(probe.index)
+
+    # --- rotation basis ---------------------------------------------------------
+    pnu, plep = _p3(probe), _p3(lep)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        zh = pnu / np.linalg.norm(pnu, axis=1, keepdims=True)
+        pt = plep - np.sum(plep*zh, axis=1, keepdims=True)*zh
+        yh = pt / np.linalg.norm(pt, axis=1, keepdims=True)
+    xh = np.cross(yh, zh)
+
+    def rot(d):
+        """Project a species' momentum onto (x_hat, y_hat, z_hat)."""
+        v = _p3(d.reindex(probe.index))
+        return np.c_[np.sum(v*xh, 1), np.sum(v*yh, 1), np.sum(v*zh, 1)]
+
+    # --- scalars ----------------------------------------------------------------
+    Enu = probe.E.to_numpy(float)
+    q0 = Enu - lep.E.to_numpy(float)
+    q3 = np.linalg.norm(pnu - plep, axis=1)
+    Q2 = q3**2 - q0**2
+
+    # W in GENIE's own convention: an on-shell nucleon at rest, so this is directly
+    # comparable to rec.mc.nu.w. The target pdg is a di-nucleon cluster (2000000200
+    # /201/202/300) for 2p2h, where the neutron/proton average is the best available
+    # nucleon mass.
+    tpdg = tgt.pdg.to_numpy(float)
+    is_nucleon = np.isin(tpdg, [2212, 2112])
+    M = np.where(tpdg == 2212, _PROTON_MASS,
+                 np.where(tpdg == 2112, _NEUTRON_MASS, 0.5*(_PROTON_MASS + _NEUTRON_MASS)))
+    W2 = M**2 + 2*M*q0 - Q2
+    W = np.sqrt(np.where(W2 > 0, W2, np.nan))
+
+    # Fermi momentum and removal energy of the struck nucleon -- the quantities the
+    # LFG/SF/HF CCQE template dials move. Undefined for a 2p2h cluster target, so
+    # those events are left NaN rather than quietly mixing in a cluster momentum.
+    ptgt = np.linalg.norm(_p3(tgt), axis=1)
+    pmiss = np.where(is_nucleon, ptgt, np.nan)
+    emiss = np.where(is_nucleon, M - tgt.E.to_numpy(float), np.nan)
+
+    out = pd.DataFrame({"genie_Enu": Enu, "genie_q0": q0, "genie_q3": q3,
+                        "genie_W": W, "genie_pmiss": pmiss, "genie_emiss": emiss},
+                       index=probe.index)
+
+    # --- pre-FSI species, leading by |p| ----------------------------------------
+    pre = er[er.status == _GHEP_PREFSI]
+    pre = pre.assign(_pmag=np.linalg.norm(_p3(pre), axis=1)).sort_values("_pmag", ascending=False)
+
+    parts = {"lep": lep}
+    for name, sel in _PREFSI_PDG.items():
+        s = pre[sel(pre.pdg.to_numpy())]
+        parts[name] = s.groupby(level=[0, 1]).head(1).droplevel("pindex")
+    # sub-leading proton: second row of the momentum-ordered proton list
+    sp = pre[pre.pdg == 2212]
+    sp = sp.groupby(level=[0, 1]).head(2)
+    parts["p2"] = sp[sp.groupby(level=[0, 1]).cumcount() == 1].droplevel("pindex")
+
+    # photons: status-1, but only those from a primary-vertex parent (see above)
+    gam = er[er.pdg == 22]
+    if len(gam):
+        gmom = er.reindex(pd.MultiIndex.from_arrays(
+            [gam.index.get_level_values(0), gam.index.get_level_values(1),
+             gam.fmother.to_numpy()], names=er.index.names))
+        gam = gam[np.isin(gmom.status.to_numpy(float), _PREFSI_GAMMA_MOTHER)]
+        gam = gam.assign(_pmag=np.linalg.norm(_p3(gam), axis=1)).sort_values("_pmag", ascending=False)
+    parts["g"] = gam.groupby(level=[0, 1]).head(1).droplevel("pindex")
+
+    for name in _GENIE_SPECIES:
+        v = rot(parts[name])
+        for i, c in enumerate("xyz"):
+            out["genie_prefsi_%s_p%s" % (name, c)] = v[:, i]
+
+    # --- map onto the mcnu index via the evtrec link ----------------------------
+    link = _evtrec_link(mcdf).to_numpy(float)
+    link = np.where(np.isfinite(link), link, -1).astype(np.int64)
+    gidx = pd.MultiIndex.from_arrays([mcdf.index.get_level_values(0), link],
+                                     names=out.index.names)
+    res = out.reindex(gidx)
+    res.index = mcdf.index
+
+    # --- self-check: the link is reconstructed, so verify it against the vertex --
+    # evtrec vtx_* is in metres, mcnu pos_* in cm. Both name the same interaction
+    # point, so on a correct link they agree to round-off on every resolved row.
+    vtx = probe[["vtx_x", "vtx_y", "vtx_z"]].reindex(gidx)
+    got = np.isfinite(vtx.vtx_x.to_numpy(float))
+    stats["n_resolved"] = int(got.sum())
+    if got.any():
+        pos = np.c_[mcdf.pos_x.to_numpy(float), mcdf.pos_y.to_numpy(float),
+                    mcdf.pos_z.to_numpy(float)]
+        d = np.abs(vtx.to_numpy(float)*100. - pos).max(axis=1)
+        stats["vtx_ok"] = float((d[got] < 1e-3).mean())
+
+    return res, stats
+
 def scale_pot(df, pot, desired_pot):
     """Scale DataFrame by desired POT."""
     scale = desired_pot / pot
@@ -354,13 +552,13 @@ def load_one(fname, idf,
     include_syst=True, nuniv=100, spline=False, xsec_univ=False, xsec_spline=False,# systematic handling
     reweight_aFF=False, pot_univ=False, flux_univ=True, sep_flux_univ=False, g4_univ=True,
     pot_spline=False, detvar_spline=False, spline_dir="rwt_outputs",
-    load_truth=True, load_crt=False, match_Enu=True, # load extra information
+    load_truth=True, load_crt=False, load_evtrec=False, match_Enu=True, # load extra information
     offbeampot=False, # POT handling
     preselection=None, # apply preselection cut
     shift_binding_E=False, split_tracks=None, # variations applied to the output df (see _apply_variations)
     shift_fraction=None, split_fraction=None, # fraction of events each variation is applied to (None -> BE_FRACTION / SPLIT_FRAC)
     cache_dir=None, # directory to cache output; None disables caching
-    flashname=FLASH, hdrname=HDR, evtname=EVT, wgtname=WGT, mcname=MC, crtname=CRT, drops=None, lightmem=False): # override default table names
+    flashname=FLASH, hdrname=HDR, evtname=EVT, wgtname=WGT, mcname=MC, crtname=CRT, evtrecname=EVTREC, drops=None, lightmem=False): # override default table names
 
     assert(detector == "SBND" or detector == "ICARUS Run2" or detector == "ICARUS Run4")
 
@@ -369,11 +567,11 @@ def load_one(fname, idf,
         cache_hash = _cache_key(fname, idf, detector=detector, include_syst=include_syst,
             nuniv=nuniv, spline=spline, xsec_univ=xsec_univ, xsec_spline=xsec_spline, reweight_aFF=reweight_aFF, pot_univ=pot_univ,
             flux_univ=flux_univ, sep_flux_univ=sep_flux_univ, g4_univ=g4_univ,
-            load_truth=load_truth, load_crt=load_crt,
+            load_truth=load_truth, load_crt=load_crt, load_evtrec=load_evtrec,
             match_Enu=match_Enu, offbeampot=offbeampot, preselection=preselection,
             drops=drops, lightmem=lightmem,
             flashname=flashname, hdrname=hdrname, evtname=evtname,
-            wgtname=wgtname, mcname=mcname, crtname=crtname)
+            wgtname=wgtname, mcname=mcname, crtname=crtname, evtrecname=evtrecname)
         cache_file = os.path.join(cache_dir, cache_hash + ".h5")
         if os.path.exists(cache_file):
             try:
