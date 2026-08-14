@@ -50,7 +50,7 @@ def transverse_kinematics(mu_p, mu_dir, p_p, p_dir, BE=BE):
 
 
     p_Tp_x = mu_phi_y*p_p_x - mu_phi_x*p_p_y
-    p_Tp_y = mu_phi_x*p_p_x - mu_phi_y*p_p_y
+    p_Tp_y = mu_phi_x*p_p_x + mu_phi_y*p_p_y
     p_Tp = mag2d(p_Tp_x, p_Tp_y)
 
 
