@@ -15,7 +15,7 @@
 #
 # Run from the cafpyana root AFTER `source setup.sh`.
 
-OUTDIR=/exp/sbnd/data/users/gputnam/MAPLE/sbn-rewgted-13
+OUTDIR=/exp/sbnd/data/users/gputnam/MAPLE/sbn-rewgted-14
 # Only consider grid-output dirs from this MAPLE campaign onward: the GUMP
 # sbn-rewgted-13 campaign used the same scratch area and the SAME sample
 # names, so older complete GUMP dirs must never be picked up.

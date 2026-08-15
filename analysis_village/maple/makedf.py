@@ -754,6 +754,9 @@ def make_maple_evt_fullsel_df(f):
 def make_maple_evt_fullsel_data_df(f):
     return make_maple_evt_df(f, selection="full", do_calo_syst=False)
 
+def make_maple_evt_presel_data_df(f):
+    return make_maple_evt_df(f, selection="presel", do_calo_syst=False)
+
 
 # =====================================================================
 # mcnu builder
