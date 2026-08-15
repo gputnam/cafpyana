@@ -809,6 +809,12 @@ def make_maple_nudf(f):
 
     return nudf
 
+g4_weights = [ 
+              "reinteractions_piminus_Geant4", 
+              "reinteractions_piplus_Geant4", 
+              "reinteractions_proton_Geant4" 
+             ]
+
 
 # =====================================================================
 # wgt builder
@@ -826,7 +832,10 @@ def make_maple_wgtdf(f):
     else:
         avail = []
     systs = [s for s in geniesyst.regen_systematics if s in avail]
-    missing = len(geniesyst.regen_systematics) - len(systs)
+
+    systs.extend(g4_weights)
+
+    missing = len(geniesyst.regen_systematics) + len(g4_weights) - len(systs)
     if missing:
         print("make_maple_wgtdf: %d requested GENIE systematics absent in file, using %d" % (missing, len(systs)))
     return make_mcnudf(f, include_weights=True, multisim_nuniv=100, genie_systematics=systs)
@@ -839,8 +848,9 @@ def make_maple_rewgtdf(f):
     column-compatible with the GUMP sbn-rewgted CV productions.
     """
     from analysis_village.gump.makedf import gump_genie_reknob_systematics
+    syst = gump_genie_reknob_systematics + g4_weights
     return make_mcnudf(f, include_weights=True, slim=False,
-                       genie_systematics=gump_genie_reknob_systematics)
+                       genie_systematics=list(set(syst)))
 
 
 # =====================================================================
