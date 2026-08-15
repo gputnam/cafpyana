@@ -32,6 +32,9 @@ regen_systematics = [
     # "GENIEReWeight_SBN_v1_multisim_NCRESVariationResponse",
     'GENIEReWeight_SBN_v1_multisim_RDecBR1gamma',
     'GENIEReWeight_SBN_v1_multisim_RDecBR1eta',
+    'GENIEReWeight_SBN_v1_multisigma_RDecBR1gamma',
+    'GENIEReWeight_SBN_v1_multisigma_RDecBR1eta',
+
     "GENIEReWeight_SBN_v1_multisigma_Theta_Delta2Npi",
     "GENIEReWeight_SBN_v1_multisigma_ThetaDelta2NRad",
 

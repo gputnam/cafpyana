@@ -121,6 +121,7 @@ def maple_truth_classdf(f, det="ICARUS"):
     is_p = apdg == 2212
     is_cpi = apdg == 211
     is_pi0 = apdg == 111
+    is_n = apdg == 2112 
     is_gamma = apdg == 22
     is_e = apdg == 11
     is_charged = is_mu | is_p | is_cpi | is_e
@@ -183,6 +184,10 @@ def maple_truth_classdf(f, det="ICARUS"):
 
     n_mu = agg(is_mu.astype(int), 0)
     n_p_above = agg(p_above.astype(int), 0)
+    n_p = agg(is_p.astype(int), 0)
+    n_pi = agg(is_cpi.astype(int), 0)
+    n_pi0 = agg(is_pi0.astype(int), 0)
+    n_n = agg(is_n.astype(int), 0)
     veto_any = agg(prim_veto, False).astype(bool)
     uncont_any = (agg(prim_uncont, False).astype(bool) |
                   agg(d_uncont_any, False).astype(bool))
@@ -222,7 +227,11 @@ def maple_truth_classdf(f, det="ICARUS"):
 
     return pd.DataFrame({
         "maple_class": maple_class,
-        "n_mu": n_mu,
+        "nmu": n_mu,
+        "np": n_p,
+        "npi": n_pi,
+        "npi0": n_pi0,
+        "nn": n_n,
         "mu_length": mu_length,
         "n_p_above40": n_p_above,
         "veto": veto_any,
@@ -495,7 +504,7 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
         crt = make_crthitdf(f)
         vetohit = ((crt.time > CRT_VETO_TMIN) & (crt.time < CRT_VETO_TMAX) &
                    (crt.plane > CRT_VETO_PLANE_MIN) & (crt.plane < CRT_VETO_PLANE_MAX)).groupby(level=0).any()
-        perentry["crtveto"] = _reindex(vetohit, perentry.index, False).astype(bool)
+        perentry["crthit"] = _reindex(vetohit, perentry.index, False).astype(bool)
     else:
         # SBND: the ICARUS-only cosmic rejection is dropped; fill sentinels
         # (cryo_light=-1, no bar flash, no CRT veto) so the evt schema is
@@ -506,10 +515,10 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
         for side in ("west", "east"):
             perentry["bar_z_" + side] = np.nan
             perentry["bar_x_" + side] = np.nan
-        perentry["crtveto"] = False
+        perentry["crthit"] = False
 
     S = S.join(perentry[["cryo_light", "flash_maxpe", "bar_z_west", "bar_x_west",
-                         "bar_z_east", "bar_x_east", "crtveto"]])
+                         "bar_z_east", "bar_x_east", "crthit"]])
 
     # ------------------------------------------------------------------
     # PID-free cut chain
@@ -517,13 +526,13 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
     S["cut_sanity"] = S.slc_vtx_x.notna() & S.slc_vtx_y.notna() & S.slc_vtx_z.notna() & S.charge_center_z.notna()
     S["cut_fv"] = maple_isInFV(S.slc_vtx_x, S.slc_vtx_y, S.slc_vtx_z, det=DETECTOR)
     if DETECTOR == "ICARUS":
-        S["cut_crtveto"] = ~S.crtveto
+        S["cut_crthit"] = ~S.crthit
         slice_cryo = np.select([S.slc_vtx_x < 0, S.slc_vtx_x > 0], [0, 1], default=-1)
         S["slice_cryo"] = slice_cryo
         S["cut_cryo"] = (S.cryo_light != -1) & ((S.cryo_light == 2) | (slice_cryo == S.cryo_light))
     else:
         # SBND: CRT veto and cryo-light cuts pass trivially (see above)
-        S["cut_crtveto"] = True
+        S["cut_crthit"] = True
         S["slice_cryo"] = -1
         S["cut_cryo"] = True
 
@@ -543,7 +552,7 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
     else:
         S["cut_cathode"] = True
 
-    S["maple_presel"] = S.cut_sanity & S.cut_fv & S.cut_crtveto & S.cut_cryo & \
+    S["maple_presel"] = S.cut_sanity & S.cut_fv & S.cut_crthit & S.cut_cryo & \
         S.cut_contained & S.cut_cathode
 
     # ------------------------------------------------------------------
@@ -764,7 +773,8 @@ def make_maple_nudf(f):
     nudf = pd.DataFrame({
         "nu_E": mc.E,
         "pdg": mc.pdg,
-        "iscc": mc.iscc,
+        "is_cc": mc.iscc,
+        "is_nc": mc.isnc,
         "genie_mode": mc.genie_mode,
         "pos_x": mc.position_x,
         "pos_y": mc.position_y,
@@ -776,20 +786,34 @@ def make_maple_nudf(f):
         "maple_class": cls.maple_class,
         "is_1mu1p_maple": cls.maple_class == CLS_1MU1P,
         "is_1muNp_maple": cls.maple_class == CLS_1MUNP,
-        "n_mu": cls.n_mu,
+        "nmu": cls.nmu,
+        "np": cls.np,
+        "npi": cls.npi,
+        "npi0": cls.npi0,
+        "nn": cls.nn,
         "mu_length": cls.mu_length,
         "n_p_above40": cls.n_p_above40,
         "veto_particles": cls.veto,
         "uncontained_truth": cls.uncontained,
         "true_visible_Enu": cls.true_visible_Enu,
     })
+    nudf["is_sig"] = (cls.maple_class == CLS_1MU1P) | (cls.maple_class == CLS_1MUNP)
+    nudf["is_other_numucc"] = cls.maple_class == CLS_1MUNP
     nudf["is_fv"] = maple_isInFV(nudf.pos_x, nudf.pos_y, nudf.pos_z, det=DETECTOR)
     nudf["is_av"] = maple_isInActive(nudf.pos_x, nudf.pos_y, nudf.pos_z, det=DETECTOR)
     nudf["ind"] = nudf.index.get_level_values(1)
     nudf["detector"] = DETECTOR
     nudf["Run"] = RUN
 
+    nudf.columns = pd.MultiIndex.from_tuples([(col, '') for col in nudf.columns])
+
     return nudf
+
+g4_weights = [ 
+              "reinteractions_piminus_Geant4", 
+              "reinteractions_piplus_Geant4", 
+              "reinteractions_proton_Geant4" 
+             ]
 
 
 # =====================================================================
@@ -808,7 +832,10 @@ def make_maple_wgtdf(f):
     else:
         avail = []
     systs = [s for s in geniesyst.regen_systematics if s in avail]
-    missing = len(geniesyst.regen_systematics) - len(systs)
+
+    systs.extend(g4_weights)
+
+    missing = len(geniesyst.regen_systematics) + len(g4_weights) - len(systs)
     if missing:
         print("make_maple_wgtdf: %d requested GENIE systematics absent in file, using %d" % (missing, len(systs)))
     return make_mcnudf(f, include_weights=True, multisim_nuniv=100, genie_systematics=systs)
@@ -821,8 +848,9 @@ def make_maple_rewgtdf(f):
     column-compatible with the GUMP sbn-rewgted CV productions.
     """
     from analysis_village.gump.makedf import gump_genie_reknob_systematics
+    syst = gump_genie_reknob_systematics + g4_weights
     return make_mcnudf(f, include_weights=True, slim=False,
-                       genie_systematics=gump_genie_reknob_systematics)
+                       genie_systematics=list(set(syst)))
 
 
 # =====================================================================
