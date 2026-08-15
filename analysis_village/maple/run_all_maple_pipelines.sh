@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Define the absolute input storage directories
-gray_prefix='/exp/sbnd/data/users/gputnam/GUMP/sbn-rewgted-12/'
-output='/exp/sbnd/data/users/nrowe/GUMP/sbn-rewgted-12-1/'
+gray_prefix='/exp/sbnd/data/users/gputnam/GUMP/sbn-rewgted-13/'
+output='/exp/sbnd/data/users/nrowe/GUMP/sbn-rewgted-13/'
 MAX_JOBS=8
 
 # Navigate to the working directory context
@@ -11,7 +11,7 @@ echo " Starting GUMP TTree Processing Batch Run...            "
 echo "========================================================"
 
 echo "Remaking det var maps..."
-selection="gc.all_cuts"
+selection="ms.all_maple_cuts"
 splinedir="${selection#*.}"
 
 python3 rwt_map.py -s ${selection} -o ${splinedir}
@@ -25,7 +25,7 @@ do
     done
 
     echo "Launching SBND MC Step $i"
-    python3 run_gump_pipeline.py \
+    python3 run_maple_pipeline.py \
         -c mc \
         -f ${splinedir} \
 	-s ${selection} \
@@ -35,7 +35,7 @@ done
 
 ### 4. ICARUS Run 2 OffBeam
 echo "--> Launching ICARUS Run 2 OffBeam Data..."
-python3 run_gump_pipeline.py \
+python3 run_maple_pipeline.py \
     -c data \
     -f ${splinedir} \
     -s ${selection} \
@@ -48,7 +48,7 @@ done
 
 ### 5. ICARUS Run 4 OffBeam
 echo "--> Launching ICARUS Run 4 OffBeam Data..."
-python3 run_gump_pipeline.py \
+python3 run_maple_pipeline.py \
     -c data \
     -s ${selection} \
     -i ${gray_prefix}ICARUS_SpringRun4BNBOff_unblind.df \
@@ -66,7 +66,7 @@ do
     done
 
     echo "Launching ICARUS Run 4 MC Step $i"
-    python3 run_gump_pipeline.py \
+    python3 run_maple_pipeline.py \
         -c mc \
         -f ${splinedir} \
 	-s ${selection} \
@@ -80,7 +80,7 @@ done
 
 ### 8. ICARUS Run 4 Dirt
 echo "--> Launching ICARUS Run 4 Dirt..."
-python3 run_gump_pipeline.py \
+python3 run_maple_pipeline.py \
     -c data \
     -s ${selection} \
     -i ${gray_prefix}ICARUSRun4_Spring_Overlay_Dirt.df \
@@ -92,7 +92,7 @@ done
 
 ### 9. SBND Dirt
 echo "--> Launching SBND Dirt..."
-python3 run_gump_pipeline.py \
+python3 run_maple_pipeline.py \
     -c data \
     -s ${selection} \
     -i ${gray_prefix}SBND_SpringLowEMC.df \
@@ -100,7 +100,7 @@ python3 run_gump_pipeline.py \
 
 ### 3. ICARUS Run 2 MC
 echo "--> Launching ICARUS Run 2 MC..."
-python3 run_gump_pipeline.py \
+python3 run_maple_pipeline.py \
     -c mc \
     -f ${splinedir} \
     -s ${selection} \
@@ -113,7 +113,7 @@ done
 
 ### 6. SBND OffBeam
 echo "--> Launching SBND OffBeam Data..."
-python3 run_gump_pipeline.py \
+python3 run_maple_pipeline.py \
     -c data \
     -s ${selection} \
     -i ${gray_prefix}SBND_SpringBNBOffData.df \
@@ -125,7 +125,7 @@ done
 
 ### 7. ICARUS Run 2 Dirt
 echo "--> Launching ICARUS Run 2 Dirt..."
-python3 run_gump_pipeline.py \
+python3 run_maple_pipeline.py \
     -c data \
     -s ${selection} \
     -i ${gray_prefix}ICARUS_Spring_Overlay_Dirt.df \

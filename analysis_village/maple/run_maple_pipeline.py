@@ -17,6 +17,7 @@ sys.path.insert(0, workspace_root + "/../gump/")
 
 from sbruce import *
 
+sys.path.insert(0, workspace_root + "/../maple/")
 # Import local physics framework utilities
 import loaddf
 

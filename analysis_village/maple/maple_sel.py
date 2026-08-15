@@ -100,3 +100,6 @@ def maple_selection(df, variation=None):
         "maple_sel": maple_sel,
         "maxcut": maxcut,
     }, index=df.index)
+
+def all_maple_cuts(df):
+    return maple_selection(df)['maple_sel']
