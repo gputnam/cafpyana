@@ -691,21 +691,6 @@ def load_one(fname, idf,
     hdr = pd.read_hdf(fname, hdrname % idf)
     ismc = hdr.ismc.iloc[0] == 1
 
-    # set run 
-    if "SBND" in fname:
-        df["Run"] = 1
-        Run = 1
-        det = "SBND"
-    elif "ICARUS" in fname and "Run4" in fname:
-        df["Run"] = 4
-        Run = 4
-        det = "ICARUS Run4"
-    elif "ICARUS" in fname:
-        df["Run"] = 2
-        Run = 2
-        det = "ICARUS Run2"
-    else: assert(False)
-
     # apply the scaled pe flash
     if ismc: # Scale PE for MC-only
         # Best-fit MC PE scale factors from the data/MC fits in FlashMCDataComparison.ipynb
@@ -739,8 +724,8 @@ def load_one(fname, idf,
 
         # Add in other meta-data to match.
         vtx = pd.DataFrame({
-          "detector": detector,
-          "Run": Run,
+          "detector": mcdf.detector,
+          "Run": mcdf.Run,
           "x": mcdf.pos_x,
           "y": mcdf.pos_y,
           "z": mcdf.pos_z,

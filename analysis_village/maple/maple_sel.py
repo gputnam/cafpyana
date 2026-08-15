@@ -7,7 +7,7 @@ SignalBoxSystematics pattern: swap the chi2 columns, re-apply the cuts,
 treat each variation as a SampleSystematic).
 
 The evt df stores, per slice:
-  - the chi2-free preselection booleans (cut_sanity, cut_fv, cut_crtveto,
+  - the chi2-free preselection booleans (cut_sanity, cut_fv, cut_crthit,
     cut_cryo, cut_contained, cut_cathode, maple_presel) and the chi2-free
     candidate booleans/counts (has_muon, n_proton, cut_np, cut_0shwother);
   - the muon-candidate chi2 (mu_chi2{v}_of_mu_cand, prot_chi2{v}_of_mu_cand);
@@ -87,7 +87,7 @@ def maple_selection(df, variation=None):
     maple_sel = df.maple_presel & cut_muon & df.cut_np & cut_protons & df.cut_0shwother
 
     maxcut = np.select(
-        [~df.cut_sanity, ~df.cut_fv, ~df.cut_crtveto, ~df.cut_cryo,
+        [~df.cut_sanity, ~df.cut_fv, ~df.cut_crthit, ~df.cut_cryo,
          ~(df.cut_contained & df.cut_cathode), ~cut_muon, ~df.cut_np,
          ~cut_protons, ~df.cut_0shwother],
         [1, 2, 3, 4, 5, 6, 7, 8, 9], default=10)

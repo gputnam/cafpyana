@@ -756,13 +756,6 @@ def make_gump_nudf(f, is_slc=False):
     if det.empty:
         return pd.DataFrame()
 
-    if 'run2' or 'Run2' in f.file_path:
-        RUN = 2
-    elif 'run4' or 'Run4' in f.file_path:
-        RUN = 4
-    elif 'SBND' or 'sbnd' in f.file_path:
-        RUN = 1
-
     if (1 == det.unique()):
         DETECTOR = "SBND"
         RUN = 1
