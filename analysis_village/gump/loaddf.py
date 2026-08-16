@@ -403,6 +403,8 @@ def _evtrec_kinematics(er, mcdf):
 detvar_rwt_files = [
   'SBND_WMXThetaXW.txt',
   'SBND_WMYZ.txt',
+  'ICARUSRun2_WMYZ.txt',
+  'ICARUSRun4_WMYZ.txt',
   'SBND_DENT.txt',
   ['SBND_0xSCE.txt', 'SBND_2xSCE.txt'],
   'ICARUSRun2_SCE.txt',
@@ -441,6 +443,8 @@ detvar_rwt_files = [
 detvar_rwt_lbls = [
   'WireMod_SBND_multisigma_WMXThetaXW',
   'WireMod_SBND_multisigma_WMYZ',
+  'WireMod_ICARUSRun2_multisigma_WMYZ',
+  'WireMod_ICARUSRun4_multisigma_WMYZ',
   'DENT_SBND_multisigma_DENT',
   'SCE_SBND_multisigma_SCE',
   'SCE_ICARUSRun2_multisigma_SCE',

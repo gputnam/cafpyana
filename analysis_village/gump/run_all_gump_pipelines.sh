@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Define the absolute input storage directories
-gray_prefix='/exp/sbnd/data/users/gputnam/GUMP/sbn-rewgted-12/'
-output='/exp/sbnd/data/users/nrowe/GUMP/sbn-rewgted-12-1/'
+gray_prefix='/exp/sbnd/data/users/gputnam/GUMP/sbn-rewgted-14/'
+output='/exp/sbnd/data/users/nrowe/GUMP/sbn-rewgted-14/'
 MAX_JOBS=8
 
 # Navigate to the working directory context

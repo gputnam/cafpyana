@@ -114,17 +114,17 @@ def plot_2d_hist_from_file(filename, plot_title, output_tag):
     plt.savefig('/exp/sbnd/app/users/nrowe/cafpyana/analysis_village/gump/rwt_outputs/2d_ratio_'+output_tag+'.png', dpi=300)
     plt.clf() 
 
-def remake_detvar_maps(detector, DF_DIR="/exp/sbnd/data/users/gputnam/GUMP/sbn-rewgted-10/", selection=gc.all_cuts, outdir="rwt_outputs"):
+def remake_detvar_maps(detector, DF_DIR, selection=gc.all_cuts, outdir="rwt_outputs"):
     if not os.path.exists(outdir):
         os.makedirs(outdir)
     if detector == "ICARUS Run2":
         GOAL_POT = 2e20
-        DETVAR_FILES = [[DF_DIR + "ICARUSRun2_SpringMCOverlay_rewgt.df"], [DF_DIR + "ICARUSRun2_Spring_Overlay_WMXThXW.df"], [DF_DIR + "ICARUSRun2_Spring_Overlay_SCE.df"]]
-        DETVAR_NAMES = ["Nominal", "WMXThetaXW", "SCE"]
+        DETVAR_FILES = [[DF_DIR + "ICARUSRun2_SpringMCOverlay_rewgt.df"], [DF_DIR + "ICARUSRun2_Spring_Overlay_WMXThXW.df"], [DF_DIR + "ICARUSRun2_Spring_Overlay_WMYZ.df"], [DF_DIR + "ICARUSRun2_Spring_Overlay_SCE.df"]]
+        DETVAR_NAMES = ["Nominal", "WMXThetaXW", "WMYZ", "SCE"]
     elif detector == "ICARUS Run4":
         GOAL_POT = 3e20
-        DETVAR_FILES = [[DF_DIR + "ICARUSRun4_SpringMCOverlay_rewgt_%i.df" % i for i in range(2)], [DF_DIR + "ICARUSRun4_Spring_Overlay_WMXThXW.df"], [DF_DIR + "ICARUSRun4_Spring_Overlay_SCE.df"]]
-        DETVAR_NAMES = ["Nominal", "WMXThetaXW", "SCE"]
+        DETVAR_FILES = [[DF_DIR + "ICARUSRun4_SpringMCOverlay_rewgt_%i.df" % i for i in range(2)], [DF_DIR + "ICARUSRun4_Spring_Overlay_WMXThXW.df"], [DF_DIR + "ICARUSRun4_Spring_Overlay_WMYZ.df"], [DF_DIR + "ICARUSRun4_Spring_Overlay_SCE.df"]]
+        DETVAR_NAMES = ["Nominal", "WMXThetaXW", "WMYZ", "SCE"]
     elif detector == "SBND": 
         GOAL_POT = 1e20
         DETVAR_FILES = [[DF_DIR + "SBNDMCCV_%i.df" % i for i in range(3)], 
@@ -257,9 +257,16 @@ if __name__ == "__main__":
         default="rwt_outputs",
         help="Output directory for reweight maps"
     )
+    parser.add_argument(
+        "-d", "--dfdir",
+        type=str,
+        default="/exp/sbnd/data/users/gputnam/GUMP/sbn-rewgted-14/",
+        help="Output directory for reweight maps"
+    )
+
    
     args = parser.parse_args()
 
-    remake_detvar_maps("SBND", selection=args.selection, outdir=args.outdir)
-    remake_detvar_maps("ICARUS Run2", selection=args.selection, outdir=args.outdir)
-    remake_detvar_maps("ICARUS Run4", selection=args.selection, outdir=args.outdir)
+    remake_detvar_maps("SBND", args.dfdir, selection=args.selection, outdir=args.outdir)
+    remake_detvar_maps("ICARUS Run2", args.dfdir, selection=args.selection, outdir=args.outdir)
+    remake_detvar_maps("ICARUS Run4", args.dfdir,  selection=args.selection, outdir=args.outdir)
