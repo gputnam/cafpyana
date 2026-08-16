@@ -71,7 +71,10 @@ def _load_dedx_bias_spline():
     # or no-calo-syst runs never touch the pnfs file
     global _dedx_bias_knots
     if _dedx_bias_knots is None:
-        poly = uproot.open(DEDX_BIAS_SPLINE_F)["Spline3"].member("fPoly")
+        # read via xrootd so grid worker nodes (no /pnfs POSIX mount) can open it
+        # (same /pnfs -> xrootd rewrite as pyanalib/ntuple_glob.py)
+        _spline_f = DEDX_BIAS_SPLINE_F.replace("/pnfs", "root://fndcadoor.fnal.gov:1094/pnfs/fnal.gov/usr")
+        poly = uproot.open(_spline_f)["Spline3"].member("fPoly")
         X = np.array([p.member("fX") for p in poly])
         Y = np.array([p.member("fY") for p in poly])
         B = np.array([p.member("fB") for p in poly])
