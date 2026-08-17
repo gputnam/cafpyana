@@ -92,7 +92,7 @@ def _reindex(series, index, fill):
 # =====================================================================
 # Truth classification (classification_type_MC port)
 # =====================================================================
-def maple_truth_classdf(f, det="ICARUS"):
+def maple_truth_classdf(f, det, run):
     """Per-(entry, mc.nu index) MAPLE truth classification.
 
     Returns a DataFrame with columns:
@@ -101,6 +101,8 @@ def maple_truth_classdf(f, det="ICARUS"):
       n_p_above40, veto, uncontained, true_visible_Enu
     """
     mc = _flatcols(loadbranches(f["recTree"], mcbranches).rec.mc.nu)
+    mc["detector"] = det
+    mc["Run"] = run
     if mc.empty:
         out = pd.DataFrame(columns=["maple_class", "n_mu", "mu_length", "n_p_above40",
                                     "veto", "uncontained", "true_visible_Enu"])
@@ -127,7 +129,7 @@ def maple_truth_classdf(f, det="ICARUS"):
     is_charged = is_mu | is_p | is_cpi | is_e
 
     # own deposited energy on plane 2 in the primary's cryostat [MeV]
-    visE_own = np.where(prim.cryostat == 0, prim.plane_I0_I2_visE, prim.plane_I1_I2_visE) * 1000.0
+    visE_own = np.where(prim.cryostat == 0, prim.plane_I0_I2_visE, prim.plane_I1_I2_visE)
     prim = prim.assign(visE_own=visE_own)
 
     # ---- daughters: true_particles with parent == prim.G4ID (same entry) ----
@@ -138,14 +140,14 @@ def maple_truth_classdf(f, det="ICARUS"):
         suffixes=("", "_d"))
     if len(m):
         # daughter visE evaluated at the PRIMARY's cryostat (as in C++)
-        m["d_visE"] = np.where(m.cryostat == 0, m.plane_I0_I2_visE, m.plane_I1_I2_visE) * 1000.0
+        m["d_visE"] = np.where(m.cryostat == 0, m.plane_I0_I2_visE, m.plane_I1_I2_visE)
         m["d_apdg"] = np.abs(m.pdg)
         m["d_is_gamma"] = m.d_apdg == 22
         m["d_charged"] = m.d_apdg.isin([13, 2212, 211, 11])
         # daughter containment check: skip cryostat<0 or end == -9999
         d_valid_cont = (m.cryostat_d >= 0) & m.d_charged & \
             ~((m.end_x == -9999) | (m.end_y == -9999) | (m.end_z == -9999))
-        m["d_uncont"] = d_valid_cont & ~maple_isInContained(m.end_x, m.end_y, m.end_z, det=det)
+        m["d_uncont"] = d_valid_cont & ~gc.endfv_cut(m, det=det, run=run)
         # note: for the pi0-gamma veto and visE sums, C++ has no cryostat check
         # on the daughter itself
         g = m.groupby(["entry", "inu", "iprim"])
@@ -171,7 +173,7 @@ def maple_truth_classdf(f, det="ICARUS"):
     prim_veto = cpi_veto | pi0_veto | gamma_veto | p_below
 
     # ---- containment (all_contained_mc): charged primaries, no -9999 skip ----
-    prim_uncont = is_charged & ~maple_isInContained(prim.end_x, prim.end_y, prim.end_z, det=det)
+    prim_uncont = is_charged & ~gc.endfv_cut(prim, det=det, run=run)
 
     # ---- per-nu aggregation ----
     grp = prim.groupby(level=["entry", "inu"])
@@ -198,7 +200,7 @@ def maple_truth_classdf(f, det="ICARUS"):
     mu_last.index.names = nuidx.names
     mu_length = _reindex(mu_last.length, nuidx, np.nan)
     mu_p_GeV = np.sqrt(mu_last.genp_x**2 + mu_last.genp_y**2 + mu_last.genp_z**2)
-    E_mu_vis = np.sqrt((mu_p_GeV * 1000.0)**2 + MUON_MASS**2)  # MeV
+    E_mu_vis = np.sqrt(mu_p_GeV**2 + MUON_MASS**2)  # MeV
     E_mu_vis = _reindex(E_mu_vis, nuidx, 0.0)
 
     # visible energy: protons above threshold contribute KE(genp) + Eb
@@ -208,18 +210,17 @@ def maple_truth_classdf(f, det="ICARUS"):
     E_p_sum.index.names = nuidx.names
     E_p_sum = _reindex(E_p_sum, nuidx, 0.0)
 
-    true_visible_Enu = (E_p_sum + E_mu_vis) / 1000.0  # GeV
+    true_visible_Enu = (E_p_sum + E_mu_vis)  # GeV
 
     # ---- classification ----
     pos_nan = mc.position_x.isna() | mc.position_y.isna() | mc.position_z.isna()
     not_numucc = (np.abs(mc.pdg) != 14) | (mc.iscc == 0)
-    not_av = ~maple_isInActive(mc.position_x, mc.position_y, mc.position_z, det=det)
-    not_fv = ~maple_isInFV(mc.position_x, mc.position_y, mc.position_z, det=det)
+    not_fv = ~gc.true_fv_cut(mc)
     good_mu = (n_mu == 1) & (mu_length > MIN_MUON_LENGTH) & (mu_length < MAX_MUON_LENGTH)
 
     maple_class = np.select(
         [pos_nan,
-         not_numucc | not_av | not_fv | veto_any | uncont_any,
+         not_numucc | not_fv | veto_any | uncont_any,
          good_mu & (n_p_above == 1),
          good_mu & (n_p_above > 1)],
         [CLS_INVALID, CLS_OTHER, CLS_1MU1P, CLS_1MUNP],
@@ -288,7 +289,7 @@ def _find_candidates(P):
 
     # remaining pfps: chi2-independent shower/other/unknown classification
     shw_unknown = P.shw_energy2.isna()
-    is_shower = P.shw_energy2 * 1000.0 > PION_KE_MIN
+    is_shower = P.shw_energy2 > PION_KE_MIN
     pid_rest = pd.Series(np.select(
         [~gate, shw_unknown, is_shower],
         [PID_UNKNOWN, PID_UNKNOWN, PID_SHOWER],
@@ -366,6 +367,8 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
         "true_vtx_z": slcdf.slc.truth.position.z,
     })
     S["slice_index"] = S.index.get_level_values(1)
+    S["detector"] = DETECTOR
+    S["Run"] = RUN
 
     # ------------------------------------------------------------------
     # per-pfp frame
@@ -404,7 +407,7 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
     dist_end = np.sqrt((P.end_x - P.slc_vtx_x)**2 + (P.end_y - P.slc_vtx_y)**2 + (P.end_z - P.slc_vtx_z)**2)
     # std::min(a, b) semantics: b if b < a else a  (NaN b -> a; NaN a -> NaN)
     P["min_dist"] = np.where(np.isnan(dist_end), P.dist_start, np.minimum(P.dist_start, dist_end))
-    P["contained10"] = maple_isInContained(P.end_x, P.end_y, P.end_z, det=DETECTOR)
+    P["contained10"] = gc.endfv_cut(P, det=DETECTOR, run=RUN)
     P["ke_pion"] = kinetic_energy(PION_MASS, np.sqrt((P.dir_x * P.p_pion)**2 + (P.dir_y * P.p_pion)**2 + (P.dir_z * P.p_pion)**2))
     P["ke_proton"] = kinetic_energy(PROTON_MASS, np.sqrt((P.dir_x * P.p_proton)**2 + (P.dir_y * P.p_proton)**2 + (P.dir_z * P.p_proton)**2))
 
@@ -524,7 +527,7 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
     # PID-free cut chain
     # ------------------------------------------------------------------
     S["cut_sanity"] = S.slc_vtx_x.notna() & S.slc_vtx_y.notna() & S.slc_vtx_z.notna() & S.charge_center_z.notna()
-    S["cut_fv"] = maple_isInFV(S.slc_vtx_x, S.slc_vtx_y, S.slc_vtx_z, det=DETECTOR)
+    S["cut_fv"] = gc.slcfv_cut(S)
     if DETECTOR == "ICARUS":
         S["cut_crthit"] = ~S.crthit
         slice_cryo = np.select([S.slc_vtx_x < 0, S.slc_vtx_x > 0], [0, 1], default=-1)
@@ -544,7 +547,7 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
     # SBND cathode-crossing veto (GUMP cathode_cut, extended to all tracks in
     # the slice); always True on ICARUS so the cut chain is unchanged there
     if DETECTOR == "SBND":
-        cross = maple_sbnd_cathode_crossing(
+        cross = gc.maple_sbnd_cathode_crossing(
             P.slc_vtx_x[valid_c], P.slc_vtx_y[valid_c], P.slc_vtx_z[valid_c],
             P.end_x[valid_c], P.end_y[valid_c], P.end_z[valid_c])
         any_cross = pd.Series(cross, index=P.index[valid_c]).groupby(level=[0, 1]).any()
@@ -583,6 +586,7 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
         maxcols=["dist_start"] + ["chi2p_%s" % fl for fl in chi2_suffixes.values()])
     aggs = aggs.reindex(S.index)
     for suff, fl in chi2_suffixes.items():
+        print(suff)
         S["mu_chi2%s_of_prot_cand" % suff] = aggs["min_chi2u_%s" % fl]
         S["prot_chi2%s_of_prot_cand" % suff] = aggs["max_chi2p_%s" % fl]
     S["min_proton_track_score"] = aggs.min_trackScore
@@ -621,13 +625,13 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
     p_mu_y = mu.p_muon * mu.dir_y
     p_mu_z = mu.p_muon * mu.dir_z
     p_mu_mag = np.sqrt(p_mu_x**2 + p_mu_y**2 + p_mu_z**2)
-    E_mu = np.sqrt((p_mu_mag * 1000.0)**2 + MUON_MASS**2)
+    E_mu = np.sqrt(p_mu_mag**2 + MUON_MASS**2)
 
     proton_ke_sum = (P.ke_proton[is_prot_cand] + PROTON_BINDING_ENERGY).groupby(level=[0, 1]).sum()
     proton_ke_sum = _reindex(proton_ke_sum, S.index, np.nan)
     found_proton = _reindex(is_prot_cand.groupby(level=[0, 1]).any(), S.index, False).astype(bool)
 
-    recoE = np.where(has_mu & found_proton, (E_mu + proton_ke_sum) / 1000.0, -999.0)
+    recoE = np.where(has_mu & found_proton, E_mu + proton_ke_sum, -999.0)
 
     # transverse / angular variables (leading proton)
     p_p_x = pro.p_proton * pro.dir_x
@@ -660,7 +664,7 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
     # ------------------------------------------------------------------
     # Reco_class (classification_type_debug port, via mcnu-level classification)
     # ------------------------------------------------------------------
-    clsdf = maple_truth_classdf(f, det=DETECTOR)
+    clsdf = maple_truth_classdf(f, det=DETECTOR, run=RUN)
     cls_lookup = clsdf.maple_class if len(clsdf) else pd.Series(dtype=float)
     key = pd.MultiIndex.from_arrays([S.index.get_level_values(0), S.tmatch_idx.fillna(-1).astype(int)])
     nu_class = pd.Series(cls_lookup.reindex(key).values, index=S.index)
@@ -669,7 +673,7 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
         [S.tmatch_idx < 0,
          nu_class == CLS_1MU1P,
          nu_class == CLS_1MUNP,
-         ~maple_isInFV(S.true_vtx_x, S.true_vtx_y, S.true_vtx_z, det=DETECTOR),
+         ~gc.trueslcfv_cut(S),
          np.abs(S.true_pdg) == 12,
          S.true_iscc == 0,
          (S.true_iscc == 1) & (S.true_genie_mode == 0),
@@ -712,8 +716,6 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
     S["Transverse_mom_reco_pro"] = norm_p_T
     S["FlashPE"] = S.flash_maxpe
 
-    S["detector"] = DETECTOR
-    S["Run"] = RUN
     S["ismc"] = ismc
 
     # ------------------------------------------------------------------
@@ -768,10 +770,12 @@ def make_maple_nudf(f):
     run = loadbranches(f["recTree"], ["rec.hdr.run"]).rec.hdr.run
     RUN = 1 if DETECTOR == "SBND" else (2 if run.iloc[0] < 12960 else 4)
 
-    cls = maple_truth_classdf(f, det=DETECTOR)
+    cls = maple_truth_classdf(f, det=DETECTOR, run=RUN)
 
     nudf = pd.DataFrame({
         "nu_E": mc.E,
+        "detector": DETECTOR,
+        "Run": RUN,
         "pdg": mc.pdg,
         "is_cc": mc.iscc,
         "is_nc": mc.isnc,
@@ -799,8 +803,7 @@ def make_maple_nudf(f):
     })
     nudf["is_sig"] = (cls.maple_class == CLS_1MU1P) | (cls.maple_class == CLS_1MUNP)
     nudf["is_other_numucc"] = cls.maple_class == CLS_1MUNP
-    nudf["is_fv"] = maple_isInFV(nudf.pos_x, nudf.pos_y, nudf.pos_z, det=DETECTOR)
-    nudf["is_av"] = maple_isInActive(nudf.pos_x, nudf.pos_y, nudf.pos_z, det=DETECTOR)
+    nudf["is_fv"] = gc.posfv_cut(nudf)
     nudf["ind"] = nudf.index.get_level_values(1)
     nudf["detector"] = DETECTOR
     nudf["Run"] = RUN
@@ -809,12 +812,158 @@ def make_maple_nudf(f):
 
     return nudf
 
-g4_weights = [ 
-              "reinteractions_piminus_Geant4", 
-              "reinteractions_piplus_Geant4", 
-              "reinteractions_proton_Geant4" 
-             ]
+gump_ar23_weights = [
+    # CCQE
+    "GENIEReWeight_SBN_v1_multisigma_VecFFCCQEshape",
+    'GENIEReWeight_SBN_v1_multisigma_CoulombCCQE',
 
+    # MEC
+    'GENIEReWeight_SBN_v1_multisigma_NormCCMEC',
+    'GENIEReWeight_SBN_v1_multisigma_NormNCMEC',
+    "GENIEReWeight_SBN_v1_multisigma_DecayAngMEC",
+
+    # RES
+    "GENIEReWeight_SBN_v1_multisigma_Theta_Delta2Npi",
+    "GENIEReWeight_SBN_v1_multisigma_ThetaDelta2NRad",
+    "GENIEReWeight_SBN_v1_multisigma_MaCCRES",
+    "GENIEReWeight_SBN_v1_multisigma_MaNCRES",
+    "GENIEReWeight_SBN_v1_multisigma_MvCCRES",
+    "GENIEReWeight_SBN_v1_multisigma_MvNCRES",
+    "GENIEReWeight_SBN_v1_multisigma_RDecBR1gamma",
+    "GENIEReWeight_SBN_v1_multisigma_RDecBR1eta",
+
+    # Non-Res
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvpCC1pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvpCC2pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvpNC1pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvpNC2pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvnCC1pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvnCC2pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvnNC1pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvnNC2pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvbarpCC1pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvbarpCC2pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvbarpNC1pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvbarpNC2pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvbarnCC1pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvbarnCC2pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvbarnNC1pi',
+    'GENIEReWeight_SBN_v1_multisim_NonRESBGvbarnNC2pi',
+
+    # DIS
+    # "GENIEReWeight_SBN_v1_multisim_DISBYVariationResponse",
+    'GENIEReWeight_SBN_v1_multisigma_AhtBY',
+    'GENIEReWeight_SBN_v1_multisigma_BhtBY',
+    'GENIEReWeight_SBN_v1_multisigma_CV1uBY',
+    'GENIEReWeight_SBN_v1_multisigma_CV2uBY',
+
+    # COH
+    "GENIEReWeight_SBN_v1_multisigma_NormCCCOH",
+    "GENIEReWeight_SBN_v1_multisigma_NormNCCOH",
+
+    # FSI
+    # "GENIEReWeight_SBN_v1_multisim_FSI_pi_VariationResponse",
+    # "GENIEReWeight_SBN_v1_multisim_FSI_N_VariationResponse",
+    'GENIEReWeight_SBN_v1_multisigma_MFP_pi',
+    'GENIEReWeight_SBN_v1_multisigma_FrCEx_pi',
+    'GENIEReWeight_SBN_v1_multisigma_FrInel_pi',
+    'GENIEReWeight_SBN_v1_multisigma_FrAbs_pi',
+    'GENIEReWeight_SBN_v1_multisigma_FrPiProd_pi',
+
+    # NCEL
+    'GENIEReWeight_SBN_v1_multisigma_MaNCEL',
+    'GENIEReWeight_SBN_v1_multisigma_EtaNCEL',
+]
+
+# Systematics introduced by Ar23+
+gump_ar23p_weights = [
+    "CCQETemplateReweight_SBN_v3_LFGToSF_q0bin0",
+    "CCQETemplateReweight_SBN_v3_LFGToSF_q0bin1",
+    "CCQETemplateReweight_SBN_v3_LFGToSF_q0bin2",
+    "CCQETemplateReweight_SBN_v3_LFGToSF_q0bin3",
+    "CCQETemplateReweight_SBN_v3_LFGToSF_q0bin4",
+
+    "CCQETemplateReweight_SBN_v3_LFGToHF_q0bin0",
+    "CCQETemplateReweight_SBN_v3_LFGToHF_q0bin1",
+    "CCQETemplateReweight_SBN_v3_LFGToHF_q0bin2",
+    "CCQETemplateReweight_SBN_v3_LFGToHF_q0bin3",
+    "CCQETemplateReweight_SBN_v3_LFGToHF_q0bin4",
+
+    "CCQETemplateReweight_SBN_v3_HFToCRPA_q0bin0",
+    "CCQETemplateReweight_SBN_v3_HFToCRPA_q0bin1",
+    "CCQETemplateReweight_SBN_v3_HFToCRPA_q0bin2",
+    "CCQETemplateReweight_SBN_v3_HFToCRPA_q0bin3",
+    "CCQETemplateReweight_SBN_v3_HFToCRPA_q0bin4",
+
+    "QEInterference_SBN_v3_QEIntf_dial_0",
+    "QEInterference_SBN_v3_QEIntf_dial_1",
+    "QEInterference_SBN_v3_QEIntf_dial_2",
+    "QEInterference_SBN_v3_QEIntf_dial_3",
+    "QEInterference_SBN_v3_QEIntf_dial_4",
+    "QEInterference_SBN_v3_QEIntf_dial_5",
+
+    "GENIEReWeight_SBN_v3_FrG4LoE_N",
+    "GENIEReWeight_SBN_v3_FrG4M1E_N",
+    "GENIEReWeight_SBN_v3_FrG4M2E_N",
+    "GENIEReWeight_SBN_v3_FrG4HiE_N",
+    "GENIEReWeight_SBN_v3_FrINCLLoE_N",
+    "GENIEReWeight_SBN_v3_FrINCLM1E_N",
+    "GENIEReWeight_SBN_v3_FrINCLM2E_N",
+    "GENIEReWeight_SBN_v3_FrINCLHiE_N",
+    "GENIEReWeight_SBN_v3_MFPLoE_N",
+    "GENIEReWeight_SBN_v3_MFPM1E_N",
+    "GENIEReWeight_SBN_v3_MFPM2E_N",
+    "GENIEReWeight_SBN_v3_MFPHiE_N",
+
+    "ZExpPCAWeighter_SBN_v3_MvA_b1",
+    "ZExpPCAWeighter_SBN_v3_MvA_b2",
+    "ZExpPCAWeighter_SBN_v3_MvA_b3",
+    "ZExpPCAWeighter_SBN_v3_MvA_b4",
+
+    "MECq0q3InterpWeighting_SBN_v3_SuSAToVal_MECResponse_q0bin0",
+    "MECq0q3InterpWeighting_SBN_v3_SuSAToVal_MECResponse_q0bin1",
+    "MECq0q3InterpWeighting_SBN_v3_SuSAToVal_MECResponse_q0bin2",
+    "MECq0q3InterpWeighting_SBN_v3_SuSAToVal_MECResponse_q0bin3",
+    "MECq0q3InterpWeighting_SBN_v3_SuSAToMar_MECResponse_q0bin0",
+    "MECq0q3InterpWeighting_SBN_v3_SuSAToMar_MECResponse_q0bin1",
+    "MECq0q3InterpWeighting_SBN_v3_SuSAToMar_MECResponse_q0bin2",
+    "MECq0q3InterpWeighting_SBN_v3_SuSAToMar_MECResponse_q0bin3",
+
+    "CCQEXSecCorr_SBN_v3_CCQEXSecCorr",
+    "GENIEReWeight_SBN_v3_FrKin_PiProFix_N",
+]
+
+# Other systematics we keep for extra info
+extra_weights = [
+    'GENIEReWeight_SBN_v1_multisigma_RPA_CCQE',
+    'GENIEReWeight_SBN_v1_multisigma_ZExpA1CCQE',
+    'GENIEReWeight_SBN_v1_multisigma_ZExpA2CCQE',
+    'GENIEReWeight_SBN_v1_multisigma_ZExpA3CCQE',
+    'GENIEReWeight_SBN_v1_multisigma_ZExpA4CCQE',
+    'GENIEReWeight_SBN_v1_multisigma_MFP_N',
+    'GENIEReWeight_SBN_v1_multisigma_FrCEx_N',
+    'GENIEReWeight_SBN_v1_multisigma_FrInel_N',
+    'GENIEReWeight_SBN_v1_multisigma_FrAbs_N',
+    'GENIEReWeight_SBN_v1_multisigma_FrPiProd_N',
+
+    "PionAbsWeighter_SBN_v3_QuasiDeuteronFraction",
+    "GENIEReWeight_SBN_v3_FrG4_N",
+    "GENIEReWeight_SBN_v3_FrINCL_N",
+
+    "ZExpPCAWeighter_SBN_v3_Deut_b1",
+    "ZExpPCAWeighter_SBN_v3_Deut_b2",
+    "ZExpPCAWeighter_SBN_v3_Deut_b3",
+    "ZExpPCAWeighter_SBN_v3_Deut_b4",
+    "GENIEReWeight_SBN_v3_FrKin_PiProBias_N",
+]
+
+g4_weights = [
+    "reinteractions_piminus_Geant4",
+    "reinteractions_piplus_Geant4",
+    "reinteractions_proton_Geant4"
+]
+
+gump_genie_reknob_systematics = gump_ar23_weights + gump_ar23p_weights + extra_weights + g4_weights
 
 # =====================================================================
 # wgt builder
@@ -847,7 +996,6 @@ def make_maple_rewgtdf(f):
     Same weight request as gump make_gump_nurewgtdf, so the wgt table is
     column-compatible with the GUMP sbn-rewgted CV productions.
     """
-    from analysis_village.gump.makedf import gump_genie_reknob_systematics
     syst = gump_genie_reknob_systematics + g4_weights
     return make_mcnudf(f, include_weights=True, slim=False,
                        genie_systematics=list(set(syst)))

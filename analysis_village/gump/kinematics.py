@@ -114,3 +114,7 @@ def transverse_kinematics(mu_p, mu_dir, p_p, p_dir, BE=BE):
                       'del_alpha' : del_alpha, 
                       'mu_E' : mu_E, 
                       'p_E' : p_E})
+
+def kinetic_energy(mass_GeV, momentum_GeV):
+    """KE in GeV given momentum in GeV (matches the CAFANA helper)."""
+    return np.sqrt(mass_GeV * mass_GeV + momentum_GeV * momentum_GeV) - mass_GeV
