@@ -748,6 +748,12 @@ def make_maple_evt_nosel_df(f):
 def make_maple_evt_presel_df(f):
     return make_maple_evt_df(f, selection="presel", do_calo_syst=True)
 
+def make_maple_evt_presel_nocalo_df(f):
+    # presel MC without the calorimetric variations: those are only needed for
+    # the CV reweighting workflow and substantially slow down processing, so
+    # the detector-variation / non-CV MC samples skip them.
+    return make_maple_evt_df(f, selection="presel", do_calo_syst=False)
+
 def make_maple_evt_fullsel_df(f):
     return make_maple_evt_df(f, selection="full", do_calo_syst=True)
 
