@@ -25,10 +25,7 @@ pull in the df-making machinery.
 """
 import numpy as np
 import pandas as pd
-
-from analysis_village.maple.maple_cuts import (
-    MAX_CHI2_MUON, MIN_CHI2_PROTON, CHI2_PROTON_PION, PROTON_KE_MIN, NP_MODE,
-)
+from analysis_village.maple.maple_cuts import * 
 
 # All chi2 variation suffixes stored in the evt df (when do_calo_syst=True),
 # plus the CAFANA-compat chi2 stored under the same scheme.
@@ -64,8 +61,7 @@ def maple_selection(df, variation=None):
       cut_muon      -- muon candidate exists and passes the chi2 cuts
       cut_np        -- proton-multiplicity cut (chi2-free, from the df)
       cut_protons   -- every candidate proton is a proton: max chi2p over
-                       candidates < CHI2_PROTON_PION (the old pion veto) and
-                       min ke over candidates >= PROTON_KE_MIN
+                       candidates < CHI2_PROTON_PION (the old pion veto)
       cut_0shwother -- no shower / other pfps (chi2-free, from the df)
       maple_sel     -- maple_presel & all of the above
       maxcut        -- cutflow stage (1-10): sanity, FV, CRT veto,
@@ -75,14 +71,8 @@ def maple_selection(df, variation=None):
     NaN comparisons are False, so a NaN chi2 or aggregate fails the cut
     (matching the old explicit notna() requirements).
     """
-    v = "" if variation is None else variation
-
-    cut_muon = df.has_muon & \
-        (df["mu_chi2%s_of_mu_cand" % v] <= MAX_CHI2_MUON) & \
-        (df["prot_chi2%s_of_mu_cand" % v] >= MIN_CHI2_PROTON)
-
-    cut_protons = (df["prot_chi2%s_of_prot_cand" % v] < CHI2_PROTON_PION) & \
-        (df.min_proton_ke >= PROTON_KE_MIN)
+    cut_muon = get_muon_mask(df, detector=df.detector.iloc[0], variation=variation)
+    cut_protons = get_proton_mask(df, detector=df.detector.iloc[0], variation=variation)
 
     maple_sel = df.maple_presel & cut_muon & df.cut_np & cut_protons & df.cut_0shwother
 

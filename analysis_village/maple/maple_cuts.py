@@ -1,65 +1,97 @@
-"""Exact port of the MAPLE (CAFANA) geometry and cut constants.
+# maple_cuts.py
 
-Source of truth:
-  NicolaICARUS/MAPLE_GUMP/icarus/
-    helper_eff_cf_FINAL_Lmu_EKpro_CHI2var_TRKSCOREvar_mup_only_CRTveto_Lmu_FV_Trigger.h
+SBND_CUTS = {
+    "nu_score_th": 0.35,
+    "max_opening_angle": 160,
+    "musel_track_score_min": 0.5,
+    "musel_muscore_th": 38,
+    "musel_pscore_th": 82,
+    "musel_len_th_min": 40,
+    "musel_len_th_max": 400,
+    "psel_muscore_th": 0,
+    "psel_pscore_th": 141,
+}
 
-All comparisons here mirror the C++ semantics, including how NaN behaves
-(in C++ any comparison with NaN is false; the same is true for pandas
-comparison operators, so masks written in "C++ direction" carry over).
-"""
-import numpy as np
-import pandas as pd
-from analysis_village.gump.kinematics import *
-import analysis_village.gump.gump_cuts as gc
+ICARUS_CUTS = {
+    "nu_score_th": 0.35,
+    "max_opening_angle": 160,
+    "musel_track_score_min": 0.5,
+    "musel_muscore_th": 111,
+    "musel_pscore_th": 74,
+    "musel_len_th_min": 40,
+    "musel_len_th_max": 400,
+    "psel_muscore_th": 0,
+    "psel_pscore_th": 92,
+}
 
-# ----------------- Tunable cuts (GUMP-tuned values) -----------------
-DEFAULT_PLANE = 2
-PRIMARY_TRACK_SCORE = 0.5
-SECONDARY_TRACK_LOW = 0.4
-VTX_MAX_DIST = 50.0        # cm
-MIN_MUON_LENGTH = 40.0     # cm
-MAX_MUON_LENGTH = 400.0    # cm
-MAX_CHI2_MUON = 111.0
-MIN_CHI2_PROTON = 74.0
-CHI2_PROTON_PION = 92.0
-CONTAINMENT_CUT = 10.0     # cm
-CALO_RR_MIN = 0.0
-CALO_RR_MAX = 25.0
-PION_KE_MIN = 0.0          # GeV
-PROTON_KE_MIN = 0.04       # GeV
-PION_MASS = 0.139570        # GeV
-PROTON_MASS = 0.9383        # GeV
-MUON_MASS = 0.105658        # GeV
-PROTON_BINDING_ENERGY = 0.0309  # GeV (argon effective)
-NP_MODE = True             # True -> 1muNp (protons > 1)
+# Registry map for easy lookup
+CUTS_BY_DETECTOR = {
+    "SBND": SBND_CUTS,
+    "ICARUS": ICARUS_CUTS,
+}
 
-# cryo_selection_from_light
-CRYO_LIGHT_TMIN = -0.6
-CRYO_LIGHT_TMAX = 1.8
-CRYO_LIGHT_PE_THRESHOLD = 3000. / 0.341  # valid for Run 4
+def get_base_muon_mask(df, cuts=CUTS_BY_DETECTOR["SBND"], level="slc"):
+    if level == "trk":
+        pref = ""
+    elif level == "slc":
+        pref = "mu_"
 
-# kCRTNeutrino (CRT top veto)
-CRT_VETO_TMIN = -1.0
-CRT_VETO_TMAX = 1.8
-CRT_VETO_PLANE_MIN = 29  # exclusive
-CRT_VETO_PLANE_MAX = 50  # exclusive
+    for c in df.columns:
+        print(c)
 
-# bar_flash time windows
-BAR_FLASH_TMIN_MC, BAR_FLASH_TMAX_MC = 0.0, 1.6
-BAR_FLASH_TMIN_DATA, BAR_FLASH_TMAX_DATA = -0.4, 1.5
+    base_mask = (
+            df[pref+"start_x"].notna()
+            & df[pref+"len"].notna()
+            & (df[pref+"trackScore"] >= cuts["musel_track_score_min"])
+            & (df[pref+"dist_start"] <= 10.0)
+            & df[pref+"len"].between(cuts["musel_len_th_min"], cuts["musel_len_th_max"])
+            & df[pref+"prim_pfp"]
+            & df[pref+"contained10"]
+            & (df[pref+"end_x"] * df["slc_vtx_x"] > 0)
+        )
+    return base_mask
 
-# ICARUS active-volume boundaries used by the MAPLE helpers
-_XE_LO, _XE_HI = -358.49, -61.94   # east cryostat
-_XW_LO, _XW_HI = 61.94, 358.49     # west cryostat
-_Y_LO, _Y_HI = -181.86, 134.96
-_Z_LO, _Z_HI = -894.95, 894.95
+def get_muon_mask(df, detector="SBND", variation=None, **override_cuts):
+    """Generates a boolean mask filtering candidate muon tracks.
 
-# SBND active-volume boundaries
-_S_X_LO, _S_X_HI = -200.0, 200.0
-_S_Y_LO, _S_Y_HI = -200.0, 200.0
-_S_Z_LO, _S_Z_HI = 0.0, 500.0
+    Applies the variation suffix 'v' strictly to chi2 variables.
+    """
+    if detector not in CUTS_BY_DETECTOR:
+        raise ValueError(
+            f"Unknown detector '{detector}'. Valid options: {list(CUTS_BY_DETECTOR.keys())}"
+        )
 
-# SBND cathode prism for the cathode-crossing veto (GUMP gump_cuts.cathode_cut)
-SBND_CATHODE_PRISM_MIN = (-5.0, -200.0, 0.0)
-SBND_CATHODE_PRISM_MAX = (5.0, 200.0, 500.0)
+    # Format variation suffix (e.g., None -> "", "_sys" -> "_sys")
+    v = "" if variation is None else variation
+    cuts = {**CUTS_BY_DETECTOR[detector], **override_cuts}
+
+    # Standard kinematic/topological selection
+    base_mask = get_base_muon_mask(df, cuts=cuts, level="slc")
+
+    # Apply muon/proton chi2 cuts using the variation suffix on chi2 columns
+    chi2_muon_col = f"muon_chi2{v}_of_muon_cand"
+    chi2_prot_col = f"prot_chi2{v}_of_muon_cand"
+
+    chi2_mask = True
+    if chi2_muon_col in df.columns:
+        chi2_mask &= df[chi2_muon_col] < cuts["musel_muscore_th"]
+    if chi2_prot_col in df.columns:
+        chi2_mask &= df[chi2_prot_col] > cuts["musel_pscore_th"]
+
+    return base_mask & chi2_mask
+
+def get_proton_mask(df, detector="SBND", variation=None, **override_cuts):
+    """Generates a boolean mask filtering candidate proton tracks on chi2 score."""
+    if detector not in CUTS_BY_DETECTOR:
+        raise ValueError(
+            f"Unknown detector '{detector}'. Valid options: {list(CUTS_BY_DETECTOR.keys())}"
+        )
+
+    # Format variation suffix (e.g., None -> "", "_sys" -> "_sys")
+    v = "" if variation is None else variation
+    cuts = {**CUTS_BY_DETECTOR[detector], **override_cuts}
+
+    # Dynamic column name targeting only prot_chi2
+    chi2_prot_col = f"prot_chi2{v}_of_prot_cand"
+
+    return df[chi2_prot_col] < cuts["psel_pscore_th"]

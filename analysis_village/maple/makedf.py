@@ -60,7 +60,9 @@ from makedf.makedf import (
 )
 from makedf import chi2pid
 
+from analysis_village.gump.kinematics import *
 from analysis_village.maple.maple_cuts import *
+import analysis_village.gump.gump_cuts as gc
 from analysis_village.maple.maple_sel import maple_selection
 from analysis_village.maple import chi2pid_cafana
 from makedf.branches import (
@@ -98,13 +100,13 @@ def maple_truth_classdf(f, det, run):
     Returns a DataFrame with columns:
       maple_class (0=1mu1p, 1=1muNp, 2=Other, 4=Invalid -- Cosmic is a
       slice-level concept, handled in the evt df), n_mu, mu_length,
-      n_p_above40, veto, uncontained, true_visible_Enu
+      veto, uncontained, true_visible_Enu
     """
     mc = _flatcols(loadbranches(f["recTree"], mcbranches).rec.mc.nu)
     mc["detector"] = det
     mc["Run"] = run
     if mc.empty:
-        out = pd.DataFrame(columns=["maple_class", "n_mu", "mu_length", "n_p_above40",
+        out = pd.DataFrame(columns=["maple_class", "n_mu", "mu_length",
                                     "veto", "uncontained", "true_visible_Enu"])
         return out
 
@@ -152,25 +154,23 @@ def maple_truth_classdf(f, det, run):
         # on the daughter itself
         g = m.groupby(["entry", "inu", "iprim"])
         dep_daughters = g.d_visE.sum()
-        pi0_gamma_veto = g.apply(lambda x: bool(((x.d_is_gamma) & (x.d_visE > PION_KE_MIN)).any()))
+        pi0_gamma_veto = g.apply(lambda x: bool(((x.d_is_gamma) & (x.d_visE > 0.0)).any())) # use PION_KE_MIN
         d_uncont_any = g.d_uncont.any()
     else:
         dep_daughters = pd.Series(dtype=float)
         pi0_gamma_veto = pd.Series(dtype=bool)
         d_uncont_any = pd.Series(dtype=bool)
 
-    dep_daughters = _reindex(dep_daughters, prim.index, 0.0)
+    dep_daughters = _reindex(dep_daughters, prim.index, 0.0) # use PION_KE_MIN
     pi0_gamma_veto = _reindex(pi0_gamma_veto, prim.index, False).astype(bool)
     d_uncont_any = _reindex(d_uncont_any, prim.index, False).astype(bool)
 
     # ---- per-primary vetoes ----
-    cpi_veto = is_cpi & (prim.visE_own > PION_KE_MIN)
+    cpi_veto = is_cpi & (prim.visE_own > 0.0) # use PION_KE_MIN
     pi0_veto = is_pi0 & pi0_gamma_veto
-    gamma_veto = is_gamma & ((prim.visE_own + dep_daughters) > PION_KE_MIN)
+    gamma_veto = is_gamma & ((prim.visE_own + dep_daughters) > 0.0) # use PION_KE_MIN
     p_depE = prim.visE_own + dep_daughters
-    p_above = is_p & (p_depE > PROTON_KE_MIN)
-    p_below = is_p & ~(p_depE > PROTON_KE_MIN)
-    prim_veto = cpi_veto | pi0_veto | gamma_veto | p_below
+    prim_veto = cpi_veto | pi0_veto | gamma_veto
 
     # ---- containment (all_contained_mc): charged primaries, no -9999 skip ----
     prim_uncont = is_charged & ~gc.endfv_cut(prim, det=det, run=run)
@@ -185,7 +185,6 @@ def maple_truth_classdf(f, det, run):
         return _reindex(s, nuidx, fill)
 
     n_mu = agg(is_mu.astype(int), 0)
-    n_p_above = agg(p_above.astype(int), 0)
     n_p = agg(is_p.astype(int), 0)
     n_pi = agg(is_cpi.astype(int), 0)
     n_pi0 = agg(is_pi0.astype(int), 0)
@@ -203,10 +202,10 @@ def maple_truth_classdf(f, det, run):
     E_mu_vis = np.sqrt(mu_p_GeV**2 + MUON_MASS**2)  # MeV
     E_mu_vis = _reindex(E_mu_vis, nuidx, 0.0)
 
-    # visible energy: protons above threshold contribute KE(genp) + Eb
-    p_rows = prim[p_above]
+    # visible energy: protons 
+    p_rows = prim[is_p]
     p_ke = kinetic_energy(PROTON_MASS, np.sqrt(p_rows.genp_x**2 + p_rows.genp_y**2 + p_rows.genp_z**2))
-    E_p_sum = (p_ke + PROTON_BINDING_ENERGY).groupby(level=["entry", "inu"]).sum()
+    E_p_sum = (p_ke + BE).groupby(level=["entry", "inu"]).sum()
     E_p_sum.index.names = nuidx.names
     E_p_sum = _reindex(E_p_sum, nuidx, 0.0)
 
@@ -216,13 +215,15 @@ def maple_truth_classdf(f, det, run):
     pos_nan = mc.position_x.isna() | mc.position_y.isna() | mc.position_z.isna()
     not_numucc = (np.abs(mc.pdg) != 14) | (mc.iscc == 0)
     not_fv = ~gc.true_fv_cut(mc)
-    good_mu = (n_mu == 1) & (mu_length > MIN_MUON_LENGTH) & (mu_length < MAX_MUON_LENGTH)
+    #good_mu = (n_mu == 1) & (mu_length > MIN_MUON_LENGTH) & (mu_length < MAX_MUON_LENGTH)
 
     maple_class = np.select(
         [pos_nan,
          not_numucc | not_fv | veto_any | uncont_any,
-         good_mu & (n_p_above == 1),
-         good_mu & (n_p_above > 1)],
+         (n_mu == 1) & (n_p == 1),
+         (n_mu == 1) & (n_p > 1)],
+         #good_mu & (n_p == 1),
+         #good_mu & (n_p > 1)],
         [CLS_INVALID, CLS_OTHER, CLS_1MU1P, CLS_1MUNP],
         default=CLS_OTHER)
 
@@ -234,7 +235,6 @@ def maple_truth_classdf(f, det, run):
         "npi0": n_pi0,
         "nn": n_n,
         "mu_length": mu_length,
-        "n_p_above40": n_p_above,
         "veto": veto_any,
         "uncontained": uncont_any,
         "true_visible_Enu": true_visible_Enu,
@@ -260,14 +260,8 @@ def _find_candidates(P):
     calorimetric variations.  All masks mirror the C++ skip conditions,
     including NaN behavior.
     """
-    # ---- find_muon, chi2 cuts removed (applied post-hoc) ----
-    keep = P.start_x.notna() & P.len.notna() \
-        & ~(P.trackScore < PRIMARY_TRACK_SCORE) \
-        & ~(P.dist_start > 10.0) \
-        & ~((P.len < MIN_MUON_LENGTH) | (P.len > MAX_MUON_LENGTH)) \
-        & P.prim_pfp \
-        & P.contained10 \
-        & (P.end_x * P.slc_vtx_x > 0)
+
+    keep = get_base_muon_mask(P, level="trk")
 
     cand = P[keep]
     if len(cand):
@@ -281,7 +275,7 @@ def _find_candidates(P):
 
     # ---- id_pfp gates (the chi2-free skip conditions) ----
     unknown0 = (~P.prim_pfp) | P.start_x.isna() | P.end_x.isna() | P.len.isna()
-    unknown1 = P.min_dist > VTX_MAX_DIST
+    unknown1 = P.min_dist > 50.0 # VTX_MAX_DIST
     no_calo = P.ncalo == 0
     gate = ~unknown0 & ~unknown1 & ~no_calo
 
@@ -289,7 +283,7 @@ def _find_candidates(P):
 
     # remaining pfps: chi2-independent shower/other/unknown classification
     shw_unknown = P.shw_energy2.isna()
-    is_shower = P.shw_energy2 > PION_KE_MIN
+    is_shower = P.shw_energy2 > 0.0 # PION_KE_MIN
     pid_rest = pd.Series(np.select(
         [~gate, shw_unknown, is_shower],
         [PID_UNKNOWN, PID_UNKNOWN, PID_SHOWER],
@@ -374,8 +368,6 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
     # per-pfp frame
     # ------------------------------------------------------------------
     trkdf = make_trkdf(f, False)  # NO vertex-distance pre-filter: MAPLE needs all pfps
-    # core shwbranches, restricted to what the file carries (ICARUS flat CAFs
-    # lack the SBND-only bestplane_for_* branches)
     keys = set(f["recTree"].keys())
     shwdf = loadbranches(f["recTree"], [b for b in shwbranches if b in keys]).rec.slc.reco.pfp.shw
     shwdf.index.names = trkdf.index.names
@@ -575,7 +567,7 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
     for c in counts.columns:
         S[c] = counts[c]
     S["has_muon"] = has_mu
-    S["cut_np"] = counts.n_proton > 1 if NP_MODE else counts.n_proton > 0
+    S["cut_np"] = counts.n_proton > 0
     S["cut_0shwother"] = (counts.n_shower == 0) & (counts.n_other == 0)
 
     # worst-case cut variables over the candidate protons (min for cuts
@@ -596,8 +588,8 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
     # ------------------------------------------------------------------
     # candidate variables (muon + leading candidate proton)
     # ------------------------------------------------------------------
-    mucols = ["len", "end_x", "end_y", "end_z", "dir_x", "dir_y", "dir_z",
-              "p_muon", "trackScore"] + \
+    mucols = ["len", "start_x", "start_y", "start_z", "end_x", "end_y", "end_z", "dir_x", "dir_y", "dir_z",
+              "p_muon", "trackScore", "dist_start", "prim_pfp", "contained10"] + \
         ["chi2u_%s" % fl for fl in chi2_suffixes.values()] + \
         ["chi2p_%s" % fl for fl in chi2_suffixes.values()]
 
@@ -627,7 +619,7 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
     p_mu_mag = np.sqrt(p_mu_x**2 + p_mu_y**2 + p_mu_z**2)
     E_mu = np.sqrt(p_mu_mag**2 + MUON_MASS**2)
 
-    proton_ke_sum = (P.ke_proton[is_prot_cand] + PROTON_BINDING_ENERGY).groupby(level=[0, 1]).sum()
+    proton_ke_sum = (P.ke_proton[is_prot_cand] + BE).groupby(level=[0, 1]).sum()
     proton_ke_sum = _reindex(proton_ke_sum, S.index, np.nan)
     found_proton = _reindex(is_prot_cand.groupby(level=[0, 1]).any(), S.index, False).astype(bool)
 
@@ -643,23 +635,6 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
     p_p_mag = np.sqrt(p_p_x**2 + p_p_y**2 + p_p_z**2)
     t3d_angle = (p_mu_x * p_p_x + p_mu_y * p_p_y + p_mu_z * p_p_z) / (p_mu_mag * p_p_mag)
     deltaPt = np.sqrt((p_mu_x + p_p_x)**2 + (p_mu_y + p_p_y)**2)
-
-    # Barycenter_delta (bar_flash logic + sentinels)
-    bar_z = np.select([S.slc_vtx_x > 0, S.slc_vtx_x < 0], [S.bar_z_west, S.bar_z_east], default=np.nan)
-    bar_z = np.where(np.isnan(bar_z), -10000.0, bar_z)
-    bar_x = np.select([S.slc_vtx_x > 0, S.slc_vtx_x < 0], [S.bar_x_west, S.bar_x_east], default=np.nan)
-    bar_x = np.where(np.isnan(bar_x), 0.0, bar_x)
-    delta = np.abs(bar_z - S.charge_center_z)
-    S["Barycenter_delta"] = np.where((bar_z < -9999) & (np.abs(bar_x) < 1), -10.0, delta)
-    S["bar_flash_z"] = bar_z
-    S["bar_flash_x"] = bar_x
-
-    # CryoSel
-    light_east = (S.cryo_light == 2) | (S.cryo_light == 0)
-    light_west = (S.cryo_light == 2) | (S.cryo_light == 1)
-    S["CryoSel"] = np.select(
-        [S.cryo_light < 0, (S.slc_vtx_x > 0) & light_west, (S.slc_vtx_x < 0) & light_east],
-        [-1, 1, 0], default=-1)
 
     # ------------------------------------------------------------------
     # Reco_class (classification_type_debug port, via mcnu-level classification)
@@ -683,18 +658,29 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
          (S.true_iscc == 1) & (S.true_genie_mode == 10)],
         [3, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11], default=12)
 
+    print("BEGIN MUON COLS")
+    for c in mu.columns:
+        print(c)
+    print("DONE WITH MUON COLS")
+
     # ------------------------------------------------------------------
     # assemble sBruce columns
     # ------------------------------------------------------------------
     S["recoE"] = recoE
     S["mu_len"] = mu.len
+    S["mu_dist_start"] = mu.dist_start
+    S["mu_prim_pfp"] = mu.prim_pfp
+    S["mu_contained10"] = mu.contained10
     S["mu_end_x"] = mu.end_x
     S["mu_end_y"] = mu.end_y
     S["mu_end_z"] = mu.end_z
+    S["mu_start_x"] = mu.start_x
+    S["mu_start_y"] = mu.start_y
+    S["mu_start_z"] = mu.start_z
     S["mu_dir_x"] = mu.dir_x
     S["mu_dir_y"] = mu.dir_y
     S["mu_dir_z"] = mu.dir_z
-    S["mu_track_score"] = mu.trackScore
+    S["mu_trackScore"] = mu.trackScore
     for suff, fl in chi2_suffixes.items():
         S["mu_chi2%s_of_mu_cand" % suff] = mu["chi2u_%s" % fl]
         S["prot_chi2%s_of_mu_cand" % suff] = mu["chi2p_%s" % fl]
@@ -706,7 +692,7 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
     S["p_dir_x"] = pro.dir_x
     S["p_dir_y"] = pro.dir_y
     S["p_dir_z"] = pro.dir_z
-    S["p_track_score"] = pro.trackScore
+    S["p_trackScore"] = pro.trackScore
     S["mu_chi2_of_lead_prot"] = pro.chi2u_cafpyana
     S["prot_chi2_of_lead_prot"] = pro.chi2p_cafpyana
     S["Transverse_angle"] = transverse_angle
@@ -796,7 +782,6 @@ def make_maple_nudf(f):
         "npi0": cls.npi0,
         "nn": cls.nn,
         "mu_length": cls.mu_length,
-        "n_p_above40": cls.n_p_above40,
         "veto_particles": cls.veto,
         "uncontained_truth": cls.uncontained,
         "true_visible_Enu": cls.true_visible_Enu,
