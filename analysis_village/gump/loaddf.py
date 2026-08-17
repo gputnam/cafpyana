@@ -723,6 +723,16 @@ def load_one(fname, idf,
     # if needed, include neutrino energy in matching information
     if match_Enu:
         mcdf = pd.read_hdf(fname, mcname % idf)
+        mcdf["detector"] = detector
+        if "Run2" in detector.replace(" ", ""):
+            mcdf["Run"] = 2
+        elif "Run4" in detector.replace(" ", ""):
+            mcdf["Run"] = 4
+        elif "SBND" in detector.replace(" ", ""):
+            mcdf["Run"] = 1
+        else:
+            print("Run ambiguous!")
+
         match = match.merge(mcdf.nu_E.groupby(level=[0,1]).max().rename("nu_E0"), on=["__ntuple", "entry"], how="left")
         match_ind = list(match.columns)
 
@@ -939,7 +949,7 @@ def load_one(fname, idf,
         for d in ["SBND", "ICARUS Run2", "ICARUS Run4"]:
             col_str = f"multisigma_{d.replace(' ', '')}_POT"
             multisigma_cols.append(col_str)
-            if det == d:
+            if detector == d:
                 skim[f"{col_str}"] = [list(pot_syst.values()) for _ in range(len(wgt))]
             else:
                 skim[f"{col_str}"] = [[1.0]*7 for _ in range(len(wgt))]
@@ -1084,7 +1094,7 @@ def load_one(fname, idf,
                 col_str = s
 
             # allow for f 
-            if det.replace(' ', '') in fs[0]:
+            if detector.replace(' ', '') in fs[0]:
                 s_df = rw.apply_map(mrg, fs, s)
                 mrg[col_str] = s_df
             elif not col_str in mrg.columns:
