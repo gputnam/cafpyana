@@ -43,4 +43,3 @@ def make_gump_evt_fullsel_data_df(f):
 
 def make_gump_nudf(f):
     return make_maple_nudf(f)
-
