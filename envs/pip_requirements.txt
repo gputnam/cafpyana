@@ -18,3 +18,5 @@ lz4
 xxhash
 xrootd
 fsspec-xrootd
+multiprocess
+more-itertools

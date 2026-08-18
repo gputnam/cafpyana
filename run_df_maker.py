@@ -191,7 +191,7 @@ def run_grid(inputfiles):
 --disk 25GB \\
 --cpu 2 \\
 --memory 4GB \\
---expected-lifetime 1h \\
+--expected-lifetime 4h \\
 "file://$(pwd)/grid_executable.sh" \\
 "%s" \\
 "%s"'''%(ngrid,OutputDir,args.output)
