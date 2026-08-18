@@ -320,11 +320,45 @@ def _proton_aggregates(P, is_prot_cand, mincols, maxcols):
             out["%s_%s" % (fn, col)] = agg
     return pd.DataFrame(out)
 
+def fetch_perentry(f, entries):
+    # ------------------------------------------------------------------
+    # spill-level inputs
+    # ------------------------------------------------------------------
+    crtpmt = loadbranches(f["recTree"], crtpmtbranches).rec.crtpmt_matches
 
-# =====================================================================
-# Main evt builder
-# =====================================================================
-def make_maple_evt_df(f, selection="none", do_calo_syst=True):
+    # cryo_selection_from_light
+    inwin = (crtpmt.flashGateTime > CRYO_LIGHT_TMIN) & (crtpmt.flashGateTime < CRYO_LIGHT_TMAX)
+    haspe = ~(crtpmt.flashPE < CRYO_LIGHT_PE_THRESHOLD)
+    west = (inwin & haspe & (crtpmt.flashPosition.x > 0)).groupby(level=0).any()
+    east = (inwin & haspe & (crtpmt.flashPosition.x < 0)).groupby(level=0).any()
+    perentry = pd.DataFrame(index=pd.Index(entries.unique(), name="entry"))
+    perentry["west"] = _reindex(west, perentry.index, False).astype(bool)
+    perentry["east"] = _reindex(east, perentry.index, False).astype(bool)
+    perentry["cryo_light"] = np.select(
+        [perentry.west & perentry.east, perentry.west, perentry.east],
+        [2, 1, 0], default=-1)
+
+    # k_pe: max flash PE in the cryo-light window, no PE threshold, default 0
+    maxpe = crtpmt.flashPE[inwin].groupby(level=0).max()
+    perentry["flash_maxpe"] = _reindex(maxpe, perentry.index, 0.0)
+
+    # bar_flash: first in-window match on each side (MC/data window differs)
+    btmin, btmax = (BAR_FLASH_TMIN_MC, BAR_FLASH_TMAX_MC) if ismc else (BAR_FLASH_TMIN_DATA, BAR_FLASH_TMAX_DATA)
+    barwin = (crtpmt.flashGateTime > btmin) & (crtpmt.flashGateTime < btmax)
+    for side, cond in [("west", crtpmt.flashPosition.x > 0), ("east", crtpmt.flashPosition.x < 0)]:
+        first = crtpmt[barwin & cond].groupby(level=0).first()
+        perentry["bar_z_" + side] = first.flashPosition.z.reindex(perentry.index)
+        perentry["bar_x_" + side] = first.flashPosition.x.reindex(perentry.index)
+
+    # kCRTNeutrino: top-CRT veto
+    crt = make_crthitdf(f)
+    vetohit = ((crt.time > CRT_VETO_TMIN) & (crt.time < CRT_VETO_TMAX) &
+               (crt.plane > CRT_VETO_PLANE_MIN) & (crt.plane < CRT_VETO_PLANE_MAX)).groupby(level=0).any()
+    perentry["crthit"] = _reindex(vetohit, perentry.index, False).astype(bool)
+
+    return perentry
+
+def fetch_metadata(f):
     det = loadbranches(f["recTree"], ["rec.hdr.det"]).rec.hdr.det
     if det.empty:
         return pd.DataFrame()
@@ -337,6 +371,10 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
     run = loadbranches(f["recTree"], ["rec.hdr.run"]).rec.hdr.run
     RUN = 1 if DETECTOR == "SBND" else (2 if run.iloc[0] < 12960 else 4)
     ismc = bool(loadbranches(f["recTree"], ["rec.hdr.ismc"]).rec.hdr.ismc.iloc[0])
+    return DETECTOR, RUN, ismc
+
+def fetch_info(f):
+    DETECTOR, RUN, ismc = fetch_metadata(f)
 
     # ------------------------------------------------------------------
     # slice frame
@@ -359,10 +397,12 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
         "true_vtx_x": slcdf.slc.truth.position.x,
         "true_vtx_y": slcdf.slc.truth.position.y,
         "true_vtx_z": slcdf.slc.truth.position.z,
+        "ismc" : ismc,
     })
     S["slice_index"] = S.index.get_level_values(1)
     S["detector"] = DETECTOR
     S["Run"] = RUN
+    S["ismc"] = ismc
 
     # ------------------------------------------------------------------
     # per-pfp frame
@@ -390,23 +430,47 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
         "true_genp_x": trkdf.pfp.trk.truth.p.genp.x,
         "shw_energy2": shwdf.plane.I2.energy,
     })
+
     P["prim_pfp"] = trkdf.pfp.parent_is_primary.fillna(False).astype(bool)
+    P["detector"] = DETECTOR
+    P["Run"] = RUN
+    P["ismc"] = ismc
 
     # broadcast slice vertex onto pfps
     P = P.join(S[["slc_vtx_x", "slc_vtx_y", "slc_vtx_z"]])
-
     P["dist_start"] = np.sqrt((P.start_x - P.slc_vtx_x)**2 + (P.start_y - P.slc_vtx_y)**2 + (P.start_z - P.slc_vtx_z)**2)
     dist_end = np.sqrt((P.end_x - P.slc_vtx_x)**2 + (P.end_y - P.slc_vtx_y)**2 + (P.end_z - P.slc_vtx_z)**2)
+
     # std::min(a, b) semantics: b if b < a else a  (NaN b -> a; NaN a -> NaN)
     P["min_dist"] = np.where(np.isnan(dist_end), P.dist_start, np.minimum(P.dist_start, dist_end))
-    P["contained10"] = gc.endfv_cut(P, det=DETECTOR, run=RUN)
+    P["contained10"] = gc.endfv_cut(P)
     P["ke_pion"] = kinetic_energy(PION_MASS, np.sqrt((P.dir_x * P.p_pion)**2 + (P.dir_y * P.p_pion)**2 + (P.dir_z * P.p_pion)**2))
     P["ke_proton"] = kinetic_energy(PROTON_MASS, np.sqrt((P.dir_x * P.p_proton)**2 + (P.dir_y * P.p_proton)**2 + (P.dir_z * P.p_proton)**2))
+    
+    if "ICARUS" in DETECTOR:
+        perentry = fetch_perentry(f, S.index.get_level_values(0))
+    else:
+        perentry = pd.DataFrame(index=pd.Index(S.index.get_level_values(0).unique(), name="entry"))
+        perentry["cryo_light"] = -1
+        perentry["flash_maxpe"] = np.nan
+        for side in ("west", "east"):
+            perentry["bar_z_" + side] = np.nan
+            perentry["bar_x_" + side] = np.nan
+        perentry["crthit"] = False
 
+    S = S.join(perentry[["cryo_light", "flash_maxpe", "bar_z_west", "bar_x_west",
+                         "bar_z_east", "bar_x_east", "crthit"]])
+    return S, P, DETECTOR, RUN, ismc
+
+
+def PID_calcs(f, P, do_calo_syst=True):
     # ------------------------------------------------------------------
     # PID: both flavors
     # ------------------------------------------------------------------
     trkhitdf = make_trkhitdf(f)
+
+    DETECTOR = P.detector.iloc[0]
+    ismc = P.ismc.iloc[0]
 
     # number of plane-2 calo points (compute_chi2 returns {} when empty)
     ncalo = trkhitdf.groupby(level=[0, 1, 2]).size()
@@ -463,58 +527,13 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
             P.loc[cosmic, "chi2u_%s" % var] = P.loc[cosmic, "chi2u_cafpyana"]
             P.loc[cosmic, "chi2p_%s" % var] = P.loc[cosmic, "chi2p_cafpyana"]
 
-    # ------------------------------------------------------------------
-    # spill-level inputs
-    # ------------------------------------------------------------------
-    entries = S.index.get_level_values(0)
+    return P
 
-    if DETECTOR == "ICARUS":
-        crtpmt = loadbranches(f["recTree"], crtpmtbranches).rec.crtpmt_matches
-
-        # cryo_selection_from_light
-        inwin = (crtpmt.flashGateTime > CRYO_LIGHT_TMIN) & (crtpmt.flashGateTime < CRYO_LIGHT_TMAX)
-        haspe = ~(crtpmt.flashPE < CRYO_LIGHT_PE_THRESHOLD)
-        west = (inwin & haspe & (crtpmt.flashPosition.x > 0)).groupby(level=0).any()
-        east = (inwin & haspe & (crtpmt.flashPosition.x < 0)).groupby(level=0).any()
-        perentry = pd.DataFrame(index=pd.Index(entries.unique(), name="entry"))
-        perentry["west"] = _reindex(west, perentry.index, False).astype(bool)
-        perentry["east"] = _reindex(east, perentry.index, False).astype(bool)
-        perentry["cryo_light"] = np.select(
-            [perentry.west & perentry.east, perentry.west, perentry.east],
-            [2, 1, 0], default=-1)
-
-        # k_pe: max flash PE in the cryo-light window, no PE threshold, default 0
-        maxpe = crtpmt.flashPE[inwin].groupby(level=0).max()
-        perentry["flash_maxpe"] = _reindex(maxpe, perentry.index, 0.0)
-
-        # bar_flash: first in-window match on each side (MC/data window differs)
-        btmin, btmax = (BAR_FLASH_TMIN_MC, BAR_FLASH_TMAX_MC) if ismc else (BAR_FLASH_TMIN_DATA, BAR_FLASH_TMAX_DATA)
-        barwin = (crtpmt.flashGateTime > btmin) & (crtpmt.flashGateTime < btmax)
-        for side, cond in [("west", crtpmt.flashPosition.x > 0), ("east", crtpmt.flashPosition.x < 0)]:
-            first = crtpmt[barwin & cond].groupby(level=0).first()
-            perentry["bar_z_" + side] = first.flashPosition.z.reindex(perentry.index)
-            perentry["bar_x_" + side] = first.flashPosition.x.reindex(perentry.index)
-
-        # kCRTNeutrino: top-CRT veto
-        crt = make_crthitdf(f)
-        vetohit = ((crt.time > CRT_VETO_TMIN) & (crt.time < CRT_VETO_TMAX) &
-                   (crt.plane > CRT_VETO_PLANE_MIN) & (crt.plane < CRT_VETO_PLANE_MAX)).groupby(level=0).any()
-        perentry["crthit"] = _reindex(vetohit, perentry.index, False).astype(bool)
-    else:
-        # SBND: the ICARUS-only cosmic rejection is dropped; fill sentinels
-        # (cryo_light=-1, no bar flash, no CRT veto) so the evt schema is
-        # identical across detectors. The cut booleans are forced True below.
-        perentry = pd.DataFrame(index=pd.Index(entries.unique(), name="entry"))
-        perentry["cryo_light"] = -1
-        perentry["flash_maxpe"] = np.nan
-        for side in ("west", "east"):
-            perentry["bar_z_" + side] = np.nan
-            perentry["bar_x_" + side] = np.nan
-        perentry["crthit"] = False
-
-    S = S.join(perentry[["cryo_light", "flash_maxpe", "bar_z_west", "bar_x_west",
-                         "bar_z_east", "bar_x_east", "crthit"]])
-
+# =====================================================================
+# Main evt builder
+# =====================================================================
+def make_maple_evt_df(f, selection="none", do_calo_syst=True):
+    S, P, DETECTOR, RUN, ismc = fetch_info(f)
     # ------------------------------------------------------------------
     # PID-free cut chain
     # ------------------------------------------------------------------
@@ -550,6 +569,8 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
     S["maple_presel"] = S.cut_sanity & S.cut_fv & S.cut_crthit & S.cut_cryo & \
         S.cut_contained & S.cut_cathode
 
+    P = PID_calcs(f, P, do_calo_syst=do_calo_syst)
+
     # ------------------------------------------------------------------
     # chi2-free candidates; chi2 cuts are applied post-hoc (maple_sel)
     # ------------------------------------------------------------------
@@ -578,7 +599,6 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
         maxcols=["dist_start"] + ["chi2p_%s" % fl for fl in chi2_suffixes.values()])
     aggs = aggs.reindex(S.index)
     for suff, fl in chi2_suffixes.items():
-        print(suff)
         S["mu_chi2%s_of_prot_cand" % suff] = aggs["min_chi2u_%s" % fl]
         S["prot_chi2%s_of_prot_cand" % suff] = aggs["max_chi2p_%s" % fl]
     S["min_proton_track_score"] = aggs.min_trackScore
@@ -658,11 +678,6 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
          (S.true_iscc == 1) & (S.true_genie_mode == 10)],
         [3, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11], default=12)
 
-    print("BEGIN MUON COLS")
-    for c in mu.columns:
-        print(c)
-    print("DONE WITH MUON COLS")
-
     # ------------------------------------------------------------------
     # assemble sBruce columns
     # ------------------------------------------------------------------
@@ -701,8 +716,6 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
     S["Transverse_mom_reco_mu"] = norm_mu_T
     S["Transverse_mom_reco_pro"] = norm_p_T
     S["FlashPE"] = S.flash_maxpe
-
-    S["ismc"] = ismc
 
     # ------------------------------------------------------------------
     # nominal-chi2 cut chain, from the stored columns via the same
@@ -1030,7 +1043,6 @@ def _read_genie_evtrec_subprocess(path, timeout=900):
                 % (res.returncode, path, res.stderr.decode(errors="replace")[-2000:]))
         with open(tf.name, "rb") as f:
             return pickle.load(f)
-
 
 def make_maple_evtrec_df(f):
     """GENIE event record (evtrec) table; same schema as make_genie_evtrec_df.
