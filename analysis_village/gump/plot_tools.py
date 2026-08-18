@@ -24,7 +24,9 @@ class PlotObj:
 
 # Colors for plots
 FONTSIZE = 14
-plt.style.use('/exp/sbnd/app/users/nrowe/cafpyana/analysis_village/gump/dune.mplstyle')
+# dune.mplstyle ships next to this module -- resolve it from __file__ rather than
+# from one user's GPVM home, which made this module unimportable anywhere else.
+plt.style.use(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dune.mplstyle'))
 
 def bin_centers(b):
     return 0.5 * (b[:-1] + b[1:])
