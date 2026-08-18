@@ -345,6 +345,14 @@ def fetch_perentry(f, entries):
     maxpe = crtpmt.flashPE[inwin].groupby(level=0).max()
     perentry["flash_maxpe"] = _reindex(maxpe, perentry.index, 0.0)
 
+    # Per-cryostat max in-window flash PE, RAW (no MC PE scale here): the
+    # GUMP flash_maxpe_cryo0/1 schema that loaddf.load_one picks from by the
+    # slice cryostat (cryo0 = East, x < 0; cryo1 = West, x > 0) and scales.
+    maxpe_east = crtpmt.flashPE[inwin & (crtpmt.flashPosition.x < 0)].groupby(level=0).max()
+    maxpe_west = crtpmt.flashPE[inwin & (crtpmt.flashPosition.x > 0)].groupby(level=0).max()
+    perentry["flash_maxpe_cryo0"] = _reindex(maxpe_east, perentry.index, 0.0)
+    perentry["flash_maxpe_cryo1"] = _reindex(maxpe_west, perentry.index, 0.0)
+
     # kCRTNeutrino (CRT top veto)
     CRT_VETO_TMIN = -1.0
     CRT_VETO_TMAX = 1.8
