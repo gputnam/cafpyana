@@ -68,8 +68,9 @@ def make_spine_no_cuts_df(f):
     dir_mu = df.mu.start_dir
     p_p = df.p.p / 1e3
     dir_p = df.p.start_dir
-    tki = transverse_kinematics(p_mu, dir_mu, p_p, dir_p)
-    nu_E_calo = neutrino_energy(p_mu, dir_mu, p_p, dir_p)
+    p_E = mag2d(p_p, PROTON_MASS)  # single proton: energy from the on-shell mass
+    tki = transverse_kinematics(p_mu, dir_mu, p_p, dir_p, p_E)
+    nu_E_calo = neutrino_energy(p_mu, dir_mu, p_p, dir_p, p_E)
     del_p = tki['del_p']
 	
     del_Tp = tki['del_Tp']
@@ -311,8 +312,9 @@ def make_pandora_no_cuts_df(f, do_calo_syst=False):
         nu_E_calo = pd.Series(dtype='float', name='nu_E_calo', index=empty_index)
         has_stub = pd.Series(dtype='float', name='has_stub', index=empty_index)
     else:
-        tki = transverse_kinematics(slcdf.mu.pfp.trk.P.p_muon, slcdf.mu.pfp.trk.dir, slcdf.p.pfp.trk.P.p_proton, slcdf.p.pfp.trk.dir)
-        nu_E_calo = neutrino_energy(slcdf.mu.pfp.trk.P.p_muon, slcdf.mu.pfp.trk.dir, slcdf.p.pfp.trk.P.p_proton, slcdf.p.pfp.trk.dir)
+        p_E_in = mag2d(slcdf.p.pfp.trk.P.p_proton, PROTON_MASS)  # single proton on-shell energy
+        tki = transverse_kinematics(slcdf.mu.pfp.trk.P.p_muon, slcdf.mu.pfp.trk.dir, slcdf.p.pfp.trk.P.p_proton, slcdf.p.pfp.trk.dir, p_E_in)
+        nu_E_calo = neutrino_energy(slcdf.mu.pfp.trk.P.p_muon, slcdf.mu.pfp.trk.dir, slcdf.p.pfp.trk.P.p_proton, slcdf.p.pfp.trk.dir, p_E_in)
         del_p = tki['del_p']
 
         del_Tp = tki['del_Tp']
@@ -791,7 +793,8 @@ def make_gump_nudf(f, is_slc=False):
     muon_dir_series = nudf.mu.genp.div(muon_p_series, axis=0)
     proton_dir_series = nudf.p.genp.div(proton_p_series, axis=0)
 
-    true_tki = transverse_kinematics(muon_p_series, muon_dir_series, proton_p_series, proton_dir_series)
+    true_p_E = mag2d(proton_p_series, PROTON_MASS)  # single true proton on-shell energy
+    true_tki = transverse_kinematics(muon_p_series, muon_dir_series, proton_p_series, proton_dir_series, true_p_E)
     true_del_p = true_tki['del_p']
 
     true_nu_E = nudf.E

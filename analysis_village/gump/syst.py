@@ -33,13 +33,19 @@ def muon_range_momentum(trkrange):
         p = np.sqrt(KE**2 + 2*_MUON_M_MEV*KE)/1000.
     return np.where(np.isfinite(trkrange) & (trkrange >= 0) & (KE >= 0), p, np.nan)
 
-def recompute_kinematics(s, mu_p=None, BE=None):
+def recompute_kinematics(s, mu_p=None, p_p=None, BE=None):
     """Recompute the downstream reco kinematics (nu_E_calo, nu_E_ccqe, del_p,
     del_Tp, del_phi, mu_E, mu_T) on the flat df `s`, in place.
 
     mu_p defaults to sqrt(mu_E^2 - m_mu^2) -- exact, since the reco momentum
     is range-based; BE defaults to kinematics.BE. Pass either to build a
     shifted-kinematics universe from the CV.
+
+    Requires a stored `p_E` (proton energy) column, passed through to the
+    kinematics functions. The proton momentum magnitude comes from the stored
+    `p_p` column when present (the summed value for a multi-proton system);
+    without a `p_p` column the frame is a single proton and p_p = sqrt(p_E^2 -
+    m_p^2). Pass `p_p` to override the stored value.
     """
 
     if BE is None:
@@ -48,12 +54,21 @@ def recompute_kinematics(s, mu_p=None, BE=None):
         mu_p = pd.Series(np.sqrt(np.maximum(s.mu_E.to_numpy()**2 - kinematics.MUON_MASS**2, 0)),
                          index=s.index)
 
+    if "p_E" not in s.columns:
+        raise KeyError("recompute_kinematics requires a stored 'p_E' (proton "
+                       "energy) column.")
+
     mu_dir = pd.DataFrame({"x": s.mu_dir_x, "y": s.mu_dir_y, "z": s.mu_dir_z})
     p_dir = pd.DataFrame({"x": s.p_dir_x, "y": s.p_dir_y, "z": s.p_dir_z})
-    p_p = np.sqrt(np.maximum(s.p_E**2 - kinematics.PROTON_MASS**2, 0))
+    p_E = s.p_E
+    if p_p is None:
+        if "p_p" in s.columns:
+            p_p = s.p_p
+        else:
+            p_p = np.sqrt(np.maximum(s.p_E**2 - kinematics.PROTON_MASS**2, 0))
 
-    tki = kinematics.transverse_kinematics(mu_p, mu_dir, p_p, p_dir, BE=BE)
-    s["nu_E_calo"] = kinematics.neutrino_energy(mu_p, mu_dir, p_p, p_dir, BE=BE)
+    tki = kinematics.transverse_kinematics(mu_p, mu_dir, p_p, p_dir, p_E, BE=BE)
+    s["nu_E_calo"] = kinematics.neutrino_energy(mu_p, mu_dir, p_p, p_dir, p_E, BE=BE)
     # muon-only CCQE energy estimator. Recomputed here (not just carried over as
     # a derived column) so both universes built on this function are consistent:
     # the binding-energy shift moves it via BE, and the track-splitting universe

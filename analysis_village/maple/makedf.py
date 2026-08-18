@@ -48,8 +48,20 @@ Selection option:
   selection="full"   -- keep slices passing the full MAPLE selection
                         (evaluated with the nominal chi2)
 """
+import os as _os
+import sys as _sys
+
 import numpy as np
 import pandas as pd
+
+# GUMP kinematics helpers live in the sibling (non-package) gump directory; put
+# it on sys.path so the GUMP-compatible mu/proton/neutrino columns can be built
+# with the exact same neutrino_energy / transverse_kinematics the loader's
+# variations use.
+_GUMP_DIR = _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))), "gump")
+if _GUMP_DIR not in _sys.path:
+    _sys.path.insert(0, _GUMP_DIR)
+import kinematics as _kinematics
 
 from pyanalib.pandas_helpers import *
 from makedf.util import *
@@ -629,6 +641,38 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
 
     recoE = np.where(has_mu & found_proton, (E_mu + proton_ke_sum) / 1000.0, -999.0)
 
+    # ------------------------------------------------------------------
+    # GUMP-compatible kinematic variables (mu_E, p_E, p_p, p_dir_*, nu_E_calo,
+    # nu_E_ccqe, del_p/Tp/phi), all GeV, read by the shared loaddf/syst
+    # binding-energy and track-split variations. The proton is the summed
+    # 4-vector over every candidate proton: p_dir = direction of sum(p_i*dir_i),
+    # p_p its magnitude, p_E = sum(E_i). p_p is stored (it is not sqrt(p_E^2 -
+    # m_p^2) for >1 proton) and read back by syst.recompute_kinematics.
+    # ------------------------------------------------------------------
+    pc = P[is_prot_cand]
+    g_psum_x = _reindex((pc.p_proton * pc.dir_x).groupby(level=[0, 1]).sum(), S.index, np.nan)
+    g_psum_y = _reindex((pc.p_proton * pc.dir_y).groupby(level=[0, 1]).sum(), S.index, np.nan)
+    g_psum_z = _reindex((pc.p_proton * pc.dir_z).groupby(level=[0, 1]).sum(), S.index, np.nan)
+    g_pE = _reindex(np.sqrt(pc.p_proton**2 + _kinematics.PROTON_MASS**2).groupby(level=[0, 1]).sum(),
+                    S.index, np.nan)
+    g_pp = np.sqrt(g_psum_x**2 + g_psum_y**2 + g_psum_z**2)
+    g_pdir = pd.DataFrame({"x": g_psum_x / g_pp, "y": g_psum_y / g_pp, "z": g_psum_z / g_pp})
+    g_mudir = pd.DataFrame({"x": mu.dir_x, "y": mu.dir_y, "z": mu.dir_z})
+    g_tki = _kinematics.transverse_kinematics(mu.p_muon, g_mudir, g_pp, g_pdir, p_E=g_pE)
+    S["nu_E_calo"] = _kinematics.neutrino_energy(mu.p_muon, g_mudir, g_pp, g_pdir, p_E=g_pE)
+    S["nu_E_ccqe"] = _kinematics.neutrino_energy_ccqe(mu.p_muon, mu.dir_z)
+    S["mu_E"] = g_tki["mu_E"]
+    S["mu_T"] = g_tki["mu_E"] - _kinematics.MUON_MASS
+    S["p_E"] = g_pE
+    S["p_T"] = g_pE - _kinematics.PROTON_MASS
+    S["p_p"] = g_pp
+    S["p_dir_x"] = g_pdir.x
+    S["p_dir_y"] = g_pdir.y
+    S["p_dir_z"] = g_pdir.z
+    S["del_p"] = g_tki["del_p"]
+    S["del_Tp"] = g_tki["del_Tp"]
+    S["del_phi"] = g_tki["del_phi"]
+
     # transverse / angular variables (leading proton)
     p_p_x = pro.p_proton * pro.dir_x
     p_p_y = pro.p_proton * pro.dir_y
@@ -699,9 +743,8 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
     S["p_end_x"] = pro.end_x
     S["p_end_y"] = pro.end_y
     S["p_end_z"] = pro.end_z
-    S["p_dir_x"] = pro.dir_x
-    S["p_dir_y"] = pro.dir_y
-    S["p_dir_z"] = pro.dir_z
+    # p_dir_* is the summed-proton direction; the leading proton is described by
+    # p_len / p_ke / p_end_* / p_track_score.
     S["p_track_score"] = pro.trackScore
     S["mu_chi2_of_lead_prot"] = pro.chi2u_cafpyana
     S["prot_chi2_of_lead_prot"] = pro.chi2p_cafpyana
