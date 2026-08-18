@@ -758,7 +758,10 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
     S["p_end_z"] = pro.end_z
     # p_dir_* is the summed-proton direction; the leading proton is described by
     # p_len / p_ke / p_end_* / p_track_score.
-    S["p_track_score"] = pro.trackScore
+    S["p_dir_x"] = pro.dir_x
+    S["p_dir_y"] = pro.dir_y
+    S["p_dir_z"] = pro.dir_z
+    S["p_trackScore"] = pro.trackScore
     S["mu_chi2_of_lead_prot"] = pro.chi2u_cafpyana
     S["prot_chi2_of_lead_prot"] = pro.chi2p_cafpyana
     S["Transverse_angle"] = transverse_angle
