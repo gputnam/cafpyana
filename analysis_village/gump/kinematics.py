@@ -67,12 +67,16 @@ def neutrino_energy_ccqe(mu_p, mu_costh, BE=BE):
     # the CV frames carry duplicate index labels and that would try to align.
     return num/np.where(den > 0, den, np.nan)
 
-def transverse_kinematics(mu_p, mu_dir, p_p, p_dir, p_E, BE=BE):
+def transverse_kinematics(mu_p, mu_dir, p_p, p_dir, p_E=None, BE=BE):
     # p_p, p_dir, p_E are the proton momentum magnitude, direction and energy.
     # For a single proton p_E = mag2d(p_p, PROTON_MASS); for a summed multi-proton
     # system p_p = |sum_i p_i| and p_E = sum_i E_i.
     mass_Ap = MASS_A - NEUTRON_MASS + BE
     mu_E = mag2d(mu_p, MUON_MASS)
+
+    # if no sep proton energy input, assume 1mu1p
+    if p_E == None:
+        p_E = mag2d(p_p, PROTON_MASS)
 
     mu_p_x = mu_p * mu_dir.x
     mu_p_y = mu_p * mu_dir.y

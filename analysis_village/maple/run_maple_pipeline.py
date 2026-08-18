@@ -141,6 +141,8 @@ def main():
         sep_g4_univ=is_mc,  # Enable multisim loops only for MC configurations
         xsec_spline=is_mc,
         pot_spline=is_mc,
+        match_Enu=is_mc,
+        load_truth=is_mc,
         spline_dir=args.dvsplines,
         include_syst=is_mc,
         reweight_aFF=is_mc,
