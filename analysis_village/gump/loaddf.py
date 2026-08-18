@@ -292,7 +292,7 @@ def _evtrec_kinematics(er, mcdf):
     Returns (frame, stats) where stats carries the diagnostics load_one prints.
     """
     nan = pd.DataFrame(np.nan, index=mcdf.index, columns=GENIE_COLS)
-    stats = {"n_mcnu": len(mcdf), "n_resolved": 0, "vtx_ok": np.nan}
+    stats = {"n_mcnu": len(mcdf), "n_resolved": 0, "vtx_ok": np.nan, "n_degen": 0}
     if er is None or not len(er) or not len(mcdf):
         return nan, stats
 
@@ -315,6 +315,22 @@ def _evtrec_kinematics(er, mcdf):
         zh = pnu / np.linalg.norm(pnu, axis=1, keepdims=True)
         pt = plep - np.sum(plep*zh, axis=1, keepdims=True)*zh
         yh = pt / np.linalg.norm(pt, axis=1, keepdims=True)
+
+    # A lepton collinear with the neutrino defines no transverse direction: |pt| is then
+    # pure round-off and pt/|pt| is noise, giving a non-orthonormal frame and inflated
+    # momenta. The azimuth is arbitrary for such an event, so fix it by convention --
+    # detector y, made transverse to the neutrino -- which keeps the frame orthonormal,
+    # so magnitudes and relative angles stay right and the lepton lands at (0, ~0, |p|).
+    # Safe because the beam is far from detector y (|z_hat.y_det| < 0.01). The threshold
+    # is uncritical: affected events sit at |pt|/|p| <= 4e-16, the next one up at 7e-4.
+    # `~( > )` also catches the exactly-collinear rows, where yh is already NaN.
+    degen = ~(np.linalg.norm(pt, axis=1) > 1e-9*np.linalg.norm(plep, axis=1))
+    if degen.any():
+        yfb = np.zeros_like(zh)
+        yfb[:, 1] = 1.
+        yfb -= np.sum(yfb*zh, axis=1, keepdims=True)*zh
+        yfb /= np.linalg.norm(yfb, axis=1, keepdims=True)
+        yh = np.where(degen[:, None], yfb, yh)
     xh = np.cross(yh, zh)
 
     def rot(d):
@@ -377,6 +393,9 @@ def _evtrec_kinematics(er, mcdf):
         v = rot(parts[name])
         for i, c in enumerate("xyz"):
             out["genie_prefsi_%s_p%s" % (name, c)] = v[:, i]
+
+    # events whose azimuth came from the detector-y fallback rather than the lepton
+    stats["n_degen"] = int(degen.sum())
 
     # --- map onto the mcnu index via the evtrec link ----------------------------
     link = _evtrec_link(mcdf).to_numpy(float)
@@ -814,7 +833,8 @@ def load_one(fname, idf,
             frac = gstats["n_resolved"] / max(gstats["n_mcnu"], 1)
             print(f"[{os.path.basename(fname)} idf={idf}] evtrec: "
                   f"{gstats['n_resolved']}/{gstats['n_mcnu']} neutrinos resolved "
-                  f"({100*frac:.1f}%), vertex check {gstats['vtx_ok']:.5f}")
+                  f"({100*frac:.1f}%), vertex check {gstats['vtx_ok']:.5f}, "
+                  f"{gstats['n_degen']} collinear-lepton frame(s)")
             if gstats["n_resolved"] > 0 and not (gstats["vtx_ok"] > 0.999):
                 print(f"WARNING: {os.path.basename(fname)} idf={idf}: the GENIE event "
                       f"record link does not reproduce the mcnu vertex "
