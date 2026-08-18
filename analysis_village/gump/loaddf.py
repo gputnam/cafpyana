@@ -703,6 +703,8 @@ def _apply_variations(df, shift_binding_E, split_tracks,
         df = syst.shift_binding_energy(df, BE_SHIFT, fraction=f, scale=_weight_col(df))
     return df
 
+_DETECTOR_RUN = {"SBND": 1, "ICARUS Run2": 2, "ICARUS Run4": 4}
+
 def load_one(fname, idf,
     detector=None, # One of SBND, ICARUS, ICARUS Run4
     include_syst=True, nuniv=100, spline=False, xsec_univ=False, xsec_spline=False,# systematic handling
@@ -775,9 +777,13 @@ def load_one(fname, idf,
         match_ind = list(match.columns)
 
         # Add in other meta-data to match.
+        # Newer makedf productions stamp detector/Run onto the mcnu frame
+        # (makedf.py:769-770); the sbn-rewgted-13/-14 files predate that, so fall
+        # back to the detector this load was told to use. gc._fv_cut only consults
+        # Run when the label is the ambiguous "ICARUS", which the fallback never is.
         vtx = pd.DataFrame({
-          "detector": mcdf.detector,
-          "Run": mcdf.Run,
+          "detector": mcdf.detector if "detector" in mcdf.columns else detector,
+          "Run": mcdf.Run if "Run" in mcdf.columns else _DETECTOR_RUN[detector],
           "x": mcdf.pos_x,
           "y": mcdf.pos_y,
           "z": mcdf.pos_z,
