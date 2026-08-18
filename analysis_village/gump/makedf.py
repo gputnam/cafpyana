@@ -1,4 +1,4 @@
-from analysis_village.maple.makedf import * 
+from analysis_village.maple.makedf import *
 
 def make_gump_evt_df(f, selection="none", do_calo_syst=True):
     S = make_maple_evt_df(f, selection=selection, do_calo_syst=do_calo_syst)
