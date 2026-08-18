@@ -78,7 +78,6 @@ CLS_1MU1P, CLS_1MUNP, CLS_OTHER, CLS_COSMIC, CLS_INVALID = 0, 1, 2, 3, 4
 CALO_VARIATIONS = ["cv", "alpha_p", "alpha_m", "beta_p", "beta_m", "R_p", "R_m", "dedxbias"]
 SCALE_SMEAR_VARIATIONS = ["lo", "hi", "2lo", "2hi", "smear5", "smear13", "sqsmear15"]
 
-
 def _flatcols(df):
     """Flatten a multiindex-column dataframe to underscore-joined names."""
     df = df.copy()
@@ -326,6 +325,10 @@ def fetch_perentry(f, entries):
     # ------------------------------------------------------------------
     crtpmt = loadbranches(f["recTree"], crtpmtbranches).rec.crtpmt_matches
 
+    CRYO_LIGHT_TMIN = -0.6
+    CRYO_LIGHT_TMAX = 1.8
+    CRYO_LIGHT_PE_THRESHOLD = 3000. / 0.341  # valid for Run 4
+
     # cryo_selection_from_light
     inwin = (crtpmt.flashGateTime > CRYO_LIGHT_TMIN) & (crtpmt.flashGateTime < CRYO_LIGHT_TMAX)
     haspe = ~(crtpmt.flashPE < CRYO_LIGHT_PE_THRESHOLD)
@@ -342,13 +345,11 @@ def fetch_perentry(f, entries):
     maxpe = crtpmt.flashPE[inwin].groupby(level=0).max()
     perentry["flash_maxpe"] = _reindex(maxpe, perentry.index, 0.0)
 
-    # bar_flash: first in-window match on each side (MC/data window differs)
-    btmin, btmax = (BAR_FLASH_TMIN_MC, BAR_FLASH_TMAX_MC) if ismc else (BAR_FLASH_TMIN_DATA, BAR_FLASH_TMAX_DATA)
-    barwin = (crtpmt.flashGateTime > btmin) & (crtpmt.flashGateTime < btmax)
-    for side, cond in [("west", crtpmt.flashPosition.x > 0), ("east", crtpmt.flashPosition.x < 0)]:
-        first = crtpmt[barwin & cond].groupby(level=0).first()
-        perentry["bar_z_" + side] = first.flashPosition.z.reindex(perentry.index)
-        perentry["bar_x_" + side] = first.flashPosition.x.reindex(perentry.index)
+    # kCRTNeutrino (CRT top veto)
+    CRT_VETO_TMIN = -1.0
+    CRT_VETO_TMAX = 1.8
+    CRT_VETO_PLANE_MIN = 29  # exclusive
+    CRT_VETO_PLANE_MAX = 50  # exclusive
 
     # kCRTNeutrino: top-CRT veto
     crt = make_crthitdf(f)
@@ -360,6 +361,7 @@ def fetch_perentry(f, entries):
 
 def fetch_metadata(f):
     det = loadbranches(f["recTree"], ["rec.hdr.det"]).rec.hdr.det
+
     if det.empty:
         return pd.DataFrame()
     if 1 == det.unique():
@@ -380,7 +382,6 @@ def fetch_info(f):
     # slice frame
     # ------------------------------------------------------------------
     slcdf = make_slcdf(f)
-
     S = pd.DataFrame({
         "slc_vtx_x": slcdf.slc.vertex.x,
         "slc_vtx_y": slcdf.slc.vertex.y,
@@ -446,22 +447,17 @@ def fetch_info(f):
     P["contained10"] = gc.endfv_cut(P)
     P["ke_pion"] = kinetic_energy(PION_MASS, np.sqrt((P.dir_x * P.p_pion)**2 + (P.dir_y * P.p_pion)**2 + (P.dir_z * P.p_pion)**2))
     P["ke_proton"] = kinetic_energy(PROTON_MASS, np.sqrt((P.dir_x * P.p_proton)**2 + (P.dir_y * P.p_proton)**2 + (P.dir_z * P.p_proton)**2))
-    
+   
     if "ICARUS" in DETECTOR:
         perentry = fetch_perentry(f, S.index.get_level_values(0))
     else:
         perentry = pd.DataFrame(index=pd.Index(S.index.get_level_values(0).unique(), name="entry"))
         perentry["cryo_light"] = -1
         perentry["flash_maxpe"] = np.nan
-        for side in ("west", "east"):
-            perentry["bar_z_" + side] = np.nan
-            perentry["bar_x_" + side] = np.nan
         perentry["crthit"] = False
 
-    S = S.join(perentry[["cryo_light", "flash_maxpe", "bar_z_west", "bar_x_west",
-                         "bar_z_east", "bar_x_east", "crthit"]])
+    S = S.join(perentry[["cryo_light", "flash_maxpe", "crthit"]])
     return S, P, DETECTOR, RUN, ismc
-
 
 def PID_calcs(f, P, do_calo_syst=True):
     # ------------------------------------------------------------------
@@ -529,48 +525,7 @@ def PID_calcs(f, P, do_calo_syst=True):
 
     return P
 
-# =====================================================================
-# Main evt builder
-# =====================================================================
-def make_maple_evt_df(f, selection="none", do_calo_syst=True):
-    S, P, DETECTOR, RUN, ismc = fetch_info(f)
-    # ------------------------------------------------------------------
-    # PID-free cut chain
-    # ------------------------------------------------------------------
-    S["cut_sanity"] = S.slc_vtx_x.notna() & S.slc_vtx_y.notna() & S.slc_vtx_z.notna() & S.charge_center_z.notna()
-    S["cut_fv"] = gc.slcfv_cut(S)
-    if DETECTOR == "ICARUS":
-        S["cut_crthit"] = ~S.crthit
-        slice_cryo = np.select([S.slc_vtx_x < 0, S.slc_vtx_x > 0], [0, 1], default=-1)
-        S["slice_cryo"] = slice_cryo
-        S["cut_cryo"] = (S.cryo_light != -1) & ((S.cryo_light == 2) | (slice_cryo == S.cryo_light))
-    else:
-        # SBND: CRT veto and cryo-light cuts pass trivially (see above)
-        S["cut_crthit"] = True
-        S["slice_cryo"] = -1
-        S["cut_cryo"] = True
-
-    valid_c = P.start_x.notna() & P.end_x.notna() & P.len.notna()
-    bad_contain = valid_c & ((P.end_x * P.slc_vtx_x < 0) | ~P.contained10)
-    any_bad = bad_contain.groupby(level=[0, 1]).any()
-    S["cut_contained"] = ~_reindex(any_bad, S.index, False).astype(bool)
-
-    # SBND cathode-crossing veto (GUMP cathode_cut, extended to all tracks in
-    # the slice); always True on ICARUS so the cut chain is unchanged there
-    if DETECTOR == "SBND":
-        cross = gc.maple_sbnd_cathode_crossing(
-            P.slc_vtx_x[valid_c], P.slc_vtx_y[valid_c], P.slc_vtx_z[valid_c],
-            P.end_x[valid_c], P.end_y[valid_c], P.end_z[valid_c])
-        any_cross = pd.Series(cross, index=P.index[valid_c]).groupby(level=[0, 1]).any()
-        S["cut_cathode"] = ~_reindex(any_cross, S.index, False).astype(bool)
-    else:
-        S["cut_cathode"] = True
-
-    S["maple_presel"] = S.cut_sanity & S.cut_fv & S.cut_crthit & S.cut_cryo & \
-        S.cut_contained & S.cut_cathode
-
-    P = PID_calcs(f, P, do_calo_syst=do_calo_syst)
-
+def fetch_candidates(S, P, do_calo_syst):
     # ------------------------------------------------------------------
     # chi2-free candidates; chi2 cuts are applied post-hoc (maple_sel)
     # ------------------------------------------------------------------
@@ -646,42 +601,30 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
     recoE = np.where(has_mu & found_proton, E_mu + proton_ke_sum, -999.0)
 
     # transverse / angular variables (leading proton)
-    p_p_x = pro.p_proton * pro.dir_x
-    p_p_y = pro.p_proton * pro.dir_y
-    p_p_z = pro.p_proton * pro.dir_z
-    norm_mu_T = np.sqrt(p_mu_x**2 + p_mu_y**2)
-    norm_p_T = np.sqrt(p_p_x**2 + p_p_y**2)
-    transverse_angle = (p_mu_x * p_p_x + p_mu_y * p_p_y) / (norm_mu_T * norm_p_T)
-    p_p_mag = np.sqrt(p_p_x**2 + p_p_y**2 + p_p_z**2)
-    t3d_angle = (p_mu_x * p_p_x + p_mu_y * p_p_y + p_mu_z * p_p_z) / (p_mu_mag * p_p_mag)
-    deltaPt = np.sqrt((p_mu_x + p_p_x)**2 + (p_mu_y + p_p_y)**2)
+    p_mu = mu.p_muon
+    dir_mu = pd.DataFrame({"x":mu.dir_x, "y":mu.dir_y, "z":mu.dir_z})
 
-    # ------------------------------------------------------------------
-    # Reco_class (classification_type_debug port, via mcnu-level classification)
-    # ------------------------------------------------------------------
-    clsdf = maple_truth_classdf(f, det=DETECTOR, run=RUN)
-    cls_lookup = clsdf.maple_class if len(clsdf) else pd.Series(dtype=float)
-    key = pd.MultiIndex.from_arrays([S.index.get_level_values(0), S.tmatch_idx.fillna(-1).astype(int)])
-    nu_class = pd.Series(cls_lookup.reindex(key).values, index=S.index)
+    p_p = pro.p_proton
+    dir_p = pd.DataFrame({"x":pro.dir_x, "y":pro.dir_y, "z":pro.dir_z})
 
-    S["Reco_class"] = np.select(
-        [S.tmatch_idx < 0,
-         nu_class == CLS_1MU1P,
-         nu_class == CLS_1MUNP,
-         ~gc.trueslcfv_cut(S),
-         np.abs(S.true_pdg) == 12,
-         S.true_iscc == 0,
-         (S.true_iscc == 1) & (S.true_genie_mode == 0),
-         (S.true_iscc == 1) & (S.true_genie_mode == 1),
-         (S.true_iscc == 1) & (S.true_genie_mode == 2),
-         (S.true_iscc == 1) & ((S.true_genie_mode == 3) | (S.true_genie_mode == 4)),
-         (S.true_iscc == 1) & (S.true_genie_mode == 10)],
-        [3, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11], default=12)
+    valid = np.isfinite(p_mu) & np.isfinite(p_p) & (p_mu > 0) & (p_p > 0)
+    cosang = np.full(len(S), np.nan, dtype=float)
+    dot = np.einsum("ij,ij->i", dir_mu, dir_p)
+    cosang[valid] = dot[valid] / (p_mu[valid] * p_p[valid])
+    cosang = np.clip(cosang, -1.0, 1.0)
+    ang = np.degrees(np.arccos(cosang))
+    S["mu_p_opening_angle_deg"] = ang
 
-    # ------------------------------------------------------------------
-    # assemble sBruce columns
-    # ------------------------------------------------------------------
-    S["recoE"] = recoE
+    tki = transverse_kinematics(p_mu, dir_mu, p_p, dir_p)
+
+    del_p = tki['del_p']
+    del_Tp = tki['del_Tp']
+    del_phi = tki['del_phi']
+    del_alpha = tki['del_alpha']
+    mu_E = tki['mu_E']
+    p_E = tki['p_E']
+
+    S["nu_E_calo"] = recoE
     S["mu_len"] = mu.len
     S["mu_dist_start"] = mu.dist_start
     S["mu_prim_pfp"] = mu.prim_pfp
@@ -710,17 +653,85 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
     S["p_trackScore"] = pro.trackScore
     S["mu_chi2_of_lead_prot"] = pro.chi2u_cafpyana
     S["prot_chi2_of_lead_prot"] = pro.chi2p_cafpyana
-    S["Transverse_angle"] = transverse_angle
-    S["T3D_angle_mup"] = t3d_angle
-    S["deltaPt"] = deltaPt
-    S["Transverse_mom_reco_mu"] = norm_mu_T
-    S["Transverse_mom_reco_pro"] = norm_p_T
-    S["FlashPE"] = S.flash_maxpe
+    S["del_p"] = del_p
+    S["del_Tp"] = del_Tp
+    S["del_phi"] = del_phi
+    S["del_alpha"] = del_alpha
+    S["mu_E"] = mu_E
+    S["p_E"] = p_E
+
+    return S
+
+# =====================================================================
+# Main evt builder
+# =====================================================================
+def make_maple_evt_df(f, selection="none", do_calo_syst=True):
+    S, P, DETECTOR, RUN, ismc = fetch_info(f)
 
     # ------------------------------------------------------------------
-    # nominal-chi2 cut chain, from the stored columns via the same
-    # function the analysis re-applies per calorimetric variation
+    # PID-free cut chain
     # ------------------------------------------------------------------
+    S["cut_sanity"] = S.slc_vtx_x.notna() & S.slc_vtx_y.notna() & S.slc_vtx_z.notna() & S.charge_center_z.notna()
+    S["cut_fv"] = gc.slcfv_cut(S)
+    if DETECTOR == "ICARUS":
+        S["cut_crthit"] = ~S.crthit
+        slice_cryo = np.select([S.slc_vtx_x < 0, S.slc_vtx_x > 0], [0, 1], default=-1)
+        S["slice_cryo"] = slice_cryo
+        S["cut_cryo"] = (S.cryo_light != -1) & ((S.cryo_light == 2) | (slice_cryo == S.cryo_light))
+    else:
+        # SBND: CRT veto and cryo-light cuts pass trivially (see above)
+        S["cut_crthit"] = True
+        S["slice_cryo"] = -1
+        S["cut_cryo"] = True
+
+    valid_c = P.start_x.notna() & P.end_x.notna() & P.len.notna()
+    bad_contain = valid_c & ((P.end_x * P.slc_vtx_x < 0) | ~P.contained10)
+    any_bad = bad_contain.groupby(level=[0, 1]).any()
+    S["cut_contained"] = ~_reindex(any_bad, S.index, False).astype(bool)
+
+    # SBND cathode-crossing veto (GUMP cathode_cut, extended to all tracks in
+    # the slice); always True on ICARUS so the cut chain is unchanged there
+    if DETECTOR == "SBND":
+        cross = gc.maple_sbnd_cathode_crossing(
+            P.slc_vtx_x[valid_c], P.slc_vtx_y[valid_c], P.slc_vtx_z[valid_c],
+            P.end_x[valid_c], P.end_y[valid_c], P.end_z[valid_c])
+        any_cross = pd.Series(cross, index=P.index[valid_c]).groupby(level=[0, 1]).any()
+        S["cut_cathode"] = ~_reindex(any_cross, S.index, False).astype(bool)
+    else:
+        S["cut_cathode"] = True
+
+    S["maple_presel"] = S.cut_sanity & S.cut_fv & S.cut_crthit & S.cut_cryo & \
+        S.cut_contained & S.cut_cathode
+
+    P = PID_calcs(f, P, do_calo_syst=do_calo_syst)
+
+    S = fetch_candidates(S, P, do_calo_syst)
+
+    # ------------------------------------------------------------------
+    # Reco_class (classification_type_debug port, via mcnu-level classification)
+    # ------------------------------------------------------------------
+    clsdf = maple_truth_classdf(f, det=DETECTOR, run=RUN)
+    cls_lookup = clsdf.maple_class if len(clsdf) else pd.Series(dtype=float)
+    key = pd.MultiIndex.from_arrays([S.index.get_level_values(0), S.tmatch_idx.fillna(-1).astype(int)])
+    nu_class = pd.Series(cls_lookup.reindex(key).values, index=S.index)
+
+    S["Reco_class"] = np.select(
+        [S.tmatch_idx < 0,
+         nu_class == CLS_1MU1P,
+         nu_class == CLS_1MUNP,
+         ~gc.trueslcfv_cut(S),
+         np.abs(S.true_pdg) == 12,
+         S.true_iscc == 0,
+         (S.true_iscc == 1) & (S.true_genie_mode == 0),
+         (S.true_iscc == 1) & (S.true_genie_mode == 1),
+         (S.true_iscc == 1) & (S.true_genie_mode == 2),
+         (S.true_iscc == 1) & ((S.true_genie_mode == 3) | (S.true_genie_mode == 4)),
+         (S.true_iscc == 1) & (S.true_genie_mode == 10)],
+        [3, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11], default=12)
+
+    # ------------------------------------------------------------------
+    # assemble sBruce columns
+    S["FlashPE"] = S.flash_maxpe
     chain = maple_selection(S)
     S["cut_muon"] = chain.cut_muon
     S["cut_protons"] = chain.cut_protons
@@ -989,16 +1000,17 @@ def make_maple_wgtdf(f):
 
 
 def make_maple_rewgtdf(f):
+
     """Systematic-weight dataframe with the GUMP CV reweight knob set.
 
     Same weight request as gump make_gump_nurewgtdf, so the wgt table is
     column-compatible with the GUMP sbn-rewgted CV productions.
     """
     syst = gump_genie_reknob_systematics + g4_weights
-    return make_mcnudf(f, include_weights=True, slim=False,
+    ret = make_mcnudf(f, include_weights=True, slim=False,
                        genie_systematics=list(set(syst)))
 
-
+    return ret
 # =====================================================================
 # GENIE event record (evtrec) builder
 # =====================================================================
@@ -1061,4 +1073,5 @@ def make_maple_evtrec_df(f):
     if path is None:
         path = f._file.file_path
     d = _read_genie_evtrec_subprocess(path)
-    return _build_genie_evtrec_df(d)
+    ret = _build_genie_evtrec_df(d)
+    return ret

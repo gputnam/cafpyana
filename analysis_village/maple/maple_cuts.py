@@ -40,7 +40,7 @@ def get_base_muon_mask(df, cuts=CUTS_BY_DETECTOR["SBND"], level="slc"):
         print(c)
 
     base_mask = (
-            df[pref+"start_x"].notna()
+            df[pref+"end_x"].notna()
             & df[pref+"len"].notna()
             & (df[pref+"trackScore"] >= cuts["musel_track_score_min"])
             & (df[pref+"dist_start"] <= 10.0)

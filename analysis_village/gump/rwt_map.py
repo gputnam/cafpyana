@@ -22,6 +22,10 @@ import loaddf
 import syst 
 import gump_cuts as gc
 
+workspace_root = os.getcwd()
+sys.path.insert(0, workspace_root)
+import maple_sel as ms
+
 class FileHistogramFunction:
     def __init__(self, filename):
         with open(filename, 'r') as f:
@@ -161,7 +165,10 @@ def remake_detvar_maps(detector, DF_DIR, selection=gc.all_cuts, outdir="rwt_outp
 
     cv_df['selected'] = selection(cv_df)
     bind_df['selected'] = selection(bind_df)
-
+    print("cv_df cols")
+    for c in cv_df.columns:
+        print(c)
+    print("cv_df cols end")
     cv_hist = np.histogram2d(*cv_df.loc[cv_df['selected'], ['nu_E_calo', 'del_p']].to_numpy().T, bins=b, weights=cv_df.loc[cv_df['selected'], 'glob_scale'].to_numpy())[0]
     bind_hist = np.histogram2d(*bind_df.loc[bind_df['selected'], ['nu_E_calo', 'del_p']].to_numpy().T, bins=b, weights=bind_df.loc[bind_df['selected'], 'glob_scale'].to_numpy())[0]
     save_histogram(f"{outdir}/{detector.replace(' ','')}_BIND.txt", bind_hist/cv_hist, b[0], b[1])
@@ -186,7 +193,6 @@ def remake_detvar_maps(detector, DF_DIR, selection=gc.all_cuts, outdir="rwt_outp
     df = detvars[0]
     detvars.extend([syst.v_chi2smear(df), syst.v_chi2hi(df), syst.v_chi2alpha(df), syst.v_chi2beta(df), syst.v_chi2R(df), syst.v_flashscale(df, 1), syst.v_flashscale(df, -1)])
     DETVAR_NAMES.extend(["Smeared dE/dx", "Gain Hi", "EMB Alpha", "EMB Beta", "EMB R", "TrigEffPls", "TrigEffMin"]) 
-
 
     hists = []
 
@@ -234,7 +240,9 @@ def resolve_function(func_string):
 
     # Handle common alias 'gc' automatically
     if module_name == "gc":
-        module_name = "analysis_village.gump.gump_cuts"  # Or your actual module import path
+        module_name = "analysis_village.gump.gump_cuts"
+    elif module_name == "ms":
+        module_name = "analysis_village.maple.maple_sel"
 
     try:
         mod = importlib.import_module(module_name)
@@ -243,7 +251,6 @@ def resolve_function(func_string):
         raise argparse.ArgumentTypeError(f"Could not import '{func_string}': {e}")
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(description="Run reweighting maps with selection cuts.")
     parser.add_argument(
         "-s", "--selection",
