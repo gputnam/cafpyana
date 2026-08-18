@@ -21,7 +21,7 @@
 
 set -e
 
-OUTDIR=/exp/sbnd/data/users/nrowe/MAPLE/sbn-rewgted-15
+OUTDIR=/exp/sbnd/data/users/gputnam/MAPLE/sbn-rewgted-14
 FILELISTS=/exp/sbnd/app/users/gputnam/osc2/cafpyana/analysis_village/gump/file-lists-reCAF
 CFGDIR=analysis_village/maple/configs
 

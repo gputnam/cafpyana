@@ -1093,7 +1093,7 @@ def load_one(fname, idf,
             else:
                 col_str = s
 
-            # allow for f 
+            # allow for f
             if detector.replace(' ', '') in fs[0]:
                 s_df = rw.apply_map(mrg, fs, s)
                 mrg[col_str] = s_df
