@@ -504,6 +504,14 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
         maxpe = crtpmt.flashPE[inwin].groupby(level=0).max()
         perentry["flash_maxpe"] = _reindex(maxpe, perentry.index, 0.0)
 
+        # Per-cryostat max in-window flash PE, RAW (no MC PE scale here): the
+        # GUMP flash_maxpe_cryo0/1 schema that loaddf.load_one picks from by the
+        # slice cryostat (cryo0 = East, x < 0; cryo1 = West, x > 0) and scales.
+        maxpe_east = crtpmt.flashPE[inwin & (crtpmt.flashPosition.x < 0)].groupby(level=0).max()
+        maxpe_west = crtpmt.flashPE[inwin & (crtpmt.flashPosition.x > 0)].groupby(level=0).max()
+        perentry["flash_maxpe_cryo0"] = _reindex(maxpe_east, perentry.index, 0.0)
+        perentry["flash_maxpe_cryo1"] = _reindex(maxpe_west, perentry.index, 0.0)
+
         # bar_flash: first in-window match on each side (MC/data window differs)
         btmin, btmax = (BAR_FLASH_TMIN_MC, BAR_FLASH_TMAX_MC) if ismc else (BAR_FLASH_TMIN_DATA, BAR_FLASH_TMAX_DATA)
         barwin = (crtpmt.flashGateTime > btmin) & (crtpmt.flashGateTime < btmax)
@@ -524,12 +532,17 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
         perentry = pd.DataFrame(index=pd.Index(entries.unique(), name="entry"))
         perentry["cryo_light"] = -1
         perentry["flash_maxpe"] = np.nan
+        # SBND is single-cryostat; loaddf scales flash_maxpe directly and never
+        # reads these, but keep the columns so the evt schema matches ICARUS.
+        perentry["flash_maxpe_cryo0"] = np.nan
+        perentry["flash_maxpe_cryo1"] = np.nan
         for side in ("west", "east"):
             perentry["bar_z_" + side] = np.nan
             perentry["bar_x_" + side] = np.nan
         perentry["crthit"] = False
 
-    S = S.join(perentry[["cryo_light", "flash_maxpe", "bar_z_west", "bar_x_west",
+    S = S.join(perentry[["cryo_light", "flash_maxpe", "flash_maxpe_cryo0",
+                         "flash_maxpe_cryo1", "bar_z_west", "bar_x_west",
                          "bar_z_east", "bar_x_east", "crthit"]])
 
     # ------------------------------------------------------------------
