@@ -82,9 +82,9 @@ def true_fv_cut(df):
     vtx = pd.DataFrame({
                            'detector': df.detector,
                            'Run': df.Run,
-                           'x': df.position.x,
-                           'y': df.position.y,
-                           'z': df.position.z}, index=df.index)
+                           'x': df.position_x,
+                           'y': df.position_y,
+                           'z': df.position_z}, index=df.index)
     return vtxfv_cut(vtx)
 
 def slcfv_cut(df):
@@ -151,6 +151,21 @@ def trkendfv_cut(df):
                            'z': df.pfp.trk.end.z}, index=df.index)
     return trkfv_cut(vtx)
 
+def endfv_cut(df, det=None, run=None):
+    if det:
+        df['detector'] = det
+
+    if run:
+        df['Run'] = run
+
+    vtx = pd.DataFrame({
+                           'detector': df.detector,
+                           'Run': df.Run,
+                           'x': df.end_x,
+                           'y': df.end_y,
+                           'z': df.end_z}, index=df.index)
+    return trkfv_cut(vtx)
+
 def mufv_cut(df):
     vtx = pd.DataFrame({
                            'detector': df.detector,
@@ -168,6 +183,25 @@ def pfv_cut(df):
                            'y': df.p_end_y,
                            'z': df.p_end_z}, index=df.index)
     return trkfv_cut(vtx)
+
+def trueslcfv_cut(df):
+    vtx = pd.DataFrame({
+                           'detector': df.detector,
+                           'Run': df.Run,
+                           'x': df.true_vtx_x,
+                           'y': df.true_vtx_y,
+                           'z': df.true_vtx_z}, index=df.index)
+    return _fv_cut(vtx)
+
+def posfv_cut(df):
+    vtx = pd.DataFrame({
+                           'detector': df.detector,
+                           'Run': df.Run,
+                           'x': df.pos_x,
+                           'y': df.pos_y,
+                           'z': df.pos_z}, index=df.index)
+    return _fv_cut(vtx)
+
 
 def _fv_cut(df, inx=10, iny=10, inzfront=10, inzback=50):
 
@@ -391,6 +425,26 @@ def breakdown_top(var, df):
            var[(df.is_sig != True) & (df.is_other_numucc != True) & (df.is_nc != True) & (df.is_fv != False) & (df.is_cosmic != True)]
            ]
     return ret
+
+
+# SBND cathode prism for the cathode-crossing veto (GUMP gump_cuts.cathode_cut)
+SBND_CATHODE_PRISM_MIN = (-5.0, -200.0, 0.0)
+SBND_CATHODE_PRISM_MAX = (5.0, 200.0, 500.0)
+
+def maple_sbnd_cathode_crossing(vtx_x, vtx_y, vtx_z, end_x, end_y, end_z):
+    """Per-track SBND cathode-crossing flag (GUMP cathode_cut semantics).
+
+    True where the segment (slice vertex -> track end) intersects the cathode
+    prism x in (-5, 5). NaN coordinates yield False.
+    """
+    from analysis_village.gump.gump_cuts import intersects_prism_vectorized
+    p1 = np.stack([np.asarray(vtx_x, dtype=float),
+                   np.asarray(vtx_y, dtype=float),
+                   np.asarray(vtx_z, dtype=float)], axis=1)
+    p2 = np.stack([np.asarray(end_x, dtype=float),
+                   np.asarray(end_y, dtype=float),
+                   np.asarray(end_z, dtype=float)], axis=1)
+    return intersects_prism_vectorized(p1, p2, SBND_CATHODE_PRISM_MIN, SBND_CATHODE_PRISM_MAX)
 
 def cathode_cut(df):
     if df.detector.iloc[0] == "SBND":

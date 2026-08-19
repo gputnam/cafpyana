@@ -185,12 +185,12 @@ g4_syst = [
 ]
 
 truthvars = {
+  "baseline": ("baseline", ""),
   "true_E": ("nu_E", ""),
   "true_nu_pdg": ("pdg", ""),
   "true_issig": ("is_sig", ""),
   "true_isothernumucc": ("is_other_numucc", ""),
   "true_isfv": ("is_fv", ""),
-  "true_isnc": ("is_nc", ""),
   "genie_mode": ("genie_mode", ""),
   "true_vtx_x": ("pos_x", ""),
   "true_vtx_y": ("pos_y", ""),
@@ -455,6 +455,8 @@ def _evtrec_kinematics(er, mcdf):
 detvar_rwt_files = [
   'SBND_WMXThetaXW.txt',
   'SBND_WMYZ.txt',
+  'ICARUSRun2_WMYZ.txt',
+  'ICARUSRun4_WMYZ.txt',
   'SBND_DENT.txt',
   ['SBND_0xSCE.txt', 'SBND_2xSCE.txt'],
   'ICARUSRun2_SCE.txt',
@@ -493,6 +495,8 @@ detvar_rwt_files = [
 detvar_rwt_lbls = [
   'WireMod_SBND_multisigma_WMXThetaXW',
   'WireMod_SBND_multisigma_WMYZ',
+  'WireMod_ICARUSRun2_multisigma_WMYZ',
+  'WireMod_ICARUSRun4_multisigma_WMYZ',
   'DENT_SBND_multisigma_DENT',
   'SCE_SBND_multisigma_SCE',
   'SCE_ICARUSRun2_multisigma_SCE',
@@ -542,7 +546,7 @@ std_drops = ['is_clear_cosmic', 'crlongtrkdiry', 'p_len', 'has_stub',
              'mu_chi2smear5_of_prot_cand', 'tmatch_pur', 'tmatch_eff', 
              'true_baseline', 'true_nu_pdg_x', 'true_nu_pdg_y',
              'true_nmu_27MeV', 'true_np_20MeV', 'true_np_50MeV', 
-             'true_npi_30MeV', 'is_cosmic', 'flash_sumpe', 'true_mucand_p', 
+             'true_npi_30MeV', 'flash_sumpe', 'true_mucand_p', 
              'true_pcand_p', 'p_true_p', 'true_mu_end_x', 
              'true_p_end_x', 'true_mu_end_y', 'true_p_end_y', 'true_mu_end_z', 
              'true_p_end_z','crthit', 'true_nu_E', 'p_true_pdg', 'mu_true_pdg', 
@@ -742,6 +746,7 @@ def load_one(fname, idf,
             return _apply_variations(df, shift_binding_E, split_tracks, shift_fraction, split_fraction), match, pot
 
     df =  pd.read_hdf(fname, evtname % idf)
+
     hdr = pd.read_hdf(fname, hdrname % idf)
     ismc = hdr.ismc.iloc[0] == 1
 
@@ -773,6 +778,16 @@ def load_one(fname, idf,
     # if needed, include neutrino energy in matching information
     if match_Enu:
         mcdf = pd.read_hdf(fname, mcname % idf)
+        mcdf["detector"] = detector
+        if "Run2" in detector.replace(" ", ""):
+            mcdf["Run"] = 2
+        elif "Run4" in detector.replace(" ", ""):
+            mcdf["Run"] = 4
+        elif "SBND" in detector.replace(" ", ""):
+            mcdf["Run"] = 1
+        else:
+            print("Run ambiguous!")
+
         match = match.merge(mcdf.nu_E.groupby(level=[0,1]).max().rename("nu_E0"), on=["__ntuple", "entry"], how="left")
         match_ind = list(match.columns)
 
@@ -1145,7 +1160,6 @@ def load_one(fname, idf,
             elif not col_str in mrg.columns:
             # Don't overwrite existing columns with defaults (eg BIND)
                 mrg[col_str] = [[1.0]*(len(fs)+1) for _ in range(len(mrg))]
-
             multisigma_cols.append(col_str)
 
     univ_cols = [col for col in skim.columns if "univ" in col]

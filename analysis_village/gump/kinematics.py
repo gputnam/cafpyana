@@ -13,7 +13,7 @@ NEUTRON_MASS = 0.939565
 MUON_MASS = 0.105658
 PION_MASS = 0.139570
 MASS_A = 22*NEUTRON_MASS + 18*PROTON_MASS - 0.34381
-BE = 0.0295
+BE = 0.0295 # note: maple had a difference value for this... 0.0309
 MASS_Ap = MASS_A - NEUTRON_MASS + BE
 
 def neutrino_energy(mu_p, mu_dir, p_p, p_dir, p_E, BE=BE):
@@ -67,12 +67,16 @@ def neutrino_energy_ccqe(mu_p, mu_costh, BE=BE):
     # the CV frames carry duplicate index labels and that would try to align.
     return num/np.where(den > 0, den, np.nan)
 
-def transverse_kinematics(mu_p, mu_dir, p_p, p_dir, p_E, BE=BE):
+def transverse_kinematics(mu_p, mu_dir, p_p, p_dir, p_E=None, BE=BE):
     # p_p, p_dir, p_E are the proton momentum magnitude, direction and energy.
     # For a single proton p_E = mag2d(p_p, PROTON_MASS); for a summed multi-proton
     # system p_p = |sum_i p_i| and p_E = sum_i E_i.
     mass_Ap = MASS_A - NEUTRON_MASS + BE
     mu_E = mag2d(mu_p, MUON_MASS)
+
+    # if no sep proton energy input, assume 1mu1p
+    if p_E is None:
+        p_E = mag2d(p_p, PROTON_MASS)
 
     mu_p_x = mu_p * mu_dir.x
     mu_p_y = mu_p * mu_dir.y
@@ -117,3 +121,7 @@ def transverse_kinematics(mu_p, mu_dir, p_p, p_dir, p_E, BE=BE):
                       'del_alpha' : del_alpha, 
                       'mu_E' : mu_E, 
                       'p_E' : p_E})
+
+def kinetic_energy(mass_GeV, momentum_GeV):
+    """KE in GeV given momentum in GeV (matches the CAFANA helper)."""
+    return np.sqrt(mass_GeV * mass_GeV + momentum_GeV * momentum_GeV) - mass_GeV

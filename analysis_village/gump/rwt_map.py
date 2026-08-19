@@ -22,6 +22,10 @@ import loaddf
 import syst 
 import gump_cuts as gc
 
+workspace_root = os.getcwd()
+sys.path.insert(0, workspace_root)
+import maple_sel as ms
+
 class FileHistogramFunction:
     def __init__(self, filename):
         with open(filename, 'r') as f:
@@ -114,17 +118,17 @@ def plot_2d_hist_from_file(filename, plot_title, output_tag):
     plt.savefig('/exp/sbnd/app/users/nrowe/cafpyana/analysis_village/gump/rwt_outputs/2d_ratio_'+output_tag+'.png', dpi=300)
     plt.clf() 
 
-def remake_detvar_maps(detector, DF_DIR="/exp/sbnd/data/users/gputnam/GUMP/sbn-rewgted-10/", selection=gc.all_cuts, outdir="rwt_outputs"):
+def remake_detvar_maps(detector, DF_DIR, selection=gc.all_cuts, outdir="rwt_outputs"):
     if not os.path.exists(outdir):
         os.makedirs(outdir)
     if detector == "ICARUS Run2":
         GOAL_POT = 2e20
-        DETVAR_FILES = [[DF_DIR + "ICARUSRun2_SpringMCOverlay_rewgt.df"], [DF_DIR + "ICARUSRun2_Spring_Overlay_WMXThXW.df"], [DF_DIR + "ICARUSRun2_Spring_Overlay_SCE.df"]]
-        DETVAR_NAMES = ["Nominal", "WMXThetaXW", "SCE"]
+        DETVAR_FILES = [[DF_DIR + "ICARUSRun2_SpringMCOverlay_rewgt.df"], [DF_DIR + "ICARUSRun2_Spring_Overlay_WMXThXW.df"], [DF_DIR + "ICARUSRun2_Spring_Overlay_WMYZ.df"], [DF_DIR + "ICARUSRun2_Spring_Overlay_SCE.df"]]
+        DETVAR_NAMES = ["Nominal", "WMXThetaXW", "WMYZ", "SCE"]
     elif detector == "ICARUS Run4":
         GOAL_POT = 3e20
-        DETVAR_FILES = [[DF_DIR + "ICARUSRun4_SpringMCOverlay_rewgt_%i.df" % i for i in range(2)], [DF_DIR + "ICARUSRun4_Spring_Overlay_WMXThXW.df"], [DF_DIR + "ICARUSRun4_Spring_Overlay_SCE.df"]]
-        DETVAR_NAMES = ["Nominal", "WMXThetaXW", "SCE"]
+        DETVAR_FILES = [[DF_DIR + "ICARUSRun4_SpringMCOverlay_rewgt_%i.df" % i for i in range(2)], [DF_DIR + "ICARUSRun4_Spring_Overlay_WMXThXW.df"], [DF_DIR + "ICARUSRun4_Spring_Overlay_WMYZ.df"], [DF_DIR + "ICARUSRun4_Spring_Overlay_SCE.df"]]
+        DETVAR_NAMES = ["Nominal", "WMXThetaXW", "WMYZ", "SCE"]
     elif detector == "SBND": 
         GOAL_POT = 1e20
         DETVAR_FILES = [[DF_DIR + "SBNDMCCV_%i.df" % i for i in range(3)], 
@@ -161,7 +165,6 @@ def remake_detvar_maps(detector, DF_DIR="/exp/sbnd/data/users/gputnam/GUMP/sbn-r
 
     cv_df['selected'] = selection(cv_df)
     bind_df['selected'] = selection(bind_df)
-
     cv_hist = np.histogram2d(*cv_df.loc[cv_df['selected'], ['nu_E_calo', 'del_p']].to_numpy().T, bins=b, weights=cv_df.loc[cv_df['selected'], 'glob_scale'].to_numpy())[0]
     bind_hist = np.histogram2d(*bind_df.loc[bind_df['selected'], ['nu_E_calo', 'del_p']].to_numpy().T, bins=b, weights=bind_df.loc[bind_df['selected'], 'glob_scale'].to_numpy())[0]
     save_histogram(f"{outdir}/{detector.replace(' ','')}_BIND.txt", bind_hist/cv_hist, b[0], b[1])
@@ -187,11 +190,9 @@ def remake_detvar_maps(detector, DF_DIR="/exp/sbnd/data/users/gputnam/GUMP/sbn-r
     detvars.extend([syst.v_chi2smear(df), syst.v_chi2hi(df), syst.v_chi2alpha(df), syst.v_chi2beta(df), syst.v_chi2R(df), syst.v_flashscale(df, 1), syst.v_flashscale(df, -1)])
     DETVAR_NAMES.extend(["Smeared dE/dx", "Gain Hi", "EMB Alpha", "EMB Beta", "EMB R", "TrigEffPls", "TrigEffMin"]) 
 
-
     hists = []
 
     for d in detvars:
-        print("detvars loop", d)
         d['selected'] = selection(d)
         hists.append(np.histogram2d(*d.loc[d['selected'], ['nu_E_calo', 'del_p']].to_numpy().T, bins=b, weights=d.loc[d['selected'], 'glob_scale'].to_numpy())[0])
 
@@ -234,7 +235,9 @@ def resolve_function(func_string):
 
     # Handle common alias 'gc' automatically
     if module_name == "gc":
-        module_name = "analysis_village.gump.gump_cuts"  # Or your actual module import path
+        module_name = "analysis_village.gump.gump_cuts"
+    elif module_name == "ms":
+        module_name = "analysis_village.maple.maple_sel"
 
     try:
         mod = importlib.import_module(module_name)
@@ -243,7 +246,6 @@ def resolve_function(func_string):
         raise argparse.ArgumentTypeError(f"Could not import '{func_string}': {e}")
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(description="Run reweighting maps with selection cuts.")
     parser.add_argument(
         "-s", "--selection",
@@ -257,9 +259,16 @@ if __name__ == "__main__":
         default="rwt_outputs",
         help="Output directory for reweight maps"
     )
+    parser.add_argument(
+        "-d", "--dfdir",
+        type=str,
+        default="/exp/sbnd/data/users/gputnam/GUMP/sbn-rewgted-14/",
+        help="Output directory for reweight maps"
+    )
+
    
     args = parser.parse_args()
 
-    remake_detvar_maps("SBND", selection=args.selection, outdir=args.outdir)
-    remake_detvar_maps("ICARUS Run2", selection=args.selection, outdir=args.outdir)
-    remake_detvar_maps("ICARUS Run4", selection=args.selection, outdir=args.outdir)
+    remake_detvar_maps("SBND", args.dfdir, selection=args.selection, outdir=args.outdir)
+    remake_detvar_maps("ICARUS Run2", args.dfdir, selection=args.selection, outdir=args.outdir)
+    remake_detvar_maps("ICARUS Run4", args.dfdir,  selection=args.selection, outdir=args.outdir)

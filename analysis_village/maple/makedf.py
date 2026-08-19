@@ -402,6 +402,8 @@ def fetch_info(f):
         "nu_E": slcdf.slc.truth.E,
         "true_pdg": slcdf.slc.truth.pdg,
         "true_iscc": slcdf.slc.truth.iscc,
+        "true_isnc": slcdf.slc.truth.isnc,
+        "true_iscosmic": (slcdf.slc.truth.pdg == -1),
         "true_genie_mode": slcdf.slc.truth.genie_mode,
         "true_vtx_x": slcdf.slc.truth.position.x,
         "true_vtx_y": slcdf.slc.truth.position.y,
@@ -462,9 +464,11 @@ def fetch_info(f):
         perentry = pd.DataFrame(index=pd.Index(S.index.get_level_values(0).unique(), name="entry"))
         perentry["cryo_light"] = -1
         perentry["flash_maxpe"] = np.nan
+        perentry["flash_maxpe_cryo0"] = np.nan
+        perentry["flash_maxpe_cryo1"] = np.nan
         perentry["crthit"] = False
 
-    S = S.join(perentry[["cryo_light", "flash_maxpe", "crthit"]])
+    S = S.join(perentry[["cryo_light", "flash_maxpe_cryo0", "flash_maxpe_cryo1", "flash_maxpe", "crthit"]])
     return S, P, DETECTOR, RUN, ismc
 
 def PID_calcs(f, P, do_calo_syst=True):
@@ -623,14 +627,14 @@ def fetch_candidates(S, P, do_calo_syst):
     ang = np.degrees(np.arccos(cosang))
     S["mu_p_opening_angle_deg"] = ang
 
-    tki = transverse_kinematics(p_mu, dir_mu, p_p, dir_p)
+    tki_leading = transverse_kinematics(p_mu, dir_mu, p_p, dir_p)
 
-    del_p = tki['del_p']
-    del_Tp = tki['del_Tp']
-    del_phi = tki['del_phi']
-    del_alpha = tki['del_alpha']
-    mu_E = tki['mu_E']
-    p_E = tki['p_E']
+    del_p = tki_leading['del_p']
+    del_Tp = tki_leading['del_Tp']
+    del_phi = tki_leading['del_phi']
+    del_alpha = tki_leading['del_alpha']
+    mu_E = tki_leading['mu_E']
+    p_E = tki_leading['p_E']
 
     S["nu_E_calo"] = recoE
     S["mu_len"] = mu.len
@@ -739,7 +743,9 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
 
     # ------------------------------------------------------------------
     # assemble sBruce columns
-    S["FlashPE"] = S.flash_maxpe
+    S["flash_maxpe"] = S.flash_maxpe
+    S["flash_maxpe_cryo0"] = S.flash_maxpe_cryo1
+    S["flash_maxpe_cryo1"] = S.flash_maxpe_cryo1
     chain = maple_selection(S)
     S["cut_muon"] = chain.cut_muon
     S["cut_protons"] = chain.cut_protons
@@ -1014,6 +1020,7 @@ def make_maple_rewgtdf(f):
     Same weight request as gump make_gump_nurewgtdf, so the wgt table is
     column-compatible with the GUMP sbn-rewgted CV productions.
     """
+
     syst = gump_genie_reknob_systematics + g4_weights
     ret = make_mcnudf(f, include_weights=True, slim=False,
                        genie_systematics=list(set(syst)))

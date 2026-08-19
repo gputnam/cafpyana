@@ -20,8 +20,6 @@ import numpy as np
 import pandas as pd
 import uproot
 
-from .maple_cuts import CALO_RR_MIN, CALO_RR_MAX
-
 TEMPLATE_FILES = [
     "/exp/icarus/app/users/marterop/dev_areas/dEdxrestemplates.root",
     "/cvmfs/larsoft.opensciencegrid.org/products/larsoft_data/v1_02_02/ParticleIdentification/dEdxrestemplates.root",
@@ -54,7 +52,7 @@ _BIN_EDGES = _TEMPLATES["pro"][0]
 _NBINS = len(_BIN_EDGES) - 1
 
 
-def chi2_cafana(hitdf, dedxname="dedx", rr_min=CALO_RR_MIN, rr_max=CALO_RR_MAX):
+def chi2_cafana(hitdf, dedxname="dedx", rr_min=0.0, rr_max=25.0):
     """Compute [chi2_mu, chi2_pro, chi2_ka, chi2_pi] per track from stored dedx.
 
     hitdf: output of make_trkhitdf (plane-2 calo points) with columns

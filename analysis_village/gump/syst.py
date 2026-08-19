@@ -50,9 +50,15 @@ def recompute_kinematics(s, mu_p=None, p_p=None, BE=None):
 
     if BE is None:
         BE = kinematics.BE
+
     if mu_p is None:
-        mu_p = pd.Series(np.sqrt(np.maximum(s.mu_E.to_numpy()**2 - kinematics.MUON_MASS**2, 0)),
-                         index=s.index)
+        if 'mu_p' in s.columns:
+            mu_p = s.mu_p
+        elif 'mu_E' in s.columns:
+            mu_p = pd.Series(np.sqrt(np.maximum(s.mu_E.to_numpy()**2 - kinematics.MUON_MASS**2, 0)),
+                             index=s.index)
+        else:
+           raise ValueError("You don't have the necessary columns to recompute kinematics.") 
 
     if "p_E" not in s.columns:
         raise KeyError("recompute_kinematics requires a stored 'p_E' (proton "
