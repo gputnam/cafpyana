@@ -782,6 +782,17 @@ def make_maple_evt_nosel_df(f):
 def make_maple_evt_presel_df(f):
     return make_maple_evt_df(f, selection="presel", do_calo_syst=True)
 
+# non-CV / detector-variation MC: preselection only, calo variations skipped
+# (those are only needed for the CV reweighting envelope, and computing them
+# substantially slows down processing).
+def make_maple_evt_presel_nocalo_df(f):
+    return make_maple_evt_df(f, selection="presel", do_calo_syst=False)
+
+# data: preselection only, no truth (mcnu built separately/omitted) and no calo
+# variations.
+def make_maple_evt_presel_data_df(f):
+    return make_maple_evt_df(f, selection="presel", do_calo_syst=False)
+
 def make_maple_evt_fullsel_df(f):
     return make_maple_evt_df(f, selection="full", do_calo_syst=True)
 
