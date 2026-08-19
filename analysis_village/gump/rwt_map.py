@@ -165,10 +165,6 @@ def remake_detvar_maps(detector, DF_DIR, selection=gc.all_cuts, outdir="rwt_outp
 
     cv_df['selected'] = selection(cv_df)
     bind_df['selected'] = selection(bind_df)
-    print("cv_df cols")
-    for c in cv_df.columns:
-        print(c)
-    print("cv_df cols end")
     cv_hist = np.histogram2d(*cv_df.loc[cv_df['selected'], ['nu_E_calo', 'del_p']].to_numpy().T, bins=b, weights=cv_df.loc[cv_df['selected'], 'glob_scale'].to_numpy())[0]
     bind_hist = np.histogram2d(*bind_df.loc[bind_df['selected'], ['nu_E_calo', 'del_p']].to_numpy().T, bins=b, weights=bind_df.loc[bind_df['selected'], 'glob_scale'].to_numpy())[0]
     save_histogram(f"{outdir}/{detector.replace(' ','')}_BIND.txt", bind_hist/cv_hist, b[0], b[1])
