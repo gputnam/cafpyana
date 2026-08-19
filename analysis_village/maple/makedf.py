@@ -75,7 +75,7 @@ PID_UNKNOWN, PID_PROTON, PID_PION, PID_SHOWER, PID_OTHER = 0, 1, 2, 3, 4
 # TruthClass: 0=1mu1p, 1=1muNp, 2=Other, 3=Cosmic, 4=Invalid
 CLS_1MU1P, CLS_1MUNP, CLS_OTHER, CLS_COSMIC, CLS_INVALID = 0, 1, 2, 3, 4
 
-CALO_VARIATIONS = ["cv", "alpha_p", "alpha_m", "beta_p", "beta_m", "R_p", "R_m", "dedxbias"]
+CALO_VARIATIONS = ["cv", "alpha_p", "alpha_m", "beta_p", "beta_m", "R_p", "R_m", "R_p25", "dedxbias"]
 SCALE_SMEAR_VARIATIONS = ["lo", "hi", "2lo", "2hi", "smear5", "smear13", "sqsmear15"]
 
 def _flatcols(df):
@@ -520,6 +520,14 @@ def PID_calcs(f, P, do_calo_syst=True):
                         dedx_bias=True)
                 else:
                     trkhitdf["dedx_dedxbias"] = trkhitdf["dedx_cv"]
+            elif c_var == "R_p25":
+                # R_p25 is SBND-only (large R+0.25 recombination test); no-op = CV on ICARUS
+                if DETECTOR == "ICARUS":
+                    trkhitdf["dedx_R_p25"] = trkhitdf["dedx_cv"]
+                else:
+                    trkhitdf["dedx_R_p25"] = chi2pid.dedx(
+                        trkhitdf, gain=DETECTOR, calibrate=DETECTOR, isMC=ismc,
+                        new_calo_params=calo_var_params["R_p25"])
             else:
                 trkhitdf["dedx_%s" % c_var] = chi2pid.dedx(
                     trkhitdf, gain=DETECTOR, calibrate=DETECTOR, isMC=ismc,
