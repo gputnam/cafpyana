@@ -36,9 +36,6 @@ def get_base_muon_mask(df, cuts=CUTS_BY_DETECTOR["SBND"], level="slc"):
     elif level == "slc":
         pref = "mu_"
 
-    for c in df.columns:
-        print(c)
-
     base_mask = (
             df[pref+"end_x"].notna()
             & df[pref+"len"].notna()

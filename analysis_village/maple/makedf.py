@@ -402,6 +402,8 @@ def fetch_info(f):
         "nu_E": slcdf.slc.truth.E,
         "true_pdg": slcdf.slc.truth.pdg,
         "true_iscc": slcdf.slc.truth.iscc,
+        "true_isnc": slcdf.slc.truth.isnc,
+        "true_iscosmic": (slcdf.slc.truth.pdg == -1),
         "true_genie_mode": slcdf.slc.truth.genie_mode,
         "true_vtx_x": slcdf.slc.truth.position.x,
         "true_vtx_y": slcdf.slc.truth.position.y,
@@ -457,7 +459,6 @@ def fetch_info(f):
     P["ke_proton"] = kinetic_energy(PROTON_MASS, np.sqrt((P.dir_x * P.p_proton)**2 + (P.dir_y * P.p_proton)**2 + (P.dir_z * P.p_proton)**2))
    
     if "ICARUS" in DETECTOR:
-        print("INPERENTRY")
         perentry = fetch_perentry(f, S.index.get_level_values(0))
     else:
         perentry = pd.DataFrame(index=pd.Index(S.index.get_level_values(0).unique(), name="entry"))
@@ -1021,9 +1022,6 @@ def make_maple_rewgtdf(f):
     """
 
     syst = gump_genie_reknob_systematics + g4_weights
-    print("beef")
-    print(list(set(syst)))
-    print("aft")
     ret = make_mcnudf(f, include_weights=True, slim=False,
                        genie_systematics=list(set(syst)))
 

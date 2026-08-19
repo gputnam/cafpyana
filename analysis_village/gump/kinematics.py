@@ -75,7 +75,7 @@ def transverse_kinematics(mu_p, mu_dir, p_p, p_dir, p_E=None, BE=BE):
     mu_E = mag2d(mu_p, MUON_MASS)
 
     # if no sep proton energy input, assume 1mu1p
-    if p_E == None:
+    if p_E is None:
         p_E = mag2d(p_p, PROTON_MASS)
 
     mu_p_x = mu_p * mu_dir.x

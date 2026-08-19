@@ -131,7 +131,6 @@ def main():
     # Stub placeholder cuts if not importing global cut library modules directly
     # Assumes 'gc.all_cuts' equivalent logic is packaged or ignored for flat passes
 
-
     df, _, _ = loaddf.loadl(
         [args.input],
         njob=args.cores,
@@ -143,12 +142,16 @@ def main():
         pot_spline=is_mc,
         match_Enu=is_mc,
         load_truth=is_mc,
+        detvar_spline=is_mc,
         spline_dir=args.dvsplines,
         include_syst=is_mc,
         reweight_aFF=is_mc,
+        preselection=args.selection,
         detector=detector_context,
         lightmem=True,
     )
+
+    print(f"args.input: {args.input}")
     # Step 2: Export to intermediate uproot template structure
     print("\n--- Step 2: Exporting to Staging Uproot Structure ---")
     export_dataframe_to_uproot(df, temp_stage1_root)

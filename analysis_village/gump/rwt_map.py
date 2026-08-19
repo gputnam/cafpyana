@@ -197,7 +197,6 @@ def remake_detvar_maps(detector, DF_DIR, selection=gc.all_cuts, outdir="rwt_outp
     hists = []
 
     for d in detvars:
-        print("detvars loop", d)
         d['selected'] = selection(d)
         hists.append(np.histogram2d(*d.loc[d['selected'], ['nu_E_calo', 'del_p']].to_numpy().T, bins=b, weights=d.loc[d['selected'], 'glob_scale'].to_numpy())[0])
 

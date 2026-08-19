@@ -48,16 +48,13 @@ def recompute_kinematics(s, mu_p=None, p_p=None, BE=None):
     m_p^2). Pass `p_p` to override the stored value.
     """
 
-    for c in s.columns:
-       print(c)
-
     if BE is None:
         BE = kinematics.BE
 
     if mu_p is None:
-        if mu_p in s.columns:
+        if 'mu_p' in s.columns:
             mu_p = s.mu_p
-        elif mu_E in s.columns:
+        elif 'mu_E' in s.columns:
             mu_p = pd.Series(np.sqrt(np.maximum(s.mu_E.to_numpy()**2 - kinematics.MUON_MASS**2, 0)),
                              index=s.index)
         else:
