@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # Define the absolute input storage directories
-gray_prefix='/exp/sbnd/data/users/gputnam/GUMP/sbn-rewgted-13/'
-output='/exp/sbnd/data/users/nrowe/GUMP/sbn-rewgted-13/'
-MAX_JOBS=8
+gray_prefix='/exp/sbnd/data/users/gputnam/GUMP/sbn-rewgted-15/'
+output='/exp/sbnd/data/users/nrowe/GUMP/sbn-rewgted-15/'
+MAX_JOBS=4
 
 # Navigate to the working directory context
 echo "========================================================"
@@ -14,7 +14,7 @@ echo "Remaking det var maps..."
 selection="gc.all_cuts"
 splinedir="${selection#*.}"
 
-#python3 rwt_map.py -s ${selection} -o ${splinedir} -d ${gray_prefix}
+python3 rwt_map.py -s ${selection} -o ${splinedir} -d ${gray_prefix}
 
 ## 1. SBND MC (20 files, 0 to 19)
 echo "--> Staging SBND Spring MC Files..."
