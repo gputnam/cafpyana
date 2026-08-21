@@ -12,7 +12,7 @@ echo " Starting GUMP TTree Processing Batch Run...            "
 echo "========================================================"
 
 echo "Remaking det var maps..."
-selection="gmpl.all_maple_cuts"
+selection="gmpl.all_mapleNGO_cuts"
 splinedir="${selection#*.}"
 
 python3 ${gumple_prefix}rwt_map.py -s ${selection} -o ${splinedir} -d ${gray_prefix}

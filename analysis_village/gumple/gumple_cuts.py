@@ -390,6 +390,9 @@ def all_maple_cuts(recodf, DETECTOR=None, det_run=None, variation=None):
 def all_gump_cuts(recodf, DETECTOR=None, det_run=None):
     return all_maple_cuts(recodf, DETECTOR=DETECTOR, det_run=det_run) & (recodf.n_proton == 1)
 
+def all_mapleNGO_cuts(recodf, DETECTOR=None, det_run=None):
+    return all_maple_cuts(recodf, DETECTOR=DETECTOR, det_run=det_run) & (recodf.n_proton > 1)
+
 def maple_cut_chain(recodf, DETECTOR=None, det_run=None, variation=None):
     if DETECTOR:
         print(f"manual detector: {DETECTOR}")

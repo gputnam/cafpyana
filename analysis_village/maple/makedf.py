@@ -443,14 +443,11 @@ def fetch_info(f):
 
     return S, P, DETECTOR, RUN, ismc
 
-def PID_calcs(f, P, do_calo_syst=True):
+def PID_calcs(f, P, DETECTOR, ismc, do_calo_syst=True):
     # ------------------------------------------------------------------
     # PID: both flavors
     # ------------------------------------------------------------------
     trkhitdf = make_trkhitdf(f)
-
-    DETECTOR = P.detector.iloc[0]
-    ismc = P.ismc.iloc[0]
 
     # number of plane-2 calo points (compute_chi2 returns {} when empty)
     ncalo = trkhitdf.groupby(level=[0, 1, 2]).size()
@@ -673,7 +670,7 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
     # Again, since we have limited trk info access after df prod
     # we want to grab information about candidate mu and p tracks here.
     # Start with PID calculations and then do some basic candidate ID.
-    P = PID_calcs(f, P, do_calo_syst=do_calo_syst)
+    P = PID_calcs(f, P, DETECTOR, ismc, do_calo_syst=do_calo_syst)
     S = fetch_candidates(S, P, do_calo_syst)
 
     # ------------------------------------------------------------------
