@@ -708,7 +708,7 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
     # ------------------------------------------------------------------
     # assemble sBruce columns
     S["flash_maxpe"] = S.flash_maxpe
-    S["flash_maxpe_cryo0"] = S.flash_maxpe_cryo1
+    S["flash_maxpe_cryo0"] = S.flash_maxpe_cryo0
     S["flash_maxpe_cryo1"] = S.flash_maxpe_cryo1
 
     chain = gmpl.maple_cut_chain(S)
