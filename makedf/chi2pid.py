@@ -45,6 +45,7 @@ SBND_CALO_VARIATIONS = {
     "beta_m": {**SBND_CALO_PARAMS, "beta_90": [0.204-0.008, 0.204-0.008]},
     "R_p": {**SBND_CALO_PARAMS, "R_emb": [1.25+0.02, 1.25+0.02]},
     "R_m": {**SBND_CALO_PARAMS, "R_emb": [1.25-0.02, 1.25-0.02]},
+    "R_p25": {**SBND_CALO_PARAMS, "R_emb": [1.25+0.25, 1.25+0.25]},  # SBND-only large R+0.25 test
 }
 
 ICARUS_CALO_VARIATIONS = {
