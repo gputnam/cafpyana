@@ -298,8 +298,11 @@ def sbnd_cathode_crossing(vtx_x, vtx_y, vtx_z, end_x, end_y, end_z):
 def sanity_cut(df):
     return df.slc_vtx_x.notna() & df.slc_vtx_y.notna() & df.slc_vtx_z.notna()
 
+# Requires at least two pfp candidates (a muon and a candidate proton), as the
+# legacy GUMP preselection did implicitly through the mu/p endpoint FV cuts.
 def presel_cut(df):
-    return sanity_cut(df) & slcfv_cut(df) & df.cut_contained & df.cut_cathode
+    return sanity_cut(df) & slcfv_cut(df) & df.cut_contained & df.cut_cathode & \
+        df.has_muon & df.cut_np
 
 def trk_cut(df):
     return df.cut_np & df.has_muon & df.cut_0shwother

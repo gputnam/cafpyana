@@ -1,5 +1,6 @@
 # MAPLE evt production, MC: apply the PID-free MAPLE preselection during
-# dataframe building (sanity + FV + CRT veto + cryo-light + containment).
+# dataframe building (sanity + FV + all-track containment + cathode + a muon
+# and >=1 candidate proton; no CRT veto or cryo-light).
 # Calorimetric variations are NOT computed here -- they are only needed for the
 # CV reweighting workflow (see maple_evtrec_presel.py) and substantially slow
 # down processing, so the non-CV / detector-variation MC samples skip them.

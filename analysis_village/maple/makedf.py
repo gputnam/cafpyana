@@ -39,7 +39,9 @@ Post-hoc (chi2-free) candidate scheme:
 Selection option:
   selection="none"   -- keep all slices, with all cut booleans (default)
   selection="presel" -- keep slices passing the PID-free MAPLE preselection
-                        (sanity + FV + CRT veto + cryo-light + containment)
+                        (sanity + FV + all-track containment + cathode + a
+                        muon and >=1 candidate proton; no CRT veto or
+                        cryo-light)
   selection="full"   -- keep slices passing the full MAPLE selection
                         (evaluated with the nominal chi2)
 """
