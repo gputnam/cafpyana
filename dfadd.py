@@ -8,6 +8,7 @@ import pandas as pd
 from tqdm import tqdm
 
 from pyanalib.split_df_helpers import get_n_split
+from pyanalib.pandas_helpers import downcast_float32, POT_TABLES
 
 warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
 warnings.filterwarnings("ignore", category=tables.exceptions.NaturalNameWarning)
@@ -90,6 +91,8 @@ class OutputWriter(object):
 
         for k in sorted(batch):
             this_key = k + "_" + str(self.k_idx)
+            if k not in POT_TABLES:
+                batch[k] = downcast_float32(batch[k])
             try:
                 self.store.put(key=this_key, value=batch[k], format="fixed")
                 print(f"Saved {this_key}: {batch[k].memory_usage(deep=True).sum() / GB:.4f} GB")
