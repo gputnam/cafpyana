@@ -16,15 +16,16 @@ import pyanalib.pandas_helpers as ph
 import warnings
 from pyanalib.split_df_helpers import *
 from makedf.util import *
-from analysis_village.gump.gump_cuts import *
-import analysis_village.gump.PID as PID 
-import loaddf
-import syst 
-import gump_cuts as gc
 
 workspace_root = os.getcwd()
-sys.path.insert(0, workspace_root)
-import maple_sel as ms
+sys.path.insert(0, workspace_root + "/../gump/")
+
+import loaddf
+import syst 
+
+workspace_root = os.getcwd()
+sys.path.insert(0, workspace_root + "/../gumple/")
+import gumple_cuts as gmpl
 
 class FileHistogramFunction:
     def __init__(self, filename):
@@ -118,20 +119,20 @@ def plot_2d_hist_from_file(filename, plot_title, output_tag):
     plt.savefig('/exp/sbnd/app/users/nrowe/cafpyana/analysis_village/gump/rwt_outputs/2d_ratio_'+output_tag+'.png', dpi=300)
     plt.clf() 
 
-def remake_detvar_maps(detector, DF_DIR, selection=gc.all_cuts, outdir="rwt_outputs"):
+def remake_detvar_maps(detector, DF_DIR, selection=gmpl.all_gump_cuts, outdir="rwt_outputs"):
     if not os.path.exists(outdir):
         os.makedirs(outdir)
     if detector == "ICARUS Run2":
         GOAL_POT = 2e20
-        DETVAR_FILES = [[DF_DIR + "ICARUSRun2_SpringMCOverlay_rewgt.df"], [DF_DIR + "ICARUSRun2_Spring_Overlay_WMXThXW.df"], [DF_DIR + "ICARUSRun2_Spring_Overlay_WMYZ.df"], [DF_DIR + "ICARUSRun2_Spring_Overlay_SCE.df"]]
+        DETVAR_FILES = [[DF_DIR + "ICARUSRun2_SpringMCOverlay_rewgt_%i.df" % i for i in range(2)], [DF_DIR + "ICARUSRun2_Spring_Overlay_WMXThXW.df"], [DF_DIR + "ICARUSRun2_Spring_Overlay_WMYZ.df"], [DF_DIR + "ICARUSRun2_Spring_Overlay_SCE.df"]]
         DETVAR_NAMES = ["Nominal", "WMXThetaXW", "WMYZ", "SCE"]
     elif detector == "ICARUS Run4":
         GOAL_POT = 3e20
-        DETVAR_FILES = [[DF_DIR + "ICARUSRun4_SpringMCOverlay_rewgt_%i.df" % i for i in range(2)], [DF_DIR + "ICARUSRun4_Spring_Overlay_WMXThXW.df"], [DF_DIR + "ICARUSRun4_Spring_Overlay_WMYZ.df"], [DF_DIR + "ICARUSRun4_Spring_Overlay_SCE.df"]]
+        DETVAR_FILES = [[DF_DIR + "ICARUSRun4_SpringMCOverlay_rewgt_%i.df" % i for i in range(4)], [DF_DIR + "ICARUSRun4_Spring_Overlay_WMXThXW.df"], [DF_DIR + "ICARUSRun4_Spring_Overlay_WMYZ.df"], [DF_DIR + "ICARUSRun4_Spring_Overlay_SCE.df"]]
         DETVAR_NAMES = ["Nominal", "WMXThetaXW", "WMYZ", "SCE"]
     elif detector == "SBND": 
         GOAL_POT = 1e20
-        DETVAR_FILES = [[DF_DIR + "SBNDMCCV_%i.df" % i for i in range(3)], 
+        DETVAR_FILES = [[DF_DIR + "SBNDMCCV_%i.df" % i for i in range(10)], 
                         [DF_DIR + "SBND_SpringMC_WMXThetaXW.df"], 
                         [DF_DIR + "SBND_SpringMC_WMYZ.df"], 
                        ]
@@ -153,9 +154,9 @@ def remake_detvar_maps(detector, DF_DIR, selection=gc.all_cuts, outdir="rwt_outp
 
     b = [np.array([0.3, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.25, 1.5]), [0.0, 0.2, 0.4, 0.6]]
 
-    detvars, detvarsmatch, detvar_pots = zip(*tqdm([loaddf.loadl(f, preselection=gc.slcfv_cut, include_syst=False, detector=detector, lightmem=True, drops=loaddf.get_std_drops()) for f in DETVAR_FILES]))
+    detvars, detvarsmatch, detvar_pots = zip(*tqdm([loaddf.loadl(f, preselection=gmpl.slcfv_cut, include_syst=False, detector=detector, lightmem=True, drops=loaddf.get_std_drops()) for f in DETVAR_FILES]))
     ## Binding E, track splitting req separate loads 
-    bind_df, _, bind_pot = loaddf.loadl(DETVAR_FILES[0], preselection=gc.slcfv_cut, include_syst=False, detector=detector, lightmem=True, shift_binding_E=True, drops=loaddf.get_std_drops())
+    bind_df, _, bind_pot = loaddf.loadl(DETVAR_FILES[0], preselection=gmpl.slcfv_cut, include_syst=False, detector=detector, lightmem=True, shift_binding_E=True, drops=loaddf.get_std_drops())
 
     cv_df = detvars[0].copy()
     cv_pot = detvar_pots[0].copy()
@@ -173,7 +174,7 @@ def remake_detvar_maps(detector, DF_DIR, selection=gc.all_cuts, outdir="rwt_outp
     ### track splitting
     if "ICARUS" in detector:
         for split_region in ["Z=0","East Cathode","West Cathode"]:
-            trksplt_df, _, trksplt_pot = loaddf.loadl(DETVAR_FILES[0], preselection=gc.slcfv_cut, include_syst=False, detector=detector, lightmem=True, split_tracks=split_region, drops=loaddf.get_std_drops())
+            trksplt_df, _, trksplt_pot = loaddf.loadl(DETVAR_FILES[0], preselection=gmpl.slcfv_cut, include_syst=False, detector=detector, lightmem=True, split_tracks=split_region, drops=loaddf.get_std_drops())
             loaddf.scale_pot(trksplt_df, trksplt_pot, GOAL_POT)
             trksplt_df['selected'] = selection(trksplt_df)
             trksplt_hist = np.histogram2d(*trksplt_df.loc[trksplt_df['selected'], ['nu_E_calo', 'del_p']].to_numpy().T, bins=b, weights=trksplt_df.loc[trksplt_df['selected'], 'glob_scale'].to_numpy())[0]
@@ -205,7 +206,7 @@ def remake_detvar_maps(detector, DF_DIR, selection=gc.all_cuts, outdir="rwt_outp
 
     ## SBND SCE now uses a different CV file than the WM samples, this is really cool and not annoying at all
     if detector == "SBND":
-        detvars, detvarsmatch, detvar_pots = zip(*tqdm([loaddf.load(f, preselection=gc.slcfv_cut, include_syst=False, detector=detector) for f in DETVAR_FILES_SMALL]))
+        detvars, detvarsmatch, detvar_pots = zip(*tqdm([loaddf.load(f, preselection=gmpl.slcfv_cut, include_syst=False, detector=detector) for f in DETVAR_FILES_SMALL]))
         detvars, detvar_pots = loaddf.match_common_evts(detvarsmatch, detvars, detvar_pots)
 
         for i in range(len(detvars)):
@@ -222,22 +223,18 @@ def remake_detvar_maps(detector, DF_DIR, selection=gc.all_cuts, outdir="rwt_outp
 
 def resolve_function(func_string):
     """
-    Resolves strings like 'gc.all_cuts', 'gc.coworker_cuts', or 
+    Resolves strings like 'gmpl.all_gump_cuts', 'gmpl.coworker_cuts', or 
     'my_cuts_module.custom_cut' into callable Python functions.
     """
     if "." not in func_string:
-        # Fall back to checking inside the local gump_cuts module if no module prefix given
-        if hasattr(gc, func_string):
-            return getattr(gc, func_string)
-        raise ValueError(f"Function name must be 'module.function' (e.g. 'gc.all_cuts'), got '{func_string}'")
+        if hasattr(gmpl, func_string):
+            return getattr(gmpl, func_string)
+        raise ValueError(f"Function name must be 'module.function' (e.g. 'gmpl.all_gump_cuts'), got '{func_string}'")
 
     module_name, func_name = func_string.rsplit(".", 1)
 
-    # Handle common alias 'gc' automatically
-    if module_name == "gc":
-        module_name = "analysis_village.gump.gump_cuts"
-    elif module_name == "ms":
-        module_name = "analysis_village.maple.maple_sel"
+    if module_name == "gmpl":
+        module_name = "analysis_village.gumple.gumple_cuts"
 
     try:
         mod = importlib.import_module(module_name)
@@ -250,8 +247,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "-s", "--selection",
         type=resolve_function,
-        default=gc.all_cuts,
-        help="Selection function to run (e.g., 'gc.all_cuts' or 'gc.coworker_cuts')"
+        default=gmpl.all_gump_cuts,
+        help="Selection function to run (e.g., 'gmpl.all_gump_cuts' or 'gmpl.coworker_cuts')"
     )
     parser.add_argument(
         "-o", "--outdir",

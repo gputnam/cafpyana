@@ -1,9 +1,4 @@
 """MAPLE (1mu + N>1 p) dataframe builders for cafpyana.
-
-Port of the CAFANA selection in
-NicolaICARUS/MAPLE_GUMP/icarus/helper_eff_cf_FINAL_..._Trigger.h
-and the SpillMultiVar output variables in helper_variables.h.
-
 Detector support:
   ICARUS -- the original selection, bit-compatible with the CAFANA port.
   SBND   -- generalization: SBND geometry for FV (high-YZ volume dropped,
@@ -54,16 +49,14 @@ import pandas as pd
 from pyanalib.pandas_helpers import *
 from makedf.util import *
 from makedf.makedf import (
-    loadbranches, make_slcdf, make_trkdf, make_trkhitdf, make_crthitdf,
+    loadbranches, make_slcdf, make_trkdf, make_trkhitdf, make_crthitdf, make_opflashdf,
     make_hdrdf, make_triggerdf, make_potdf_bnb, make_mcnudf,
     make_genie_evtrec_df, _build_genie_evtrec_df,
 )
 from makedf import chi2pid
 
 from analysis_village.gump.kinematics import *
-from analysis_village.maple.maple_cuts import *
-import analysis_village.gump.gump_cuts as gc
-from analysis_village.maple.maple_sel import maple_selection
+import analysis_village.gumple.gumple_cuts as gmpl
 from analysis_village.maple import chi2pid_cafana
 from makedf.branches import (
     crtpmtbranches, shwbranches,
@@ -84,7 +77,6 @@ def _flatcols(df):
     df.columns = ["_".join([str(c) for c in (col if isinstance(col, tuple) else (col,)) if str(c) != ""])
                   for col in df.columns]
     return df
-
 
 def _reindex(series, index, fill):
     return series.reindex(index).fillna(fill)
@@ -112,7 +104,10 @@ def maple_truth_classdf(f, det, run):
     nuidx = mc.index
 
     prim = _flatcols(loadbranches(f["recTree"], mcprimbranches + mcprimvisEbranches).rec.mc.nu.prim)
+    prim["detector"] = det
+    prim["Run"] = run
     prim.index.names = ["entry", "inu", "iprim"]
+
     tp = _flatcols(loadbranches(f["recTree"], trueparticlebranches).rec.true_particles)
     tp.index.names = ["entry", "itp"]
 
@@ -136,7 +131,7 @@ def maple_truth_classdf(f, det, run):
     # ---- daughters: true_particles with parent == prim.G4ID (same entry) ----
     prim_r = prim.reset_index()
     tp_r = tp.reset_index()
-    m = prim_r[["entry", "inu", "iprim", "G4ID", "cryostat"]].merge(
+    m = prim_r[["entry", "inu", "iprim", "G4ID", "cryostat", "detector", "Run"]].merge(
         tp_r, left_on=["entry", "G4ID"], right_on=["entry", "parent"],
         suffixes=("", "_d"))
     if len(m):
@@ -148,7 +143,7 @@ def maple_truth_classdf(f, det, run):
         # daughter containment check: skip cryostat<0 or end == -9999
         d_valid_cont = (m.cryostat_d >= 0) & m.d_charged & \
             ~((m.end_x == -9999) | (m.end_y == -9999) | (m.end_z == -9999))
-        m["d_uncont"] = d_valid_cont & ~gc.endfv_cut(m, det=det, run=run)
+        m["d_uncont"] = d_valid_cont & ~gmpl.prefix_fv_cut(m, "end")
         # note: for the pi0-gamma veto and visE sums, C++ has no cryostat check
         # on the daughter itself
         g = m.groupby(["entry", "inu", "iprim"])
@@ -172,7 +167,7 @@ def maple_truth_classdf(f, det, run):
     prim_veto = cpi_veto | pi0_veto | gamma_veto
 
     # ---- containment (all_contained_mc): charged primaries, no -9999 skip ----
-    prim_uncont = is_charged & ~gc.endfv_cut(prim, det=det, run=run)
+    prim_uncont = is_charged & ~gmpl.prefix_fv_cut(prim, "end")
 
     # ---- per-nu aggregation ----
     grp = prim.groupby(level=["entry", "inu"])
@@ -213,7 +208,7 @@ def maple_truth_classdf(f, det, run):
     # ---- classification ----
     pos_nan = mc.position_x.isna() | mc.position_y.isna() | mc.position_z.isna()
     not_numucc = (np.abs(mc.pdg) != 14) | (mc.iscc == 0)
-    not_fv = ~gc.true_fv_cut(mc)
+    not_fv = ~gmpl.prefix_fv_cut(mc, "position")
     #good_mu = (n_mu == 1) & (mu_length > MIN_MUON_LENGTH) & (mu_length < MAX_MUON_LENGTH)
 
     maple_class = np.select(
@@ -260,7 +255,7 @@ def _find_candidates(P):
     including NaN behavior.
     """
 
-    keep = get_base_muon_mask(P, level="trk")
+    keep = gmpl.get_base_muon_mask(P, level="trk")
 
     cand = P[keep]
     if len(cand):
@@ -319,53 +314,33 @@ def _proton_aggregates(P, is_prot_cand, mincols, maxcols):
             out["%s_%s" % (fn, col)] = agg
     return pd.DataFrame(out)
 
-def fetch_perentry(f, entries):
-    # ------------------------------------------------------------------
-    # spill-level inputs
-    # ------------------------------------------------------------------
-    crtpmt = loadbranches(f["recTree"], crtpmtbranches).rec.crtpmt_matches
-
-    CRYO_LIGHT_TMIN = -0.6
-    CRYO_LIGHT_TMAX = 1.8
-    CRYO_LIGHT_PE_THRESHOLD = 3000. / 0.341  # valid for Run 4
-
-    # cryo_selection_from_light
-    inwin = (crtpmt.flashGateTime > CRYO_LIGHT_TMIN) & (crtpmt.flashGateTime < CRYO_LIGHT_TMAX)
-    haspe = ~(crtpmt.flashPE < CRYO_LIGHT_PE_THRESHOLD)
-    west = (inwin & haspe & (crtpmt.flashPosition.x > 0)).groupby(level=0).any()
-    east = (inwin & haspe & (crtpmt.flashPosition.x < 0)).groupby(level=0).any()
-    perentry = pd.DataFrame(index=pd.Index(entries.unique(), name="entry"))
-    perentry["west"] = _reindex(west, perentry.index, False).astype(bool)
-    perentry["east"] = _reindex(east, perentry.index, False).astype(bool)
-    perentry["cryo_light"] = np.select(
-        [perentry.west & perentry.east, perentry.west, perentry.east],
-        [2, 1, 0], default=-1)
-
-    # k_pe: max flash PE in the cryo-light window, no PE threshold, default 0
-    maxpe = crtpmt.flashPE[inwin].groupby(level=0).max()
-    perentry["flash_maxpe"] = _reindex(maxpe, perentry.index, 0.0)
-
-    # Per-cryostat max in-window flash PE, RAW (no MC PE scale here): the
-    # GUMP flash_maxpe_cryo0/1 schema that loaddf.load_one picks from by the
-    # slice cryostat (cryo0 = East, x < 0; cryo1 = West, x > 0) and scales.
-    maxpe_east = crtpmt.flashPE[inwin & (crtpmt.flashPosition.x < 0)].groupby(level=0).max()
-    maxpe_west = crtpmt.flashPE[inwin & (crtpmt.flashPosition.x > 0)].groupby(level=0).max()
-    perentry["flash_maxpe_cryo0"] = _reindex(maxpe_east, perentry.index, 0.0)
-    perentry["flash_maxpe_cryo1"] = _reindex(maxpe_west, perentry.index, 0.0)
-
-    # kCRTNeutrino (CRT top veto)
-    CRT_VETO_TMIN = -1.0
-    CRT_VETO_TMAX = 1.8
-    CRT_VETO_PLANE_MIN = 29  # exclusive
-    CRT_VETO_PLANE_MAX = 50  # exclusive
-
-    # kCRTNeutrino: top-CRT veto
+def add_crt(f, S):
+    # Add in crt hit matching for ICARUS
     crt = make_crthitdf(f)
-    vetohit = ((crt.time > CRT_VETO_TMIN) & (crt.time < CRT_VETO_TMAX) &
-               (crt.plane > CRT_VETO_PLANE_MIN) & (crt.plane < CRT_VETO_PLANE_MAX)).groupby(level=0).any()
-    perentry["crthit"] = _reindex(vetohit, perentry.index, False).astype(bool)
+    S = S.join(((crt.time > -1) & (crt.time < 1.8) & (crt.plane != 50)).groupby(level=[0]).any().rename("crthit"))
+    S = S.join(((crt.time > -1) & (crt.time < 1.8) & (crt.plane != 50) & (crt.truth.bestmatch_id != -1)).groupby(level=[0]).any().rename("crthit_ismc"))
+    S["crthit"] = S.crthit.fillna(False).astype(bool)
+    S["crthit_ismc"] = S.crthit_ismc.fillna(False).astype(bool)
+    return S
 
-    return perentry
+def add_pmt(f, S, DETECTOR):
+    # Flash value for trigger emulation. Note: these need to be scaled per-detector, per-Run
+    flashes = make_opflashdf(f)
+    if DETECTOR == "ICARUS":
+        timename = "firsttime"
+    elif DETECTOR == "SBND":
+        timename = "time"
+    intime = (flashes[timename] > -5) & (flashes[timename] < 5)
+    maxpe = (flashes.totalpe*intime).groupby(level=[0]).max().rename("flash_maxpe")
+    S = S.join(maxpe)
+    sumpe = (flashes.totalpe*intime).groupby(level=[0]).sum().rename("flash_sumpe")
+    S = S.join(sumpe)
+
+    flash_cryo0 = (flashes.totalpe * intime * (flashes.cryo == 0)).groupby(level=[0]).max().rename("flash_maxpe_cryo0")
+    flash_cryo1 = (flashes.totalpe * intime * (flashes.cryo == 1)).groupby(level=[0]).max().rename("flash_maxpe_cryo1")
+    S = S.join(flash_cryo0)
+    S = S.join(flash_cryo1)
+    return S
 
 def fetch_metadata(f):
     det = loadbranches(f["recTree"], ["rec.hdr.det"]).rec.hdr.det
@@ -454,31 +429,25 @@ def fetch_info(f):
 
     # std::min(a, b) semantics: b if b < a else a  (NaN b -> a; NaN a -> NaN)
     P["min_dist"] = np.where(np.isnan(dist_end), P.dist_start, np.minimum(P.dist_start, dist_end))
-    P["contained10"] = gc.endfv_cut(P)
+    P["contained10"] = gmpl.prefix_fv_cut(P, "end")
     P["ke_pion"] = kinetic_energy(PION_MASS, np.sqrt((P.dir_x * P.p_pion)**2 + (P.dir_y * P.p_pion)**2 + (P.dir_z * P.p_pion)**2))
     P["ke_proton"] = kinetic_energy(PROTON_MASS, np.sqrt((P.dir_x * P.p_proton)**2 + (P.dir_y * P.p_proton)**2 + (P.dir_z * P.p_proton)**2))
-   
+  
     if "ICARUS" in DETECTOR:
-        perentry = fetch_perentry(f, S.index.get_level_values(0))
+        S = add_crt(f, S)
     else:
-        perentry = pd.DataFrame(index=pd.Index(S.index.get_level_values(0).unique(), name="entry"))
-        perentry["cryo_light"] = -1
-        perentry["flash_maxpe"] = np.nan
-        perentry["flash_maxpe_cryo0"] = np.nan
-        perentry["flash_maxpe_cryo1"] = np.nan
-        perentry["crthit"] = False
+        S["crthit"] = False 
+        S["crthit_ismc"] = False 
 
-    S = S.join(perentry[["cryo_light", "flash_maxpe_cryo0", "flash_maxpe_cryo1", "flash_maxpe", "crthit"]])
+    S = add_pmt(f, S, DETECTOR)
+
     return S, P, DETECTOR, RUN, ismc
 
-def PID_calcs(f, P, do_calo_syst=True):
+def PID_calcs(f, P, DETECTOR, ismc, do_calo_syst=True):
     # ------------------------------------------------------------------
     # PID: both flavors
     # ------------------------------------------------------------------
     trkhitdf = make_trkhitdf(f)
-
-    DETECTOR = P.detector.iloc[0]
-    ismc = P.ismc.iloc[0]
 
     # number of plane-2 calo points (compute_chi2 returns {} when empty)
     ncalo = trkhitdf.groupby(level=[0, 1, 2]).size()
@@ -686,33 +655,19 @@ def fetch_candidates(S, P, do_calo_syst):
 # Main evt builder
 # =====================================================================
 def make_maple_evt_df(f, selection="none", do_calo_syst=True):
+    # Get a slice level df (S) a pfp level df (P) and some meta-data
     S, P, DETECTOR, RUN, ismc = fetch_info(f)
 
-    # ------------------------------------------------------------------
-    # PID-free cut chain
-    # ------------------------------------------------------------------
-    S["cut_sanity"] = S.slc_vtx_x.notna() & S.slc_vtx_y.notna() & S.slc_vtx_z.notna() & S.charge_center_z.notna()
-    S["cut_fv"] = gc.slcfv_cut(S)
-    if DETECTOR == "ICARUS":
-        S["cut_crthit"] = ~S.crthit
-        slice_cryo = np.select([S.slc_vtx_x < 0, S.slc_vtx_x > 0], [0, 1], default=-1)
-        S["slice_cryo"] = slice_cryo
-        S["cut_cryo"] = (S.cryo_light != -1) & ((S.cryo_light == 2) | (slice_cryo == S.cryo_light))
-    else:
-        # SBND: CRT veto and cryo-light cuts pass trivially (see above)
-        S["cut_crthit"] = True
-        S["slice_cryo"] = -1
-        S["cut_cryo"] = True
-
+    # After df prod, limited trk info access. So cut here.
+    # Check that all tracks are contained
     valid_c = P.start_x.notna() & P.end_x.notna() & P.len.notna()
     bad_contain = valid_c & ((P.end_x * P.slc_vtx_x < 0) | ~P.contained10)
     any_bad = bad_contain.groupby(level=[0, 1]).any()
     S["cut_contained"] = ~_reindex(any_bad, S.index, False).astype(bool)
 
-    # SBND cathode-crossing veto (GUMP cathode_cut, extended to all tracks in
-    # the slice); always True on ICARUS so the cut chain is unchanged there
+    # SBND cathode-crossing veto 
     if DETECTOR == "SBND":
-        cross = gc.maple_sbnd_cathode_crossing(
+        cross = gmpl.sbnd_cathode_crossing(
             P.slc_vtx_x[valid_c], P.slc_vtx_y[valid_c], P.slc_vtx_z[valid_c],
             P.end_x[valid_c], P.end_y[valid_c], P.end_z[valid_c])
         any_cross = pd.Series(cross, index=P.index[valid_c]).groupby(level=[0, 1]).any()
@@ -720,11 +675,10 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
     else:
         S["cut_cathode"] = True
 
-    S["maple_presel"] = S.cut_sanity & S.cut_fv & S.cut_crthit & S.cut_cryo & \
-        S.cut_contained & S.cut_cathode
-
-    P = PID_calcs(f, P, do_calo_syst=do_calo_syst)
-
+    # Again, since we have limited trk info access after df prod
+    # we want to grab information about candidate mu and p tracks here.
+    # Start with PID calculations and then do some basic candidate ID.
+    P = PID_calcs(f, P, DETECTOR, ismc, do_calo_syst=do_calo_syst)
     S = fetch_candidates(S, P, do_calo_syst)
 
     # ------------------------------------------------------------------
@@ -739,7 +693,7 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
         [S.tmatch_idx < 0,
          nu_class == CLS_1MU1P,
          nu_class == CLS_1MUNP,
-         ~gc.trueslcfv_cut(S),
+         ~gmpl.prefix_fv_cut(S, "true_vtx"),
          np.abs(S.true_pdg) == 12,
          S.true_iscc == 0,
          (S.true_iscc == 1) & (S.true_genie_mode == 0),
@@ -754,11 +708,15 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
     S["flash_maxpe"] = S.flash_maxpe
     S["flash_maxpe_cryo0"] = S.flash_maxpe_cryo1
     S["flash_maxpe_cryo1"] = S.flash_maxpe_cryo1
-    chain = maple_selection(S)
+
+    chain = gmpl.maple_cut_chain(S)
+    S["cut_presel"] = chain.cut_presel
+    S["cut_cosmic"] = chain.cut_cosmic
+    S["cut_flash"] = chain.cut_flash
+    S["cut_trk"] = chain.cut_trk
     S["cut_muon"] = chain.cut_muon
     S["cut_protons"] = chain.cut_protons
     S["maple_sel"] = chain.maple_sel
-    S["maxcut"] = chain.maxcut
 
     # ------------------------------------------------------------------
     # selection option
@@ -766,7 +724,7 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
     if selection == "none":
         pass
     elif selection == "presel":
-        S = S[S.maple_presel]
+        S = S[S.cut_presel]
     elif selection == "full":
         S = S[S.maple_sel]
     else:
@@ -845,7 +803,7 @@ def make_maple_nudf(f):
     })
     nudf["is_sig"] = (cls.maple_class == CLS_1MU1P) | (cls.maple_class == CLS_1MUNP)
     nudf["is_other_numucc"] = cls.maple_class == CLS_1MUNP
-    nudf["is_fv"] = gc.posfv_cut(nudf)
+    nudf["is_fv"] = gmpl.prefix_fv_cut(nudf, "pos")
     nudf["ind"] = nudf.index.get_level_values(1)
     nudf["detector"] = DETECTOR
     nudf["Run"] = RUN
