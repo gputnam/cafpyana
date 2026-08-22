@@ -398,6 +398,28 @@ def fetch_info(f):
         "true_vtx_x": slcdf.slc.truth.position.x,
         "true_vtx_y": slcdf.slc.truth.position.y,
         "true_vtx_z": slcdf.slc.truth.position.z,
+        # slice-level true signal particles (GUMP true_mu_*/true_p_*/true_p2_*)
+        "true_mu_p": slcdf.slc.truth.mu.totp,
+        "true_mu_dir_x": slcdf.slc.truth.mu.dir.x,
+        "true_mu_dir_y": slcdf.slc.truth.mu.dir.y,
+        "true_mu_dir_z": slcdf.slc.truth.mu.dir.z,
+        "true_mu_end_x": slcdf.slc.truth.mu.end.x,
+        "true_mu_end_y": slcdf.slc.truth.mu.end.y,
+        "true_mu_end_z": slcdf.slc.truth.mu.end.z,
+        "true_p_p": slcdf.slc.truth.p.totp,
+        "true_p_dir_x": slcdf.slc.truth.p.dir.x,
+        "true_p_dir_y": slcdf.slc.truth.p.dir.y,
+        "true_p_dir_z": slcdf.slc.truth.p.dir.z,
+        "true_p_end_x": slcdf.slc.truth.p.end.x,
+        "true_p_end_y": slcdf.slc.truth.p.end.y,
+        "true_p_end_z": slcdf.slc.truth.p.end.z,
+        "true_p2_p": slcdf.slc.truth.p2.totp,
+        "true_p2_dir_x": slcdf.slc.truth.p2.dir.x,
+        "true_p2_dir_y": slcdf.slc.truth.p2.dir.y,
+        "true_p2_dir_z": slcdf.slc.truth.p2.dir.z,
+        "true_p2_end_x": slcdf.slc.truth.p2.end.x,
+        "true_p2_end_y": slcdf.slc.truth.p2.end.y,
+        "true_p2_end_z": slcdf.slc.truth.p2.end.z,
         "ismc" : ismc,
     })
     S["slice_index"] = S.index.get_level_values(1)
@@ -429,6 +451,12 @@ def fetch_info(f):
         "p_proton": trkdf.pfp.trk.rangeP.p_proton,
         "trackScore": trkdf.pfp.trackScore,
         "true_genp_x": trkdf.pfp.trk.truth.p.genp.x,
+        "true_genp_y": trkdf.pfp.trk.truth.p.genp.y,
+        "true_genp_z": trkdf.pfp.trk.truth.p.genp.z,
+        "true_pdg": trkdf.pfp.trk.truth.p.pdg,
+        "true_end_x": trkdf.pfp.trk.truth.p.end.x,
+        "true_end_y": trkdf.pfp.trk.truth.p.end.y,
+        "true_end_z": trkdf.pfp.trk.truth.p.end.z,
         "shw_energy2": shwdf.plane.I2.energy,
     })
 
@@ -567,8 +595,10 @@ def fetch_candidates(S, P, do_calo_syst):
     # ------------------------------------------------------------------
     # candidate variables (muon + leading candidate proton)
     # ------------------------------------------------------------------
+    truthcols = ["true_pdg", "true_genp_x", "true_genp_y", "true_genp_z",
+                 "true_end_x", "true_end_y", "true_end_z"]
     mucols = ["len", "start_x", "start_y", "start_z", "end_x", "end_y", "end_z", "dir_x", "dir_y", "dir_z",
-              "p_muon", "trackScore", "dist_start", "prim_pfp", "contained10"] + \
+              "p_muon", "trackScore", "dist_start", "prim_pfp", "contained10"] + truthcols + \
         ["chi2u_%s" % fl for fl in chi2_suffixes.values()] + \
         ["chi2p_%s" % fl for fl in chi2_suffixes.values()]
 
@@ -582,7 +612,7 @@ def fetch_candidates(S, P, do_calo_syst):
     # leading proton: longest candidate proton with len > 0 (find_longest_proton)
     prodf = P[is_prot_cand & (P.len > 0)]
     pcols = ["len", "end_x", "end_y", "end_z", "dir_x", "dir_y", "dir_z",
-             "p_proton", "ke_proton", "trackScore", "chi2u_cafpyana", "chi2p_cafpyana"]
+             "p_proton", "ke_proton", "trackScore", "chi2u_cafpyana", "chi2p_cafpyana"] + truthcols
     if len(prodf):
         p_ilocs = prodf.len.groupby(level=[0, 1]).idxmax()
         pro = P.loc[pd.Index(p_ilocs.values), pcols].copy()
@@ -646,6 +676,21 @@ def fetch_candidates(S, P, do_calo_syst):
     for suff, fl in chi2_suffixes.items():
         S["mu_chi2%s_of_mu_cand" % suff] = mu["chi2u_%s" % fl]
         S["prot_chi2%s_of_mu_cand" % suff] = mu["chi2p_%s" % fl]
+
+    # muon-candidate truth (truth of the reco track matched to the muon cand);
+    # GUMP kept both the mu_true_* alias and the true_mucand_* canonical name
+    mu_true_p = magdf(pd.DataFrame({"x": mu.true_genp_x, "y": mu.true_genp_y, "z": mu.true_genp_z}))
+    S["mu_true_p"] = mu_true_p
+    S["true_mucand_p"] = mu_true_p
+    S["mu_true_pdg"] = mu.true_pdg
+    S["true_mucand_pdg"] = mu.true_pdg
+    S["true_mucand_dir_x"] = mu.true_genp_x / mu_true_p
+    S["true_mucand_dir_y"] = mu.true_genp_y / mu_true_p
+    S["true_mucand_dir_z"] = mu.true_genp_z / mu_true_p
+    S["true_mucand_end_x"] = mu.true_end_x
+    S["true_mucand_end_y"] = mu.true_end_y
+    S["true_mucand_end_z"] = mu.true_end_z
+
     S["p_len"] = pro.len
     S["p_ke"] = pro.ke_proton  # MeV (the old Proton_kinetic_leading was GeV)
     S["p_end_x"] = pro.end_x
@@ -657,6 +702,33 @@ def fetch_candidates(S, P, do_calo_syst):
     S["p_trackScore"] = pro.trackScore
     S["mu_chi2_of_lead_prot"] = pro.chi2u_cafpyana
     S["prot_chi2_of_lead_prot"] = pro.chi2p_cafpyana
+
+    # leading-proton-candidate truth (truth of the reco track matched to the
+    # leading proton cand); GUMP kept both p_true_* and true_pcand_* names
+    p_true_p = magdf(pd.DataFrame({"x": pro.true_genp_x, "y": pro.true_genp_y, "z": pro.true_genp_z}))
+    S["p_true_p"] = p_true_p
+    S["true_pcand_p"] = p_true_p
+    S["p_true_pdg"] = pro.true_pdg
+    S["true_pcand_pdg"] = pro.true_pdg
+    S["true_pcand_dir_x"] = pro.true_genp_x / p_true_p
+    S["true_pcand_dir_y"] = pro.true_genp_y / p_true_p
+    S["true_pcand_dir_z"] = pro.true_genp_z / p_true_p
+    S["true_pcand_end_x"] = pro.true_end_x
+    S["true_pcand_end_y"] = pro.true_end_y
+    S["true_pcand_end_z"] = pro.true_end_z
+
+    # sub-leading proton length: 2nd-longest proton candidate (same is_prot_cand
+    # set as the leading proton -> no track-score gate). Sort ascending by len,
+    # then nth(-2) -> 2nd largest (legacy GUMP idiom); slices with <2 candidates
+    # drop out and become NaN after reindex. nth keeps the per-pfp index, so
+    # drop the pfp level before aligning onto the slice frame.
+    subldf = P[is_prot_cand & (P.len > 0)]
+    if len(subldf):
+        subl = subldf.sort_values("len").len.groupby(level=[0, 1]).nth(-2).droplevel(2)
+    else:
+        subl = pd.Series(dtype=float)
+    S["subl_proton_length"] = subl.reindex(S.index)
+
     S["del_p"] = del_p
     S["del_Tp"] = del_Tp
     S["del_phi"] = del_phi
