@@ -749,7 +749,6 @@ def load_one(fname, idf,
             return _apply_variations(df, shift_binding_E, split_tracks, shift_fraction, split_fraction), match, pot
 
     df =  pd.read_hdf(fname, evtname % idf)
-
     hdr = pd.read_hdf(fname, hdrname % idf)
     ismc = hdr.ismc.iloc[0] == 1
 
@@ -772,7 +771,6 @@ def load_one(fname, idf,
     # Apply preselection
     if preselection is not None:
         df = df[preselection(df)]
-
 
     match = hdr[["run", "evt"]]
     # The columns that identify an event across samples. Everything merged onto `match`
@@ -809,6 +807,7 @@ def load_one(fname, idf,
         })
         any_in_AV = gmpl._fv_cut(vtx, 0, 0, 0, 0).groupby(level=[0,1]).any().rename("AVnu")
         match = match.merge(any_in_AV, on=["__ntuple", "entry"], how="left")
+
 
     df = df.merge(match, on=["__ntuple", "entry"], how="left")
 
@@ -1208,6 +1207,7 @@ def load_one(fname, idf,
         mrg.drop(columns=drops, inplace=True, errors='ignore')
     if cache_dir is not None:
         _write_cache(cache_file, mrg, match, pot)
+
     return _apply_variations(mrg, shift_binding_E, split_tracks, shift_fraction, split_fraction), match, pot
 
 

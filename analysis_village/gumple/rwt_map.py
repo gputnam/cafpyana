@@ -124,15 +124,15 @@ def remake_detvar_maps(detector, DF_DIR, selection=gmpl.all_gump_cuts, outdir="r
         os.makedirs(outdir)
     if detector == "ICARUS Run2":
         GOAL_POT = 2e20
-        DETVAR_FILES = [[DF_DIR + "ICARUSRun2_SpringMCOverlay_rewgt_%i.df" % i for i in range(2)], [DF_DIR + "ICARUSRun2_Spring_Overlay_WMXThXW.df"], [DF_DIR + "ICARUSRun2_Spring_Overlay_WMYZ.df"], [DF_DIR + "ICARUSRun2_Spring_Overlay_SCE.df"]]
+        DETVAR_FILES = [[DF_DIR + "ICARUSRun2_SpringMCOverlay_rewgt_%i.df" % i for i in range(4)], [DF_DIR + "ICARUSRun2_Spring_Overlay_WMXThXW.df"], [DF_DIR + "ICARUSRun2_Spring_Overlay_WMYZ.df"], [DF_DIR + "ICARUSRun2_Spring_Overlay_SCE.df"]]
         DETVAR_NAMES = ["Nominal", "WMXThetaXW", "WMYZ", "SCE"]
     elif detector == "ICARUS Run4":
         GOAL_POT = 3e20
-        DETVAR_FILES = [[DF_DIR + "ICARUSRun4_SpringMCOverlay_rewgt_%i.df" % i for i in range(4)], [DF_DIR + "ICARUSRun4_Spring_Overlay_WMXThXW.df"], [DF_DIR + "ICARUSRun4_Spring_Overlay_WMYZ.df"], [DF_DIR + "ICARUSRun4_Spring_Overlay_SCE.df"]]
+        DETVAR_FILES = [[DF_DIR + "ICARUSRun4_SpringMCOverlay_rewgt_%i.df" % i for i in range(8)], [DF_DIR + "ICARUSRun4_Spring_Overlay_WMXThXW.df"], [DF_DIR + "ICARUSRun4_Spring_Overlay_WMYZ.df"], [DF_DIR + "ICARUSRun4_Spring_Overlay_SCE.df"]]
         DETVAR_NAMES = ["Nominal", "WMXThetaXW", "WMYZ", "SCE"]
     elif detector == "SBND": 
         GOAL_POT = 1e20
-        DETVAR_FILES = [[DF_DIR + "SBNDMCCV_%i.df" % i for i in range(10)], 
+        DETVAR_FILES = [[DF_DIR + "SBNDMCCV_%i.df" % i for i in range(20)], 
                         [DF_DIR + "SBND_SpringMC_WMXThetaXW.df"], 
                         [DF_DIR + "SBND_SpringMC_WMYZ.df"], 
                        ]

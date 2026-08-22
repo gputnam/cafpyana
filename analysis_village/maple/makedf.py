@@ -70,8 +70,21 @@ PID_UNKNOWN, PID_PROTON, PID_PION, PID_SHOWER, PID_OTHER = 0, 1, 2, 3, 4
 # TruthClass: 0=1mu1p, 1=1muNp, 2=Other, 3=Cosmic, 4=Invalid
 CLS_1MU1P, CLS_1MUNP, CLS_OTHER, CLS_COSMIC, CLS_INVALID = 0, 1, 2, 3, 4
 
-CALO_VARIATIONS = ["cv", "alpha_p", "alpha_m", "beta_p", "beta_m", "R_p", "R_m", "R_p25", "dedxbias"]
+# All chi2 variation suffixes stored in the evt df (when do_calo_syst=True),
+# plus the CAFANA-compat chi2 stored under the same scheme.
 SCALE_SMEAR_VARIATIONS = ["lo", "hi", "2lo", "2hi", "smear5", "smear13", "sqsmear15"]
+CALO_VARIATIONS = ["cv", "alpha_p", "alpha_m", "beta_p", "beta_m", "R_p", "R_m", "R_p25", "dedxbias"]
+CHI2_VARIATIONS = SCALE_SMEAR_VARIATIONS + CALO_VARIATIONS + ["cafana"]
+
+# The four per-slice chi2 candidate columns, GUMP naming ("%s" is the
+# variation suffix; "" is nominal).
+CHI2_CAND_COLS = [
+    "mu_chi2%s_of_mu_cand",
+    "prot_chi2%s_of_mu_cand",
+    "mu_chi2%s_of_prot_cand",
+    "prot_chi2%s_of_prot_cand",
+]
+
 
 def _flatcols(df):
     """Flatten a multiindex-column dataframe to underscore-joined names."""

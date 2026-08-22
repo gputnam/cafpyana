@@ -89,6 +89,9 @@ def main():
         "-o", "--output", required=True, help="Final output .root file path"
     )
     parser.add_argument(
+        "-w", "--weights", action="store_true", help="include weights"
+    )
+    parser.add_argument(
         "-j", "--cores", type=int, default=1, help="Number of cores for loadl"
     )
     parser.add_argument(
@@ -136,16 +139,16 @@ def main():
         njob=args.cores,
         xsec_univ=False,
         flux_univ=False,
-        sep_flux_univ=is_mc,  # Enable multisim loops only for MC configurations
-        sep_g4_univ=is_mc,  # Enable multisim loops only for MC configurations
-        xsec_spline=is_mc,
-        pot_spline=is_mc,
+        sep_flux_univ=args.weights,  # Enable multisim loops only for MC configurations
+        sep_g4_univ=args.weights,  # Enable multisim loops only for MC configurations
+        xsec_spline=args.weights,
+        pot_spline=args.weights,
         match_Enu=is_mc,
         load_truth=is_mc,
-        detvar_spline=is_mc,
+        detvar_spline=args.weights,
         spline_dir=args.dvsplines,
-        include_syst=is_mc,
-        reweight_aFF=is_mc,
+        include_syst=args.weights,
+        reweight_aFF=args.weights,
         preselection=args.selection,
         detector=detector_context,
         lightmem=True,

@@ -16,21 +16,19 @@ MASS_A = 22*NEUTRON_MASS + 18*PROTON_MASS - 0.34381
 BE = 0.0295 # note: maple had a difference value for this... 0.0309
 MASS_Ap = MASS_A - NEUTRON_MASS + BE
 
-def neutrino_energy(mu_p, mu_dir, p_p, p_dir, p_E, BE=BE):
+def neutrino_energy(mu_p, mu_dir, p_p, p_dir, p_E, n_proton=None, BE=BE):
+    if not n_proton:
+        n_proton = pd.DataFrame(1.0, index=mu_p.index, columns=mu_p.columns)
     # p_p, p_dir, p_E are the proton momentum magnitude, direction and energy.
     # For a single proton p_E = mag2d(p_p, PROTON_MASS); for a summed multi-proton
     # system p_p = |sum_i p_i| and p_E = sum_i E_i.
-    mass_Ap = MASS_A - NEUTRON_MASS + BE
 
     mu_E = mag2d(mu_p, MUON_MASS)
     # invariant mass of the proton system (PROTON_MASS for a single on-shell
     # proton); p_E - p_M is the proton system's kinetic energy.
     p_M = np.sqrt(np.maximum(p_E**2 - p_p**2, 0.))
 
-    dpT = transverse_kinematics(mu_p, mu_dir, p_p, p_dir, p_E, BE=BE)['del_Tp']
-    ET = np.sqrt(dpT**2 + mass_Ap**2) - mass_Ap
-
-    return mu_E + p_E - p_M + ET + BE
+    return mu_E + p_E - p_M + n_proton*BE
 
 def neutrino_energy_ccqe(mu_p, mu_costh, BE=BE):
     """Reconstructed neutrino energy under the CCQE assumption, from the muon

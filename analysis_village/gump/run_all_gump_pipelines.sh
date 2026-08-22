@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Define the absolute input storage directories
-gray_prefix='/exp/sbnd/data/users/nrowe/MAPLE/tests/'
+gray_prefix='/exp/sbnd/data/users/gputnam/GUMPLE/sbn-rewgted-16/'
 gumple_prefix='../gumple/'
-output='/exp/sbnd/data/users/nrowe/GUMP/tests/'
-MAX_JOBS=8
+output='/exp/sbnd/data/users/nrowe/GUMP/sbn-rewgted-16/'
+MAX_JOBS=5
 
 # Navigate to the working directory context
 echo "========================================================"
@@ -19,7 +19,7 @@ python3 ${gumple_prefix}rwt_map.py -s ${selection} -o ${splinedir} -d ${gray_pre
 
 ### 1. SBND MC (20 files, 0 to 9)
 echo "--> Staging SBND Spring MC Files..."
-for i in {0..10}
+for i in {0..19}
 do
     while [ $(jobs -rp | wc -l) -ge $MAX_JOBS ]; do
         sleep 10 # Check every 2 seconds
@@ -28,6 +28,7 @@ do
     echo "Launching SBND MC Step $i"
     python3 ${gumple_prefix}/run_gumple_pipeline.py \
         -c mc \
+        -w \
         -f ${splinedir} \
 	-s ${selection} \
         -i ${gray_prefix}SBNDMCCV_${i}.df \
@@ -60,7 +61,7 @@ while [ $(jobs -rp | wc -l) -ge $MAX_JOBS ]; do
 done
 ### 2. ICARUS Run 4 MC (10 files, 0 to 9)
 echo "--> Staging ICARUS Run 4 MC Files..."
-for i in {0..3}
+for i in {0..7}
 do
     while [ $(jobs -rp | wc -l) -ge $MAX_JOBS ]; do
         sleep 10 # Check every 2 seconds
@@ -69,6 +70,7 @@ do
     echo "Launching ICARUS Run 4 MC Step $i"
     python3 ${gumple_prefix}/run_gumple_pipeline.py \
         -c mc \
+        -w \
         -f ${splinedir} \
 	-s ${selection} \
         -i ${gray_prefix}ICARUSRun4_SpringMCOverlay_rewgt_${i}.df \
@@ -89,18 +91,18 @@ python3 ${gumple_prefix}/run_gumple_pipeline.py \
 
 while [ $(jobs -rp | wc -l) -ge $MAX_JOBS ]; do
     sleep 10 # Check every 2 seconds
-#done
+done
 
 ### 9. SBND Dirt
 echo "--> Launching SBND Dirt..."
 python3 ${gumple_prefix}/run_gumple_pipeline.py \
-    -c data \
+    -c mc \
     -s ${selection} \
     -i ${gray_prefix}SBND_SpringLowEMC.df \
     -o ${output}SBND_SpringLowEMC_sbruce.root &
 
 ### 2. ICARUS Run 2 MC (files, 0 to 3)
-echo "--> Staging ICARUS Run 4 MC Files..."
+echo "--> Staging ICARUS Run 2 MC Files..."
 for i in {0..3}
 do
     while [ $(jobs -rp | wc -l) -ge $MAX_JOBS ]; do
@@ -110,6 +112,7 @@ do
     echo "Launching ICARUS Run 4 MC Step $i"
     python3 ${gumple_prefix}/run_gumple_pipeline.py \
         -c mc \
+        -w \
         -f ${splinedir} \
 	-s ${selection} \
         -i ${gray_prefix}ICARUSRun2_SpringMCOverlay_rewgt_${i}.df \
@@ -135,7 +138,7 @@ done
 ### 7. ICARUS Run 2 Dirt
 echo "--> Launching ICARUS Run 2 Dirt..."
 python3 ${gumple_prefix}/run_gumple_pipeline.py \
-    -c data \
+    -c mc \
     -s ${selection} \
     -i ${gray_prefix}ICARUSRun2_Spring_Overlay_Dirt.df \
     -o ${output}ICARUSRun2_Spring_Overlay_Dirt_sbruce.root &

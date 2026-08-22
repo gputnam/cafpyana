@@ -42,6 +42,14 @@ ICARUS_CUTS = {
     "psel_pscore_th": 92,
 }
 
+def maple_v_calovariation(df, variation):
+    """Copy of df with the nominal chi2 candidate columns replaced by the
+    {variation}-suffixed ones (GUMP nb v_calovariation semantics)."""
+    df = df.copy()
+    for c in CHI2_CAND_COLS:
+        df[c % ""] = df[c % variation]
+    return df
+
 # function for picking cut val based on detector
 def _det_cut_th(detector, key):
     return np.where(detector == "SBND", SBND_CUTS[key], ICARUS_CUTS[key])
@@ -220,8 +228,7 @@ def flash_cut(df):
     return pd.Series(np_mask, index=df.index) 
 
 def cosmic_cut(df):
-    return (df.nu_score > _det_cut_th(df.detector, "nu_score_th")) & \
-           (df["mu_p_opening_angle_deg"] < _det_cut_th(df.detector, "max_opening_angle"))
+    return (df["mu_p_opening_angle_deg"] < _det_cut_th(df.detector, "max_opening_angle")) & (df["crthit"] == 0)
 
 def slcfv_cut(df):
     return prefix_fv_cut(df, "slc_vtx")
