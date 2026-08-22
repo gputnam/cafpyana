@@ -75,10 +75,21 @@ def recompute_kinematics(s, mu_p=None, p_p=None, BE=None):
 
     tki = kinematics.transverse_kinematics(mu_p, mu_dir, p_p, p_dir, p_E, BE=BE)
     s["nu_E_calo"] = kinematics.neutrino_energy(mu_p, mu_dir, p_p, p_dir, p_E, n_proton=s.n_proton)
-    if BE != kinematics.BE:
-        nucleon_map = {0: 1, 10: 2, 1: 1, 2: 1, 3: 1} # 0:QE(1), 10:MEC(2), 1,2,3:RES/SIS/DIS(1), others:0
-        nucleons_series = s.genie_mode.map(nucleon_map).fillna(0).astype(int)
-        s["nu_E_calo"] = s["nu_E_calo"] - BE * s.nucleons_series
+
+    dBE = 0.025
+    
+    # Check if BE is a Series or a scalar
+    if np.ndim(BE) > 0:
+        # Element-wise check: where BE is NOT equal to kinematics.BE, use dBE, otherwise use 0.0
+        effective_dBE = np.where(BE != kinematics.BE, dBE, 0.0)
+    else:
+        effective_dBE = dBE if BE != kinematics.BE else 0.0 # or just 0.0
+    
+    nucleon_map = {0: 1, 10: 2, 1: 1, 2: 1, 3: 1}  # 0:QE(1), 10:MEC(2), 1,2,3:RES/SIS/DIS(1), others:0
+    nucleons_series = s.genie_mode.map(nucleon_map).fillna(0).astype(int)
+    
+    s["nu_E_calo"] = s["nu_E_calo"] - effective_dBE * nucleons_series
+
     # muon-only CCQE energy estimator. Recomputed here (not just carried over as
     # a derived column) so both universes built on this function are consistent:
     # the binding-energy shift moves it via BE, and the track-splitting universe
