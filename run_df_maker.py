@@ -6,6 +6,7 @@ import pathlib
 import argparse
 import tables
 from pyanalib.ntuple_glob import NTupleGlob
+from pyanalib.pandas_helpers import downcast_float32, POT_TABLES
 import pandas as pd
 import warnings
 
@@ -91,6 +92,8 @@ def run_pool(output, inputs, nproc):
                 for k, buffer in df_buffers.items():
                     if buffer:  # only if buffer has data
                         concat_df = pd.concat(buffer, ignore_index=False)
+                        if k not in POT_TABLES:
+                            concat_df = downcast_float32(concat_df)
                         this_key = k + "_" + str(k_idx)
                         try:
                             hdf_pd.put(key=this_key, value=concat_df, format="fixed")
@@ -106,6 +109,8 @@ def run_pool(output, inputs, nproc):
         for k, buffer in df_buffers.items():
             if buffer:
                 concat_df = pd.concat(buffer, ignore_index=False)
+                if k not in POT_TABLES:
+                    concat_df = downcast_float32(concat_df)
                 this_key = k + "_" + str(k_idx)
                 try:
                     hdf_pd.put(key=this_key, value=concat_df, format="fixed")
