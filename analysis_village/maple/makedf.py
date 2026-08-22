@@ -386,6 +386,7 @@ def fetch_info(f):
         "slc_vtx_z": slcdf.slc.vertex.z,
         "charge_center_z": slcdf.slc.charge_center.z,
         "nu_score": slcdf.slc.nu_score,
+        "crlongtrkdiry": slcdf.slc.nuid.crlongtrkdiry,
         "tmatch_idx": slcdf.slc.tmatch.idx,
         "tmatch_eff": slcdf.slc.tmatch.eff,
         "tmatch_pur": slcdf.slc.tmatch.pur,
