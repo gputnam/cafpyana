@@ -17,7 +17,7 @@ BE = 0.0295 # note: maple had a difference value for this... 0.0309
 MASS_Ap = MASS_A - NEUTRON_MASS + BE
 
 def neutrino_energy(mu_p, mu_dir, p_p, p_dir, p_E, n_proton=None, BE=BE):
-    if not n_proton:
+    if n_proton is None:
         n_proton = pd.DataFrame(1.0, index=mu_p.index, columns=mu_p.columns)
     # p_p, p_dir, p_E are the proton momentum magnitude, direction and energy.
     # For a single proton p_E = mag2d(p_p, PROTON_MASS); for a summed multi-proton
