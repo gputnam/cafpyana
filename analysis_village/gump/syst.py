@@ -41,11 +41,12 @@ def recompute_kinematics(s, mu_p=None, p_p=None, BE=None):
     is range-based; BE defaults to kinematics.BE. Pass either to build a
     shifted-kinematics universe from the CV.
 
-    Requires a stored `p_E` (proton energy) column, passed through to the
-    kinematics functions. The proton momentum magnitude comes from the stored
-    `p_p` column when present (the summed value for a multi-proton system);
-    without a `p_p` column the frame is a single proton and p_p = sqrt(p_E^2 -
-    m_p^2). Pass `p_p` to override the stored value.
+    The proton system is the SUMMED candidate-proton system (psum): requires
+    the stored `psum_E` (summed energy) and `psum_dir_*` (unit direction of
+    the vector-sum momentum) columns, so the kinematics generalize to the Np
+    case. The momentum magnitude comes from the stored `psum_p` column when
+    present; otherwise the frame is treated as a single on-shell proton and
+    p_p = sqrt(psum_E^2 - m_p^2). Pass `p_p` to override the stored value.
     """
 
     if BE is None:
@@ -58,23 +59,24 @@ def recompute_kinematics(s, mu_p=None, p_p=None, BE=None):
             mu_p = pd.Series(np.sqrt(np.maximum(s.mu_E.to_numpy()**2 - kinematics.MUON_MASS**2, 0)),
                              index=s.index)
         else:
-           raise ValueError("You don't have the necessary columns to recompute kinematics.") 
+           raise ValueError("You don't have the necessary columns to recompute kinematics.")
 
-    if "p_E" not in s.columns:
-        raise KeyError("recompute_kinematics requires a stored 'p_E' (proton "
-                       "energy) column.")
+    if "psum_E" not in s.columns:
+        raise KeyError("recompute_kinematics requires stored 'psum_E'/'psum_dir_*' "
+                       "(summed proton system) columns.")
 
     mu_dir = pd.DataFrame({"x": s.mu_dir_x, "y": s.mu_dir_y, "z": s.mu_dir_z})
-    p_dir = pd.DataFrame({"x": s.p_dir_x, "y": s.p_dir_y, "z": s.p_dir_z})
-    p_E = s.p_E
+    p_dir = pd.DataFrame({"x": s.psum_dir_x, "y": s.psum_dir_y, "z": s.psum_dir_z})
+    p_E = s.psum_E
     if p_p is None:
-        if "p_p" in s.columns:
-            p_p = s.p_p
+        if "psum_p" in s.columns:
+            p_p = s.psum_p
         else:
-            p_p = np.sqrt(np.maximum(s.p_E**2 - kinematics.PROTON_MASS**2, 0))
+            p_p = np.sqrt(np.maximum(p_E**2 - kinematics.PROTON_MASS**2, 0))
 
     tki = kinematics.transverse_kinematics(mu_p, mu_dir, p_p, p_dir, p_E, BE=BE)
-    s["nu_E_calo"] = kinematics.neutrino_energy(mu_p, mu_dir, p_p, p_dir, p_E, n_proton=s.n_proton)
+    # number of candidate protons = candidate pfps minus the muon
+    s["nu_E_calo"] = kinematics.neutrino_energy(mu_p, mu_dir, p_p, p_dir, p_E, n_proton=s.n_pfp - 1)
 
     dBE = 0.025
     

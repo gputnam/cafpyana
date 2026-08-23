@@ -344,15 +344,16 @@ def get_muon_mask(df, variation=None):
     # Standard kinematic/topological selection
     base_mask = get_base_muon_mask(df, level="slc")
 
-    # Apply muon/proton chi2 cuts using the variation suffix on chi2 columns
-    chi2_muon_col = f"muon_chi2{v}_of_muon_cand"
-    chi2_prot_col = f"prot_chi2{v}_of_muon_cand"
+    # Apply muon/proton chi2 cuts using the variation suffix on chi2 columns.
+    # Column names match the makedf outputs (mu_chi2{v}_of_mu_cand /
+    # prot_chi2{v}_of_mu_cand); a missing column raises rather than silently
+    # skipping the cut (which is how the muon chi2 PID was lost in the
+    # sbn-rewgted-16/17/18 productions).
+    chi2_muon_col = f"mu_chi2{v}_of_mu_cand"
+    chi2_prot_col = f"prot_chi2{v}_of_mu_cand"
 
-    chi2_mask = True
-    if chi2_muon_col in df.columns:
-        chi2_mask &= df[chi2_muon_col] < _det_cut_th(df.detector, "musel_muscore_th")
-    if chi2_prot_col in df.columns:
-        chi2_mask &= df[chi2_prot_col] > _det_cut_th(df.detector, "musel_pscore_th")
+    chi2_mask = (df[chi2_muon_col] < _det_cut_th(df.detector, "musel_muscore_th")) & \
+                (df[chi2_prot_col] > _det_cut_th(df.detector, "musel_pscore_th"))
 
     return base_mask & chi2_mask
 
@@ -372,7 +373,10 @@ def pid_cut(df, variation=None):
     cut_protons = get_proton_mask(df, variation=variation)
     return cut_muon & cut_protons
 
-def all_maple_cuts(recodf, DETECTOR=None, det_run=None, variation=None):
+def maple_base_cuts(recodf, DETECTOR=None, det_run=None, variation=None):
+    """The shared (multiplicity-inclusive) cut chain: presel & cosmic & flash
+    & trk & PID.  The GUMP/MAPLE selections split this on n_pfp (the number
+    of candidate pfps in the slice, muon included)."""
     if DETECTOR:
         print(f"manual detector: {DETECTOR}")
         recodf['detector'] = DETECTOR
@@ -388,7 +392,7 @@ def all_maple_cuts(recodf, DETECTOR=None, det_run=None, variation=None):
 
     ### flash cut
     flash_mask = flash_cut(recodf)
-  
+
     ### trk cut
     trk_mask = trk_cut(recodf)
 
@@ -397,11 +401,19 @@ def all_maple_cuts(recodf, DETECTOR=None, det_run=None, variation=None):
 
     return presel_mask & cosmic_mask & flash_mask & trk_mask & pid_mask
 
-def all_gump_cuts(recodf, DETECTOR=None, det_run=None):
-    return all_maple_cuts(recodf, DETECTOR=DETECTOR, det_run=det_run) & (recodf.n_proton == 1)
+def all_gump_cuts(recodf, DETECTOR=None, det_run=None, variation=None):
+    """GUMP (1u1p): base chain + exactly two candidate pfps (muon + proton)."""
+    return maple_base_cuts(recodf, DETECTOR=DETECTOR, det_run=det_run, variation=variation) & \
+        (recodf.n_pfp == 2)
 
-def all_mapleNGO_cuts(recodf, DETECTOR=None, det_run=None):
-    return all_maple_cuts(recodf, DETECTOR=DETECTOR, det_run=det_run) & (recodf.n_proton > 1)
+def all_maple_cuts(recodf, DETECTOR=None, det_run=None, variation=None):
+    """MAPLE (1uN>1p): base chain + more than two candidate pfps.
+
+    NB semantic change: this used to be the multiplicity-INCLUSIVE chain
+    (now maple_base_cuts); it is now exclusive of the GUMP (n_pfp == 2)
+    selection."""
+    return maple_base_cuts(recodf, DETECTOR=DETECTOR, det_run=det_run, variation=variation) & \
+        (recodf.n_pfp > 2)
 
 def maple_cut_chain(recodf, DETECTOR=None, det_run=None, variation=None):
     if DETECTOR:
@@ -419,7 +431,7 @@ def maple_cut_chain(recodf, DETECTOR=None, det_run=None, variation=None):
 
     ### flash cut
     flash_mask = flash_cut(recodf)
-  
+
     ### trk cut
     trk_mask = trk_cut(recodf)
 
@@ -427,8 +439,9 @@ def maple_cut_chain(recodf, DETECTOR=None, det_run=None, variation=None):
     cut_muon = get_muon_mask(recodf, variation=variation)
     cut_protons = get_proton_mask(recodf, variation=variation)
 
-    ### maple sel
-    maple_sel = all_maple_cuts(recodf, DETECTOR=DETECTOR, det_run=det_run, variation=variation)
+    ### base chain, split on candidate-pfp multiplicity into the exclusive
+    ### gump (1u1p, n_pfp==2) and maple (1uN>1p, n_pfp>2) selections
+    base_sel = presel_mask & cosmic_mask & flash_mask & trk_mask & cut_muon & cut_protons
 
     return pd.DataFrame({
         "cut_presel": presel_mask,
@@ -437,5 +450,6 @@ def maple_cut_chain(recodf, DETECTOR=None, det_run=None, variation=None):
         "cut_trk": trk_mask,
         "cut_muon": cut_muon,
         "cut_protons": cut_protons,
-        "maple_sel": maple_sel
+        "gump_sel": base_sel & (recodf.n_pfp == 2),
+        "maple_sel": base_sel & (recodf.n_pfp > 2),
     }, index=recodf.index)

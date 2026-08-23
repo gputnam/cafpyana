@@ -8,16 +8,13 @@ def make_gump_evt_df(f, selection="none", do_calo_syst=True):
     ## presel is same btwn maple and gump
     elif selection == "presel":
         pass
-    ## full gump selection is just maple, but with added cut 
+    ## full gump selection: exactly two candidate pfps (muon + proton)
     elif selection == "full":
-        S = S[(S['n_proton'] == 1)]
+        S = S[S.gump_sel]
     return S
 
-def make_gump_evt_df(f):
-    return make_maple_nudf(f)
-
 def make_gump_evtrec_df(f):
-    return make_maple_nudf(f)
+    return make_maple_evtrec_df(f)
 
 def make_gump_wgtdf(f):
     return make_maple_wgtdf(f)
@@ -33,12 +30,12 @@ def make_gump_evt_presel_df(f):
 
 def make_gump_evt_fullsel_df(f):
     S = make_maple_evt_df(f, selection="full", do_calo_syst=True)
-    S = S[(S['n_proton'] == 1)]
+    S = S[S.gump_sel]
     return S
 
 def make_gump_evt_fullsel_data_df(f):
     S = make_maple_evt_df(f, selection="full", do_calo_syst=False)
-    S = S[(S['n_proton'] == 1)]
+    S = S[S.gump_sel]
     return S
 
 def make_gump_nudf(f):

@@ -254,20 +254,21 @@ def maple_truth_classdf(f, det, run):
 # Per-pfp candidate machinery (chi2-free; chi2 cuts live in maple_sel)
 # =====================================================================
 def _find_candidates(P):
-    """Chi2-free muon + candidate-proton finding and fixed pfp counting.
+    """Chi2-free muon + candidate-pfp finding and fixed pfp counting.
 
     P: flat per-pfp frame (index entry, slc, pfp).
     Returns (mu_ilocs [per-slice Index of muon rows],
              is_prot_cand [bool Series over P],
-             counts DataFrame per slice [n_proton, n_shower, n_other]).
+             counts DataFrame per slice [n_pfp, n_pfp_no_calo, n_shower, n_other]).
 
     The muon is the longest track passing the chi2-free part of the old
-    find_muon mask.  Candidate protons are every other pfp passing the
-    id_pfp gates with dist_start < 10 -- the set the old id_pfp split into
-    pion/proton by chi2.  The remaining pfps keep the chi2-independent
-    shower/other/unknown classification, so the counts are fixed under
-    calorimetric variations.  All masks mirror the C++ skip conditions,
-    including NaN behavior.
+    find_muon mask.  A candidate pfp is any pandora pfp that is primary,
+    has calo points, and starts within 10 cm of the vertex; n_pfp counts
+    the candidate pfps in the slice (the muon included).  Candidate
+    protons are the non-muon candidate pfps -- the set whose worst-case
+    chi2 aggregates the proton PID cut is applied to.  The remaining pfps
+    keep the chi2-independent shower/other/unknown classification, so the
+    counts are fixed under calorimetric variations.
     """
 
     keep = gmpl.get_base_muon_mask(P, level="trk")
@@ -282,13 +283,21 @@ def _find_candidates(P):
     if len(mu_ilocs):
         is_mu.loc[pd.Index(mu_ilocs.values)] = True
 
-    # ---- id_pfp gates (the chi2-free skip conditions) ----
+    # ---- candidate pfps: primary, has calo points, starts within 10 cm ----
+    # NaN semantics: NaN ncalo/dist_start fail the comparisons -> not a candidate.
+    is_cand = P.prim_pfp.astype(bool) & (P.ncalo > 0) & (P.dist_start < 10.0)
+    is_prot_cand = is_cand & ~is_mu
+
+    # would-be candidates without calo: primary, starts within 10 cm, but no
+    # calo points -- invisible to n_pfp/PID (classified "unknown" below)
+    is_cand_no_calo = P.prim_pfp.astype(bool) & (P.ncalo == 0) & (P.dist_start < 10.0)
+
+    # ---- id_pfp gates (the chi2-free skip conditions), kept for the
+    # shower/other/unknown classification of the remaining pfps ----
     unknown0 = (~P.prim_pfp) | P.start_x.isna() | P.end_x.isna() | P.len.isna()
     unknown1 = P.min_dist > 50.0 # VTX_MAX_DIST
     no_calo = P.ncalo == 0
     gate = ~unknown0 & ~unknown1 & ~no_calo
-
-    is_prot_cand = gate & (P.dist_start < 10.0) & ~is_mu
 
     # remaining pfps: chi2-independent shower/other/unknown classification
     shw_unknown = P.shw_energy2.isna()
@@ -301,7 +310,10 @@ def _find_candidates(P):
 
     grp = lambda s: s.groupby(level=[0, 1]).sum()
     counts = pd.DataFrame({
-        "n_proton": grp(is_prot_cand.astype(int)),
+        # muon included via the union: the muon counts toward n_pfp even in
+        # the (rare) case it misses the candidate definition itself
+        "n_pfp": grp((is_cand | is_mu).astype(int)),
+        "n_pfp_no_calo": grp(is_cand_no_calo.astype(int)),
         "n_shower": grp((pid_rest == PID_SHOWER).astype(int)),
         "n_other": grp((pid_rest == PID_OTHER).astype(int)),
     })
@@ -576,11 +588,15 @@ def fetch_candidates(S, P, do_calo_syst):
     for c in counts.columns:
         S[c] = counts[c]
     S["has_muon"] = has_mu
-    S["cut_np"] = counts.n_proton > 0
+    # muon + at least one other candidate pfp (same semantics as the old
+    # n_proton > 0 once combined with has_muon)
+    S["cut_np"] = counts.n_pfp >= 2
     S["cut_0shwother"] = (counts.n_shower == 0) & (counts.n_other == 0)
 
     # worst-case cut variables over the candidate protons (min for cuts
-    # with direction >, max for cuts with direction <)
+    # with direction >, max for cuts with direction <): min chi2u / max chi2p
+    # over ALL non-muon candidate pfps, so the proton PID cut on the max chi2p
+    # only passes when every candidate is proton-like
     aggs = _proton_aggregates(
         P, is_prot_cand,
         mincols=["trackScore", "ke_proton"] + ["chi2u_%s" % fl for fl in chi2_suffixes.values()],
@@ -610,9 +626,11 @@ def fetch_candidates(S, P, do_calo_syst):
         mu = pd.DataFrame(columns=mucols, dtype=float)
     mu = mu.reindex(S.index)
 
-    # leading proton: longest candidate proton with len > 0 (find_longest_proton)
+    # leading proton: the longest-length non-muon candidate pfp (with len > 0);
+    # all p_* / true_pcand_* output columns come from this same pfp
     prodf = P[is_prot_cand & (P.len > 0)]
-    pcols = ["len", "end_x", "end_y", "end_z", "dir_x", "dir_y", "dir_z",
+    pcols = ["len", "start_x", "start_y", "start_z", "end_x", "end_y", "end_z",
+             "dir_x", "dir_y", "dir_z", "dist_start",
              "p_proton", "ke_proton", "trackScore", "chi2u_cafpyana", "chi2p_cafpyana"] + truthcols
     if len(prodf):
         p_ilocs = prodf.len.groupby(level=[0, 1]).idxmax()
@@ -635,29 +653,68 @@ def fetch_candidates(S, P, do_calo_syst):
 
     recoE = np.where(has_mu & found_proton, E_mu + proton_ke_sum, -999.0)
 
-    # transverse / angular variables (leading proton)
+    # ------------------------------------------------------------------
+    # psum: the summed proton-candidate system -- vector-sum momentum,
+    # summed KE and total energy, and unit direction over ALL candidate
+    # protons (the chi2-free non-muon candidate pfps, before PID cuts).
+    # NaN semantics follow _proton_aggregates: a NaN momentum/direction on
+    # any candidate (or no candidates at all) makes the psum NaN.
+    # ------------------------------------------------------------------
+    pc = P[is_prot_cand]
+    pcg = pd.DataFrame({
+        "px": pc.p_proton * pc.dir_x,
+        "py": pc.p_proton * pc.dir_y,
+        "pz": pc.p_proton * pc.dir_z,
+        "ke": pc.ke_proton,
+        "E": pc.ke_proton + PROTON_MASS,
+    }).groupby(level=[0, 1])
+    psum = pcg.sum()
+    cnt = pcg.count()
+    sz = pcg.size()
+    for c in psum.columns:
+        psum.loc[cnt[c] < sz, c] = np.nan
+    psum = psum.reindex(S.index)
+    psum_p = np.sqrt(psum.px**2 + psum.py**2 + psum.pz**2)
+    S["psum_p"] = psum_p
+    S["psum_ke"] = psum.ke
+    S["psum_E"] = psum.E
+    S["psum_dir_x"] = psum.px / psum_p
+    S["psum_dir_y"] = psum.py / psum_p
+    S["psum_dir_z"] = psum.pz / psum_p
+
+    # transverse / angular variables: the opening angle uses the LEADING
+    # proton candidate; the TKI (del_*) uses the summed proton system, so
+    # the variables generalize to the Np case
     p_mu = mu.p_muon
     dir_mu = pd.DataFrame({"x":mu.dir_x, "y":mu.dir_y, "z":mu.dir_z})
 
     p_p = pro.p_proton
     dir_p = pd.DataFrame({"x":pro.dir_x, "y":pro.dir_y, "z":pro.dir_z})
 
-    valid = np.isfinite(p_mu) & np.isfinite(p_p) & (p_mu > 0) & (p_p > 0)
+    # opening angle between the muon and the leading-length proton candidate:
+    # cosine = dot of the direction vectors normalized by their magnitudes
+    # (dirs are unit vectors, but normalize explicitly for safety)
+    mu_dirn = np.sqrt(np.einsum("ij,ij->i", dir_mu, dir_mu))
+    p_dirn = np.sqrt(np.einsum("ij,ij->i", dir_p, dir_p))
+    valid = np.isfinite(mu_dirn) & np.isfinite(p_dirn) & (mu_dirn > 0) & (p_dirn > 0)
     cosang = np.full(len(S), np.nan, dtype=float)
     dot = np.einsum("ij,ij->i", dir_mu, dir_p)
-    cosang[valid] = dot[valid] / (p_mu[valid] * p_p[valid])
+    cosang[valid] = dot[valid] / (mu_dirn[valid] * p_dirn[valid])
     cosang = np.clip(cosang, -1.0, 1.0)
     ang = np.degrees(np.arccos(cosang))
     S["mu_p_opening_angle_deg"] = ang
 
-    tki_leading = transverse_kinematics(p_mu, dir_mu, p_p, dir_p)
+    dir_psum = pd.DataFrame({"x": S.psum_dir_x, "y": S.psum_dir_y, "z": S.psum_dir_z})
+    tki_psum = transverse_kinematics(p_mu, dir_mu, S.psum_p, dir_psum, p_E=S.psum_E)
 
-    del_p = tki_leading['del_p']
-    del_Tp = tki_leading['del_Tp']
-    del_phi = tki_leading['del_phi']
-    del_alpha = tki_leading['del_alpha']
-    mu_E = tki_leading['mu_E']
-    p_E = tki_leading['p_E']
+    del_p = tki_psum['del_p']
+    del_Tp = tki_psum['del_Tp']
+    del_phi = tki_psum['del_phi']
+    del_alpha = tki_psum['del_alpha']
+    mu_E = tki_psum['mu_E']
+    # p_E stays the LEADING proton candidate's on-shell energy (the summed
+    # system energy is stored as psum_E)
+    p_E = np.sqrt(pro.p_proton**2 + PROTON_MASS**2)
 
     S["nu_E_calo"] = recoE
     S["mu_len"] = mu.len
@@ -693,14 +750,20 @@ def fetch_candidates(S, P, do_calo_syst):
     S["true_mucand_end_z"] = mu.true_end_z
 
     S["p_len"] = pro.len
-    S["p_ke"] = pro.ke_proton  # MeV (the old Proton_kinetic_leading was GeV)
+    S["p_ke"] = pro.ke_proton  # GeV, range-based
+    S["p_T"] = pro.ke_proton   # legacy GUMP alias (p_E - PROTON_MASS on-shell)
+    S["p_start_x"] = pro.start_x
+    S["p_start_y"] = pro.start_y
+    S["p_start_z"] = pro.start_z
     S["p_end_x"] = pro.end_x
     S["p_end_y"] = pro.end_y
     S["p_end_z"] = pro.end_z
     S["p_dir_x"] = pro.dir_x
     S["p_dir_y"] = pro.dir_y
     S["p_dir_z"] = pro.dir_z
+    S["p_dist_to_vertex"] = pro.dist_start  # legacy GUMP name
     S["p_trackScore"] = pro.trackScore
+    S["p_track_score"] = pro.trackScore  # legacy GUMP alias
     S["mu_chi2_of_lead_prot"] = pro.chi2u_cafpyana
     S["prot_chi2_of_lead_prot"] = pro.chi2p_cafpyana
 
@@ -729,6 +792,17 @@ def fetch_candidates(S, P, do_calo_syst):
     else:
         subl = pd.Series(dtype=float)
     S["subl_proton_length"] = subl.reindex(S.index)
+
+    # longest other pfp: length of the longest pfp in the slice that is
+    # neither the muon candidate nor the leading-length proton candidate
+    # (ANY pfp counts here, candidate or not); NaN if no such pfp
+    excl = pd.Series(False, index=P.index)
+    if len(mu_ilocs):
+        excl.loc[pd.Index(mu_ilocs.values)] = True
+    if len(prodf):
+        excl.loc[pd.Index(p_ilocs.values)] = True
+    othr = P.len[~excl & P.len.notna()].groupby(level=[0, 1]).max()
+    S["othr_pfp_length"] = othr.reindex(S.index)
 
     S["del_p"] = del_p
     S["del_Tp"] = del_Tp
@@ -804,6 +878,10 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
     S["cut_trk"] = chain.cut_trk
     S["cut_muon"] = chain.cut_muon
     S["cut_protons"] = chain.cut_protons
+    # exclusive selections split on n_pfp: gump = base chain & n_pfp==2 (1u1p),
+    # maple = base chain & n_pfp>2 (1uN>1p). NB maple_sel used to be the
+    # inclusive base chain; 1u1p analyses must use gump_sel.
+    S["gump_sel"] = chain.gump_sel
     S["maple_sel"] = chain.maple_sel
 
     # ------------------------------------------------------------------
@@ -814,7 +892,7 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
     elif selection == "presel":
         S = S[S.cut_presel]
     elif selection == "full":
-        S = S[S.maple_sel]
+        S = S[S.gump_sel | S.maple_sel]
     else:
         raise ValueError("selection must be 'none', 'presel', or 'full'")
 
