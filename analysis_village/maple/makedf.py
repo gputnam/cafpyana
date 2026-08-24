@@ -271,7 +271,7 @@ def _find_candidates(P):
     counts are fixed under calorimetric variations.
     """
 
-    keep = gmpl.get_base_muon_mask(P, level="trk")
+    keep = gmpl.get_good_trk_prim(P)
 
     cand = P[keep]
     if len(cand):
@@ -285,7 +285,7 @@ def _find_candidates(P):
 
     # ---- candidate pfps: primary, has calo points, starts within 10 cm ----
     # NaN semantics: NaN ncalo/dist_start fail the comparisons -> not a candidate.
-    is_cand = P.prim_pfp.astype(bool) & (P.ncalo > 0) & (P.dist_start < 10.0)
+    is_cand = P[keep]
     is_prot_cand = is_cand & ~is_mu
 
     # would-be candidates without calo: primary, starts within 10 cm, but no
@@ -297,13 +297,13 @@ def _find_candidates(P):
     unknown0 = (~P.prim_pfp) | P.start_x.isna() | P.end_x.isna() | P.len.isna()
     unknown1 = P.min_dist > 50.0 # VTX_MAX_DIST
     no_calo = P.ncalo == 0
-    gate = ~unknown0 & ~unknown1 & ~no_calo
+    gate = unknown0 | unknown1 | no_calo
 
     # remaining pfps: chi2-independent shower/other/unknown classification
     shw_unknown = P.shw_energy2.isna()
     is_shower = P.shw_energy2 > 0.0 # PION_KE_MIN
     pid_rest = pd.Series(np.select(
-        [~gate, shw_unknown, is_shower],
+        [gate, shw_unknown, is_shower],
         [PID_UNKNOWN, PID_UNKNOWN, PID_SHOWER],
         default=PID_OTHER), index=P.index)
     pid_rest[is_mu | is_prot_cand] = -1

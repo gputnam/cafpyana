@@ -19,7 +19,6 @@ from makedf.util import *
 # opt used the most updated calo treatment (no EMB IC, no sqmear15, double SBND 13)
 
 SBND_CUTS = {
-    "nu_score_th": 0.35,
     "max_opening_angle": 160,
     "musel_track_score_min": 0.5,
     "musel_muscore_th": 38,
@@ -31,7 +30,6 @@ SBND_CUTS = {
 }
 
 ICARUS_CUTS = {
-    "nu_score_th": 0.35,
     "max_opening_angle": 160,
     "musel_track_score_min": 0.5,
     "musel_muscore_th": 111,
@@ -313,6 +311,16 @@ def presel_cut(df):
 
 def trk_cut(df):
     return df.cut_np & df.has_muon & df.cut_0shwother
+
+def get_good_trk_prim(df, pref=""):
+
+    mask = (df[pref+"prim_pfp"].astype(bool)
+            & (df[pref+"ncalo"] > 0)
+            & (df[pref + "dist_start"] <= 10.0)
+            & (df[pref+"end_x"].notna())
+            & (df[pref+"len"].notna()))
+
+    return mask
 
 def get_base_muon_mask(df, level="slc"):
     if level == "trk":
