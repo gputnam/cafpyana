@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Define the absolute input storage directories
-gray_prefix='/exp/sbnd/data/users/gputnam/GUMPLE/sbn-rewgted-16/'
+gray_prefix='/exp/sbnd/data/users/gputnam/GUMPLE/sbn-rewgted-17-slim/'
 gumple_prefix='../gumple/'
-output='/exp/sbnd/data/users/nrowe/GUMP/sbn-rewgted-16/'
-MAX_JOBS=5
+output='/exp/sbnd/data/users/nrowe/GUMP/sbn-rewgted-17/'
+MAX_JOBS=10
 
 # Navigate to the working directory context
 echo "========================================================"
@@ -19,11 +19,15 @@ python3 ${gumple_prefix}rwt_map.py -s ${selection} -o ${splinedir} -d ${gray_pre
 
 ### 1. SBND MC (20 files, 0 to 9)
 echo "--> Staging SBND Spring MC Files..."
-for i in {0..19}
+for file in ${gray_prefix}SBNDMCCV_*.df
 do
     while [ $(jobs -rp | wc -l) -ge $MAX_JOBS ]; do
         sleep 10 # Check every 2 seconds
     done
+
+    filename=$(basename "$file")
+    i="${filename#SBNDMCCV_}"
+    i="${i%.df}"
 
     echo "Launching SBND MC Step $i"
     python3 ${gumple_prefix}/run_gumple_pipeline.py \
@@ -61,11 +65,15 @@ while [ $(jobs -rp | wc -l) -ge $MAX_JOBS ]; do
 done
 ### 2. ICARUS Run 4 MC (10 files, 0 to 9)
 echo "--> Staging ICARUS Run 4 MC Files..."
-for i in {0..7}
+for file in ${gray_prefix}ICARUSRun4_SpringMCOverlay_rewgt_*.df
 do
     while [ $(jobs -rp | wc -l) -ge $MAX_JOBS ]; do
         sleep 10 # Check every 2 seconds
     done
+
+    filename=$(basename "$file")
+    i="${filename#ICARUSRun4_SpringMCOverlay_rewgt_}"
+    i="${i%.df}"
 
     echo "Launching ICARUS Run 4 MC Step $i"
     python3 ${gumple_prefix}/run_gumple_pipeline.py \
@@ -103,11 +111,15 @@ python3 ${gumple_prefix}/run_gumple_pipeline.py \
 
 ### 2. ICARUS Run 2 MC (files, 0 to 3)
 echo "--> Staging ICARUS Run 2 MC Files..."
-for i in {0..3}
+for file in ${gray_prefix}ICARUSRun2_SpringMCOverlay_rewgt_*.df
 do
     while [ $(jobs -rp | wc -l) -ge $MAX_JOBS ]; do
         sleep 10 # Check every 2 seconds
     done
+
+    filename=$(basename "$file")
+    i="${filename#ICARUSRun2_SpringMCOverlay_rewgt_}"
+    i="${i%.df}"
 
     echo "Launching ICARUS Run 4 MC Step $i"
     python3 ${gumple_prefix}/run_gumple_pipeline.py \
