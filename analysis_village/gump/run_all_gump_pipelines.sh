@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Define the absolute input storage directories
-gray_prefix='/exp/sbnd/data/users/gputnam/GUMPLE/sbn-rewgted-17-slim/'
+gray_prefix='/exp/sbnd/data/users/gputnam/GUMPLE/sbn-rewgted-19-preview/'
 gumple_prefix='../gumple/'
-output='/exp/sbnd/data/users/nrowe/GUMP/sbn-rewgted-17/'
-MAX_JOBS=10
+output='/exp/sbnd/data/users/nrowe/GUMP/sbn-rewgted-19-new/'
+MAX_JOBS=8
 
 # Navigate to the working directory context
 echo "========================================================"
@@ -92,7 +92,7 @@ done
 ### 8. ICARUS Run 4 Dirt
 echo "--> Launching ICARUS Run 4 Dirt..."
 python3 ${gumple_prefix}/run_gumple_pipeline.py \
-    -c data \
+    -c mc \
     -s ${selection} \
     -i ${gray_prefix}ICARUSRun4_Spring_Overlay_Dirt.df \
     -o ${output}ICARUSRun4_Spring_Overlay_Dirt_sbruce.root &
