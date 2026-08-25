@@ -481,6 +481,14 @@ def make_mcdf(f, branches=mcbranches, primbranches=mcprimbranches):
     cpidf = mcprimdf[np.abs(mcprimdf.pdg)==211].sort_values(mcprimdf.index.names[:2] + [("genE", "")]).groupby(level=[0,1]).last()
     cpidf.columns = pd.MultiIndex.from_tuples([tuple(["cpi"] + list(c)) for c in cpidf.columns])
 
+    # leading neutral pion
+    pi0df = mcprimdf[np.abs(mcprimdf.pdg)==111].sort_values(mcprimdf.index.names[:2] + [("genE", "")]).groupby(level=[0,1]).last()
+    pi0df.columns = pd.MultiIndex.from_tuples([tuple(["pi0"] + list(c)) for c in pi0df.columns])
+
+    # leading photon
+    gdf = mcprimdf[np.abs(mcprimdf.pdg)==22].sort_values(mcprimdf.index.names[:2] + [("genE", "")]).groupby(level=[0,1]).last()
+    gdf.columns = pd.MultiIndex.from_tuples([tuple(["g"] + list(c)) for c in gdf.columns])
+
     pdf = mcprimdf[mcprimdf.pdg==2212].sort_values(mcprimdf.index.names[:2] + [("genE", "")]).groupby(level=[0,1]).last()
     pdf.columns = pd.MultiIndex.from_tuples([tuple(["p"] + list(c)) for c in pdf.columns])
 
@@ -495,6 +503,8 @@ def make_mcdf(f, branches=mcbranches, primbranches=mcprimbranches):
 
     mcdf = multicol_merge(mcdf, mudf, left_index=True, right_index=True, how="left", validate="one_to_one")
     mcdf = multicol_merge(mcdf, cpidf, left_index=True, right_index=True, how="left", validate="one_to_one")
+    mcdf = multicol_merge(mcdf, pi0df, left_index=True, right_index=True, how="left", validate="one_to_one")
+    mcdf = multicol_merge(mcdf, gdf, left_index=True, right_index=True, how="left", validate="one_to_one")
     mcdf = multicol_merge(mcdf, pdf, left_index=True, right_index=True, how="left", validate="one_to_one")
     mcdf = multicol_merge(mcdf, p2df, left_index=True, right_index=True, how="left", validate="one_to_one")
     mcdf = multicol_merge(mcdf, edf, left_index=True, right_index=True, how="left", validate="one_to_one")
@@ -503,6 +513,8 @@ def make_mcdf(f, branches=mcbranches, primbranches=mcprimbranches):
     mcdf.loc[:, ('mu','totp','')] = np.sqrt(mcdf.mu.genp.x**2 + mcdf.mu.genp.y**2 + mcdf.mu.genp.z**2)
     mcdf.loc[:, ('e','totp','')] = np.sqrt(mcdf.e.genp.x**2 + mcdf.e.genp.y**2 + mcdf.e.genp.z**2)
     mcdf.loc[:, ('cpi','totp','')] = np.sqrt(mcdf.cpi.genp.x**2 + mcdf.cpi.genp.y**2 + mcdf.cpi.genp.z**2)
+    mcdf.loc[:, ('pi0','totp','')] = np.sqrt(mcdf.pi0.genp.x**2 + mcdf.pi0.genp.y**2 + mcdf.pi0.genp.z**2)
+    mcdf.loc[:, ('g','totp','')] = np.sqrt(mcdf.g.genp.x**2 + mcdf.g.genp.y**2 + mcdf.g.genp.z**2)
     mcdf.loc[:, ('p','totp','')] = np.sqrt(mcdf.p.genp.x**2 + mcdf.p.genp.y**2 + mcdf.p.genp.z**2)
     mcdf.loc[:, ('p2','totp','')] = np.sqrt(mcdf.p2.genp.x**2 + mcdf.p2.genp.y**2 + mcdf.p2.genp.z**2)
 
@@ -516,6 +528,12 @@ def make_mcdf(f, branches=mcbranches, primbranches=mcprimbranches):
     mcdf.loc[:, ('cpi','dir','x')] = mcdf.cpi.genp.x/mcdf.cpi.totp
     mcdf.loc[:, ('cpi','dir','y')] = mcdf.cpi.genp.y/mcdf.cpi.totp
     mcdf.loc[:, ('cpi','dir','z')] = mcdf.cpi.genp.z/mcdf.cpi.totp
+    mcdf.loc[:, ('pi0','dir','x')] = mcdf.pi0.genp.x/mcdf.pi0.totp
+    mcdf.loc[:, ('pi0','dir','y')] = mcdf.pi0.genp.y/mcdf.pi0.totp
+    mcdf.loc[:, ('pi0','dir','z')] = mcdf.pi0.genp.z/mcdf.pi0.totp
+    mcdf.loc[:, ('g','dir','x')] = mcdf.g.genp.x/mcdf.g.totp
+    mcdf.loc[:, ('g','dir','y')] = mcdf.g.genp.y/mcdf.g.totp
+    mcdf.loc[:, ('g','dir','z')] = mcdf.g.genp.z/mcdf.g.totp
     mcdf.loc[:, ('p','dir','x')] = mcdf.p.genp.x/mcdf.p.totp
     mcdf.loc[:, ('p','dir','y')] = mcdf.p.genp.y/mcdf.p.totp
     mcdf.loc[:, ('p','dir','z')] = mcdf.p.genp.z/mcdf.p.totp
