@@ -9,13 +9,15 @@ Detector support:
             containment stage; PID uses SBND-calibrated chi2 with the
             same MAPLE thresholds as ICARUS.
 
-Post-hoc (chi2-free) candidate scheme:
-  Candidate finding is chi2-free so that the chi2 cuts can be re-applied
-  after df production under any calorimetric chi2 variation (the GUMP
-  SignalBoxSystematics pattern; see maple_sel.maple_selection).
-    - Muon candidate: longest track passing the chi2-free MAPLE muon cuts
-      (trackScore, dist_start, length, primary, containment, direction);
-      the chi2 cuts on it are applied post-hoc.
+Post-hoc candidate scheme:
+  Candidates are FIXED at df production; the chi2 cuts can be re-applied
+  after df production under any calorimetric chi2 variation on the fixed
+  candidates (the GUMP SignalBoxSystematics pattern; see
+  maple_sel.maple_selection).
+    - Muon candidate: legacy-GUMP rule -- the track (trackScore > 0)
+      starting within 10 cm of the vertex, longer than 40 cm, with the
+      smallest NOMINAL chi2u/chi2p ratio; the chi2 cuts on it are applied
+      post-hoc (calo variations re-evaluate the cuts, not the choice).
     - Candidate protons: every other pfp passing the id_pfp gates with
       dist_start < 10 -- exactly the set the old id_pfp split into
       pion/proton by chi2.  Kinematics (recoE, ...) assume all of them are
@@ -253,28 +255,54 @@ def maple_truth_classdf(f, det, run):
 # =====================================================================
 # Per-pfp candidate machinery (chi2-free; chi2 cuts live in maple_sel)
 # =====================================================================
-def _find_candidates(P):
-    """Chi2-free muon + candidate-pfp finding and fixed pfp counting.
+def _find_candidates(P, use_chi2=True):
+    """Muon + candidate-pfp finding and fixed pfp counting.
 
-    P: flat per-pfp frame (index entry, slc, pfp).
+    P: flat per-pfp frame (index entry, slc, pfp), with the nominal chi2
+    columns already attached (PID_calcs runs first).
     Returns (mu_ilocs [per-slice Index of muon rows],
              is_prot_cand [bool Series over P],
              counts DataFrame per slice [n_pfp, n_pfp_no_calo, n_shower, n_other]).
 
-    The muon is the longest track passing the chi2-free part of the old
-    find_muon mask.  A candidate pfp is any pandora pfp that is primary,
-    has calo points, and starts within 10 cm of the vertex; n_pfp counts
-    the candidate pfps in the slice (the muon included).  Candidate
-    protons are the non-muon candidate pfps -- the set whose worst-case
-    chi2 aggregates the proton PID cut is applied to.  The remaining pfps
-    keep the chi2-independent shower/other/unknown classification, so the
-    counts are fixed under calorimetric variations.
+    Muon candidate, selected by `use_chi2`:
+      use_chi2=True (default) -- legacy-GUMP rule: among tracks with any
+        track score (trackScore > 0) starting within 10 cm of the vertex --
+        with the addendum that the track must be longer than 40 cm -- take
+        the smallest NOMINAL chi2u/chi2p ratio.  NaN ratios (no-calo
+        tracks) sort last, so a slice whose only qualifying tracks lack
+        calo still yields a muon, as in legacy GUMP.  The candidate is
+        FIXED under calorimetric variations (legacy semantics: variations
+        re-evaluate the chi2 cuts on the fixed candidate, never the
+        choice).
+      use_chi2=False -- chi2-free MAPLE rule: the longest track passing
+        get_base_muon_mask (trackScore >= 0.5, dist_start <= 10,
+        len in [40, 400], primary, contained, same-side).
+
+    A candidate pfp is any pandora pfp that is primary, has calo points,
+    and starts within 10 cm of the vertex; n_pfp counts the candidate pfps
+    in the slice (the muon included).  Candidate protons are the non-muon
+    candidate pfps -- the set whose worst-case chi2 aggregates the proton
+    PID cut is applied to.  The remaining pfps keep the chi2-independent
+    shower/other/unknown classification, so the counts are fixed under
+    calorimetric variations.
     """
 
-    keep = gmpl.get_base_muon_mask(P, level="trk")
+    if use_chi2:
+        keep = (P.trackScore > 0.0) & (P.dist_start < 10.0) & (P.len > 40.0)
+    else:
+        keep = gmpl.get_base_muon_mask(P, level="trk")
 
     cand = P[keep]
-    if len(cand):
+    if len(cand) and use_chi2:
+        ratio = cand.chi2u_cafpyana / cand.chi2p_cafpyana
+        first = cand.assign(_mu_ratio=ratio).sort_values(
+            "_mu_ratio", na_position="last", kind="stable").groupby(level=[0, 1]).head(1)
+        mu_ilocs = pd.Series(
+            list(first.index),
+            index=pd.MultiIndex.from_arrays(
+                [first.index.get_level_values(0), first.index.get_level_values(1)],
+                names=P.index.names[:2]))
+    elif len(cand):
         mu_ilocs = cand.len.groupby(level=[0, 1]).idxmax()
     else:
         mu_ilocs = pd.Series(dtype=object)
@@ -594,16 +622,16 @@ def PID_calcs(f, P, DETECTOR, ismc, do_calo_syst=True):
 
     return P
 
-def fetch_candidates(S, P, do_calo_syst):
+def fetch_candidates(S, P, do_calo_syst, use_chi2=True):
     # ------------------------------------------------------------------
-    # chi2-free candidates; chi2 cuts are applied post-hoc (maple_sel)
+    # fixed candidates; chi2 cuts are applied post-hoc (maple_sel)
     # ------------------------------------------------------------------
     # evt-df chi2 suffix -> per-pfp chi2 flavor ("" = nominal cafpyana)
     chi2_suffixes = {"": "cafpyana", "cafana": "cafana"}
     if do_calo_syst:
         chi2_suffixes.update({v: v for v in SCALE_SMEAR_VARIATIONS + CALO_VARIATIONS})
 
-    mu_ilocs, is_prot_cand, counts = _find_candidates(P)
+    mu_ilocs, is_prot_cand, counts = _find_candidates(P, use_chi2=use_chi2)
     counts = counts.reindex(S.index).fillna(0).astype(int)
     has_mu = pd.Series(False, index=S.index)
     if len(mu_ilocs):
@@ -844,7 +872,10 @@ def fetch_candidates(S, P, do_calo_syst):
 # =====================================================================
 # Main evt builder
 # =====================================================================
-def make_maple_evt_df(f, selection="none", do_calo_syst=True):
+def make_maple_evt_df(f, selection="none", do_calo_syst=True, use_chi2=True):
+    # use_chi2: muon-candidate selection behavior -- True (default) picks the
+    # legacy-GUMP min-chi2u/chi2p-ratio track (len > 40 cm), False the
+    # longest chi2-free base-mask track (see _find_candidates).
     # Get a slice level df (S) a pfp level df (P) and some meta-data
     S, P, DETECTOR, RUN, ismc = fetch_info(f)
 
@@ -869,7 +900,7 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
     # we want to grab information about candidate mu and p tracks here.
     # Start with PID calculations and then do some basic candidate ID.
     P = PID_calcs(f, P, DETECTOR, ismc, do_calo_syst=do_calo_syst)
-    S = fetch_candidates(S, P, do_calo_syst)
+    S = fetch_candidates(S, P, do_calo_syst, use_chi2=use_chi2)
 
     # ------------------------------------------------------------------
     # Reco_class (classification_type_debug port, via mcnu-level classification)
