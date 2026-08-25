@@ -312,7 +312,12 @@ def presel_cut(df):
         df.has_muon & df.cut_np
 
 def trk_cut(df):
-    return df.cut_np & df.has_muon & df.cut_0shwother
+    # The shower/other veto (cut_0shwother, from the MAPLE id_pfp
+    # classification with VTX_MAX_DIST=50) is NOT applied: multiplicity is
+    # enforced by the candidate count alone (n_pfp == 2 for gump_sel,
+    # n_pfp > 2 for maple_sel). n_shower/n_other/cut_0shwother remain in the
+    # evt df as diagnostics.
+    return df.cut_np & df.has_muon
 
 def get_base_muon_mask(df, level="slc"):
     if level == "trk":

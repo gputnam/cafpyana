@@ -507,7 +507,9 @@ def fetch_info(f):
 
     # std::min(a, b) semantics: b if b < a else a  (NaN b -> a; NaN a -> NaN)
     P["min_dist"] = np.where(np.isnan(dist_end), P.dist_start, np.minimum(P.dist_start, dist_end))
-    P["contained10"] = gmpl.prefix_fv_cut(P, "end")
+    # track-endpoint containment: 10 cm insets on every face including z-back
+    # (is_trk=True), matching the legacy GUMP mufv/pfv candidate-endpoint cut
+    P["contained10"] = gmpl.prefix_fv_cut(P, "end", is_trk=True)
     P["ke_pion"] = kinetic_energy(PION_MASS, np.sqrt((P.dir_x * P.p_pion)**2 + (P.dir_y * P.p_pion)**2 + (P.dir_z * P.p_pion)**2))
     P["ke_proton"] = kinetic_energy(PROTON_MASS, np.sqrt((P.dir_x * P.p_proton)**2 + (P.dir_y * P.p_proton)**2 + (P.dir_z * P.p_proton)**2))
   
