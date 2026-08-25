@@ -249,9 +249,13 @@ def genie_fsi_name(code):
     return GENIE_FSI_NAMES.get(int(code), "code%d" % int(code))
 
 # pre-FSI hadron species: output moniker -> pdg selection. Monikers follow the
-# make_mcdf convention (mu/p/p2/cpi/e). The photon is NOT here -- see below.
+# make_mcdf convention (mu/p/p2/cpi/e), extended with n/n2 for the neutron, which has
+# no make_mcdf counterpart. The photon is NOT here -- see below. NB the neutron IS
+# transported by INTRANUKE, so unlike the photon it carries a real fate: its status is
+# 14 and its fsi is FSI_NOINT/CEX/ELAS/INELAS/..., never FSI_NONE.
 _PREFSI_PDG = {
     "p":   lambda pdg: pdg == 2212,
+    "n":   lambda pdg: pdg == 2112,
     "cpi": lambda pdg: np.abs(pdg) == 211,
     "pi0": lambda pdg: pdg == 111,
 }
@@ -269,8 +273,8 @@ _PREFSI_PDG = {
 _PREFSI_GAMMA_MOTHER = [3, 12, 14]
 
 # species carrying a momentum, in output order. "lep" is the primary lepton and
-# "p2" the sub-leading pre-FSI proton; both are handled specially below.
-_GENIE_SPECIES = ["lep", "p", "p2", "cpi", "g", "pi0"]
+# "p2"/"n2" the sub-leading pre-FSI proton and neutron; all are handled specially below.
+_GENIE_SPECIES = ["lep", "p", "p2", "n", "n2", "cpi", "g", "pi0"]
 
 _GENIE_SCALARS = ["genie_Enu", "genie_q0", "genie_q3", "genie_W",
                   "genie_pmiss", "genie_emiss"]
@@ -410,6 +414,10 @@ def _evtrec_kinematics(er, mcdf):
     sp = pre[pre.pdg == 2212]
     sp = sp.groupby(level=[0, 1]).head(2)
     parts["p2"] = sp[sp.groupby(level=[0, 1]).cumcount() == 1].droplevel("pindex")
+    # sub-leading neutron: the same, on the momentum-ordered neutron list
+    sn = pre[pre.pdg == 2112]
+    sn = sn.groupby(level=[0, 1]).head(2)
+    parts["n2"] = sn[sn.groupby(level=[0, 1]).cumcount() == 1].droplevel("pindex")
 
     # photons: status-1, but only those from a primary-vertex parent (see above)
     gam = er[er.pdg == 22]
