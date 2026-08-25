@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Define the absolute input storage directories
-gray_prefix='/exp/sbnd/data/users/gputnam/GUMPLE/sbn-rewgted-17/'
+gray_prefix='/exp/sbnd/data/users/gputnam/GUMPLE/sbn-rewgted-19-preview/'
 gumple_prefix='../gumple/'
-output='/exp/sbnd/data/users/nrowe/MAPLE/sbn-rewgted-17-debug/'
-MAX_JOBS=15
+output='/exp/sbnd/data/users/nrowe/MAPLE/sbn-rewgted-19-new/'
+MAX_JOBS=8
 
 # Navigate to the working directory context
 echo "========================================================"
@@ -12,32 +12,32 @@ echo " Starting GUMP TTree Processing Batch Run...            "
 echo "========================================================"
 
 echo "Remaking det var maps..."
-selection="gmpl.all_mapleNGO_cuts"
+selection="gmpl.all_maple_cuts"
 splinedir="${selection#*.}"
 
-#python3 ${gumple_prefix}rwt_map.py -s ${selection} -o ${splinedir} -d ${gray_prefix}
+python3 ${gumple_prefix}rwt_map.py -s ${selection} -o ${splinedir} -d ${gray_prefix}
+
+#### 1. SBND MC (20 files, 0 to 9)
+#echo "--> Staging SBND Spring MC Files..."
+#for file in ${gray_prefix}SBNDMCCV_*.df
+#do
+#    while [ $(jobs -rp | wc -l) -ge $MAX_JOBS ]; do
+#        sleep 10 # Check every 2 seconds
+#    done
 #
-### 1. SBND MC (20 files, 0 to 9)
-echo "--> Staging SBND Spring MC Files..."
-for file in ${gray_prefix}SBNDMCCV_*.df
-do
-    while [ $(jobs -rp | wc -l) -ge $MAX_JOBS ]; do
-        sleep 10 # Check every 2 seconds
-    done
-
-    filename=$(basename "$file")
-    i="${filename#SBNDMCCV_}"
-    i="${i%.df}"
-
-    echo "Launching SBND MC Step $i"
-    python3 ${gumple_prefix}/run_gumple_pipeline.py \
-        -c mc \
-        -w \
-        -f ${splinedir} \
-	-s ${selection} \
-        -i ${gray_prefix}SBNDMCCV_${i}.df \
-        -o ${output}SBNDMCCV_${i}_sbruce.root
-done
+#    filename=$(basename "$file")
+#    i="${filename#SBNDMCCV_}"
+#    i="${i%.df}"
+#
+#    echo "Launching SBND MC Step $i"
+#    python3 ${gumple_prefix}/run_gumple_pipeline.py \
+#        -c mc \
+#        -w \
+#        -f ${splinedir} \
+#	-s ${selection} \
+#        -i ${gray_prefix}SBNDMCCV_${i}.df \
+#        -o ${output}SBNDMCCV_${i}_sbruce.root &
+#done
 #
 #### 4. ICARUS Run 2 OffBeam
 #echo "--> Launching ICARUS Run 2 OffBeam Data..."
@@ -51,15 +51,15 @@ done
 #while [ $(jobs -rp | wc -l) -ge $MAX_JOBS ]; do
 #    sleep 10 # Check every 2 seconds
 #done
-
-### 5. ICARUS Run 4 OffBeam
-echo "--> Launching ICARUS Run 4 OffBeam Data..."
-python3 ${gumple_prefix}/run_gumple_pipeline.py \
-    -c data \
-    -s ${selection} \
-    -i ${gray_prefix}ICARUS_SpringRun4BNBOff_unblind.df \
-    -o ${output}ICARUS_SpringRun4BNBOff_unblind_sbruce.root &
-
+#
+#### 5. ICARUS Run 4 OffBeam
+#echo "--> Launching ICARUS Run 4 OffBeam Data..."
+#python3 ${gumple_prefix}/run_gumple_pipeline.py \
+#    -c data \
+#    -s ${selection} \
+#    -i ${gray_prefix}ICARUS_SpringRun4BNBOff_unblind.df \
+#    -o ${output}ICARUS_SpringRun4BNBOff_unblind_sbruce.root &
+#
 #while [ $(jobs -rp | wc -l) -ge $MAX_JOBS ]; do
 #    sleep 10 # Check every 2 seconds
 #done
