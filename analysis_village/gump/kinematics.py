@@ -18,17 +18,18 @@ MASS_Ap = MASS_A - NEUTRON_MASS + BE
 
 def neutrino_energy(mu_p, mu_dir, p_p, p_dir, p_E, n_proton=None, BE=BE):
     if n_proton is None:
-        n_proton = pd.DataFrame(1.0, index=mu_p.index, columns=mu_p.columns)
+        n_proton = 1
     # p_p, p_dir, p_E are the proton momentum magnitude, direction and energy.
     # For a single proton p_E = mag2d(p_p, PROTON_MASS); for a summed multi-proton
     # system p_p = |sum_i p_i| and p_E = sum_i E_i.
 
     mu_E = mag2d(mu_p, MUON_MASS)
-    # invariant mass of the proton system (PROTON_MASS for a single on-shell
-    # proton); p_E - p_M is the proton system's kinetic energy.
-    p_M = np.sqrt(np.maximum(p_E**2 - p_p**2, 0.))
-
-    return mu_E + p_E - p_M + n_proton*BE
+    # Summed proton kinetic energy in the per-proton (production recoE)
+    # convention: sum_i(E_i - m_p) = p_E - n_proton*m_p. NB the previous
+    # invariant-mass form (p_E - sqrt(p_E^2 - p_p^2)) equals this only for a
+    # single proton and understates the KE of a non-collinear multi-proton
+    # system by (M_inv - n*m_p), O(100 MeV) -- generalized 2026-08-25.
+    return mu_E + p_E - n_proton*PROTON_MASS + n_proton*BE
 
 def neutrino_energy_ccqe(mu_p, mu_costh, BE=BE):
     """Reconstructed neutrino energy under the CCQE assumption, from the muon
@@ -65,11 +66,21 @@ def neutrino_energy_ccqe(mu_p, mu_costh, BE=BE):
     # the CV frames carry duplicate index labels and that would try to align.
     return num/np.where(den > 0, den, np.nan)
 
-def transverse_kinematics(mu_p, mu_dir, p_p, p_dir, p_E=None, BE=BE):
+def transverse_kinematics(mu_p, mu_dir, p_p, p_dir, p_E=None, n_proton=None, BE=BE):
     # p_p, p_dir, p_E are the proton momentum magnitude, direction and energy.
     # For a single proton p_E = mag2d(p_p, PROTON_MASS); for a summed multi-proton
-    # system p_p = |sum_i p_i| and p_E = sum_i E_i.
-    mass_Ap = MASS_A - NEUTRON_MASS + BE
+    # system p_p = |sum_i p_i| and p_E = sum_i E_i, with n_proton the number of
+    # candidate protons in the sum.
+    if n_proton is None:
+        n_proton = 1
+
+    # Residual-nucleus mass for n-nucleon knockout: the struck neutron plus the
+    # (n_proton - 1) additional knocked-out protons, each binding-energy BE.
+    # For n_proton = 1 this is the historical MASS_Ap. NB: p_E = sum_i E_i
+    # carries each extra proton's rest mass, so using the single-nucleon
+    # residual mass for an Np system biases del_Lp by ~ -(n-1)*m_p
+    # (generalized 2026-08-25).
+    mass_Ap = MASS_A - NEUTRON_MASS - (n_proton - 1)*PROTON_MASS + n_proton*BE
     mu_E = mag2d(mu_p, MUON_MASS)
 
     # if no sep proton energy input, assume 1mu1p

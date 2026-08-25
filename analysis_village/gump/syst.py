@@ -74,7 +74,11 @@ def recompute_kinematics(s, mu_p=None, p_p=None, BE=None):
         else:
             p_p = np.sqrt(np.maximum(p_E**2 - kinematics.PROTON_MASS**2, 0))
 
-    tki = kinematics.transverse_kinematics(mu_p, mu_dir, p_p, p_dir, p_E, BE=BE)
+    # number of candidate protons = candidate pfps minus the muon; the TKI
+    # residual mass and the calo BE term both scale with it
+    n_proton = s.n_pfp - 1
+    tki = kinematics.transverse_kinematics(mu_p, mu_dir, p_p, p_dir, p_E,
+                                           n_proton=n_proton, BE=BE)
     # Calorimetric energy in the PRODUCTION convention (maple recoE):
     #     nu_E_calo = E_mu + sum_i ke_i + n*BE = E_mu + (psum_E - n*m_p) + n*BE
     # computed at the NOMINAL BE (the mode-scaled shift is applied below).
@@ -82,9 +86,7 @@ def recompute_kinematics(s, mu_p=None, p_p=None, BE=None):
     # (psum_E - M_inv, with M_inv the summed-system invariant mass) equals the
     # per-proton KE sum only at n = 1 and understates it by O(100 MeV) for
     # non-collinear multi-proton systems, which dwarfed the 25 MeV BE shift.
-    # The invariant-mass construction remains correct for the TKI variables
-    # above. psum_E - n*m_p reproduces the stored psum_ke to float precision.
-    n_proton = s.n_pfp - 1
+    # psum_E - n*m_p reproduces the stored psum_ke to float precision.
     s["nu_E_calo"] = tki["mu_E"] + (p_E - n_proton*kinematics.PROTON_MASS) \
         + n_proton*kinematics.BE
 

@@ -727,7 +727,11 @@ def fetch_candidates(S, P, do_calo_syst):
     S["mu_p_opening_angle_deg"] = ang
 
     dir_psum = pd.DataFrame({"x": S.psum_dir_x, "y": S.psum_dir_y, "z": S.psum_dir_z})
-    tki_psum = transverse_kinematics(p_mu, dir_mu, S.psum_p, dir_psum, p_E=S.psum_E)
+    # n_proton generalizes the TKI residual mass to the Np case (the summed
+    # p_E carries each proton's rest mass); sz is the per-slice candidate
+    # count from the psum groupby above.
+    tki_psum = transverse_kinematics(p_mu, dir_mu, S.psum_p, dir_psum, p_E=S.psum_E,
+                                     n_proton=sz.reindex(S.index))
 
     del_p = tki_psum['del_p']
     del_Tp = tki_psum['del_Tp']
