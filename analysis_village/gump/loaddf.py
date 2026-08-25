@@ -633,9 +633,10 @@ BE_SHIFT = 0.025
 # BE systematic (eres_ar23_ar25.BE_FRACTION, mcdata_comparison)
 BE_FRACTION = 0.5
 
-# Columns syst.split_tracks recomputes on the plane-crossing rows
+# Columns syst.split_tracks recomputes on the plane-crossing rows. mu_T is no
+# longer stored in the GUMPLE dfs (recompute as mu_E - MUON_MASS if needed).
 _SPLIT_COLS = ["mu_end_x", "mu_end_y", "mu_end_z", "mu_len",
-               "nu_E_calo", "del_p", "del_Tp", "del_phi", "mu_E", "mu_T"]
+               "nu_E_calo", "del_p", "del_Tp", "del_phi", "mu_E"]
 
 def _weight_col(df):
     """The column the mixture weight is folded into.
@@ -653,8 +654,9 @@ def _mix(df, varied, rows, frac):
     The affected rows enter twice -- unvaried at (1-f)*w and varied at f*w --
     and every other row is left alone, so histogramming the result with the
     weight column reproduces (1-f)*nominal + f*varied exactly, with no added MC
-    statistical noise. Same convention as syst.TrackSplittingSystematic and
-    syst.shift_binding_energy(fraction=...).
+    statistical noise. Same convention as syst.TrackSplittingSystematic.
+    (syst.shift_binding_energy instead shifts a deterministic fraction of the
+    rows in place, keeping the row count.)
 
     `rows` is positional (index labels are not guaranteed unique), and `varied`
     holds exactly those rows, already carrying their unscaled weights.
@@ -683,12 +685,14 @@ def _apply_variations(df, shift_binding_E, split_tracks,
     split_fraction / shift_fraction to override; 1.0 varies every affected event
     in place, as before the fractions existed.
 
-    With a fraction below 1 the returned frame therefore has MORE ROWS than the
-    input and duplicate index labels, though the total weight is unchanged: the
-    split adds a copy of the crossing rows, the BE shift a copy of every row (it
-    goes through syst.shift_binding_energy's own mixture -- see below). Cut
-    columns must be evaluated downstream of this (loaddf computes none itself):
-    the split moves mu_end_*, which the FV cuts read.
+    With a split fraction below 1 the returned frame has MORE ROWS than the
+    input and duplicate index labels (the split adds a copy of the crossing
+    rows via _mix), though the total weight is unchanged. The BE shift keeps
+    the row count: syst.shift_binding_energy recomputes the shifted kinematics
+    in place on a deterministic, evenly-interleaved fraction of the rows and
+    leaves the rest at their stored CV values. Cut columns must be evaluated
+    downstream of this (loaddf computes none itself): the split moves
+    mu_end_*, which the FV cuts read.
 
     Run after the cache read/write on purpose: the cache always holds the
     unvaried df, so one cached load serves every variant and adding a variation
@@ -709,13 +713,11 @@ def _apply_variations(df, shift_binding_E, split_tracks,
             df = _mix(df, s, rows, f)
     if shift_binding_E:
         f = BE_FRACTION if shift_fraction is None else shift_fraction
-        # hand off to shift_binding_energy's own mixture rather than mixing the
-        # stored CV rows in here with _mix: its unshifted half is *rebuilt* by
-        # recompute_kinematics, and that recompute does not reproduce the stored
-        # CV columns exactly (~5 MeV in nu_E_calo, more in del_p/del_phi), so
-        # mixing against the stored CV would give a different universe than the
-        # signal-box systematic. Costs a whole-frame copy, which is why the
-        # caller should slim the frame first if memory is tight.
+        # hand off to shift_binding_energy so this stays the same universe as
+        # the signal-box systematic: it shifts a deterministic fraction f of
+        # the rows in place (unshifted rows keep their stored CV columns; row
+        # count and weights unchanged). Costs a whole-frame copy, which is why
+        # the caller should slim the frame first if memory is tight.
         df = syst.shift_binding_energy(df, BE_SHIFT, fraction=f, scale=_weight_col(df))
     return df
 

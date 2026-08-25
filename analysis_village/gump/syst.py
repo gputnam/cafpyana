@@ -74,23 +74,29 @@ def recompute_kinematics(s, mu_p=None, p_p=None, BE=None):
         else:
             p_p = np.sqrt(np.maximum(p_E**2 - kinematics.PROTON_MASS**2, 0))
 
-    tki = kinematics.transverse_kinematics(mu_p, mu_dir, p_p, p_dir, p_E, BE=BE)
-    # number of candidate protons = candidate pfps minus the muon
-    s["nu_E_calo"] = kinematics.neutrino_energy(mu_p, mu_dir, p_p, p_dir, p_E, n_proton=s.n_pfp - 1)
+    # number of candidate protons = candidate pfps minus the muon; the TKI
+    # residual mass and the calo BE term both scale with it
+    n_proton = s.n_pfp - 1
+    tki = kinematics.transverse_kinematics(mu_p, mu_dir, p_p, p_dir, p_E,
+                                           n_proton=n_proton, BE=BE)
+    # Calorimetric energy in the PRODUCTION convention (maple recoE):
+    #     nu_E_calo = E_mu + sum_i ke_i + n*BE = E_mu + (psum_E - n*m_p) + n*BE
+    # computed at the NOMINAL BE (the mode-scaled shift is applied below).
+    # NB: deliberately NOT kinematics.neutrino_energy -- its KE term
+    # (psum_E - M_inv, with M_inv the summed-system invariant mass) equals the
+    # per-proton KE sum only at n = 1 and understates it by O(100 MeV) for
+    # non-collinear multi-proton systems, which dwarfed the 25 MeV BE shift.
+    # psum_E - n*m_p reproduces the stored psum_ke to float precision.
+    s["nu_E_calo"] = tki["mu_E"] + (p_E - n_proton*kinematics.PROTON_MASS) \
+        + n_proton*kinematics.BE
 
-    dBE = 0.025
-    
-    # Check if BE is a Series or a scalar
-    if np.ndim(BE) > 0:
-        # Element-wise check: where BE is NOT equal to kinematics.BE, use dBE, otherwise use 0.0
-        effective_dBE = np.where(BE != kinematics.BE, dBE, 0.0)
-    else:
-        effective_dBE = dBE if BE != kinematics.BE else 0.0 # or just 0.0
-    
-    nucleon_map = {0: 1, 10: 2, 1: 1, 2: 1, 3: 1}  # 0:QE(1), 10:MEC(2), 1,2,3:RES/SIS/DIS(1), others:0
-    nucleons_series = s.genie_mode.map(nucleon_map).fillna(0).astype(int)
-    
-    s["nu_E_calo"] = s["nu_E_calo"] - effective_dBE * nucleons_series
+    # Binding-energy shift on the calorimetric estimator: subtract the actual
+    # per-event shift (BE - nominal), which already carries the caller's
+    # per-mode scaling (shift_binding_energy: x1 QE/RES/DIS, x sqrt(2) MEC,
+    # 0 COH / non-neutrino). This keeps nu_E_calo consistent with nu_E_ccqe
+    # and the TKI variables, which receive the same BE directly. At nominal BE
+    # (the CV / track-splitting path) the term is identically zero.
+    s["nu_E_calo"] = s["nu_E_calo"] - (BE - kinematics.BE)
 
     # muon-only CCQE energy estimator. Recomputed here (not just carried over as
     # a derived column) so both universes built on this function are consistent:
@@ -105,6 +111,11 @@ def recompute_kinematics(s, mu_p=None, p_p=None, BE=None):
 
     return s
 
+# Columns recompute_kinematics writes -- the ones the BE universe overwrites
+# on the shifted rows.
+_BE_RECOMPUTED_COLS = ["nu_E_calo", "nu_E_ccqe", "del_p", "del_Tp", "del_phi",
+                       "mu_E", "mu_T"]
+
 def shift_binding_energy(df, dBE, fraction=0.5, scale="glob_scale"):
     """Universe df for a binding-energy shift: copy of the CV with the reco
     kinematics recomputed under BE -> BE + dBE, scaled per interaction mode:
@@ -112,32 +123,64 @@ def shift_binding_energy(df, dBE, fraction=0.5, scale="glob_scale"):
     (genie_mode 10, two-nucleon initial state), and no shift for COH and
     non-neutrino rows (genie_mode 3/NaN -- no struck bound nucleon).
 
-    `fraction` applies the shift to only that fraction of events, as a
-    deterministic mixture (as in TrackSplittingSystematic): the returned df
-    holds the unshifted rows at (1 - fraction) x `scale` alongside the shifted
-    rows at fraction x `scale`.
+    `fraction` applies the shift to only that fraction of events, IN PLACE on
+    the copied frame: a deterministic, evenly-interleaved subset of row
+    positions gets the shifted kinematics; every other row keeps its stored CV
+    values (no recompute) and its full weight. The returned frame therefore
+    has the same rows, index and weights as the input. Reproducible for a
+    given row order; `scale` is unused and kept for API compatibility.
 
     The selection cuts use no recomputed column, so 'selected' etc. carry over
     from the CV unchanged.
     """
+    s = df.copy()
+    if fraction <= 0:
+        return s
 
-    mode = df.genie_mode.to_numpy()
+    n = len(s)
+    if fraction >= 1.0:
+        shifted = np.ones(n, dtype=bool)
+    else:
+        # evenly-interleaved deterministic selection of a fraction of the row
+        # positions (fraction=0.5 -> every other row)
+        shifted = (np.arange(n)*fraction) % 1.0 < fraction
+
+    mode = s.genie_mode.to_numpy()[shifted]
     mode_scl = np.where(np.isin(mode, [0, 1, 2]), 1.,
                np.where(mode == 10, np.sqrt(2.), 0.))
 
-    s = df.copy()
-    recompute_kinematics(s, BE=kinematics.BE + dBE*mode_scl)
+    sub = s.iloc[shifted].copy()
+    recompute_kinematics(sub, BE=kinematics.BE + dBE*mode_scl)
 
-    if fraction == 1.0:
-        return s
+    # mu_T is not stored in the flat dfs; derive the unshifted rows' value
+    # from the stored mu_E (exact -- the reco momentum is range-based).
+    if "mu_T" not in s.columns:
+        s["mu_T"] = s["mu_E"] - kinematics.MUON_MASS
 
-    # rebuild the unshifted half with the nominal BE rather than copying the
-    # CV columns: the input df may be slimmed to just the recompute inputs
-    # (exact -- the recompute round-trips the CV kinematics)
-    cv = recompute_kinematics(df.copy())
-    cv[scale] = cv[scale]*(1 - fraction)
-    s[scale] = s[scale]*fraction
-    return pd.concat([cv, s])
+    # A frame slimmed to just the recompute inputs lacks stored kinematic
+    # columns for the unshifted rows to keep -- rebuild ONLY those missing
+    # columns at the nominal BE. Columns the input does carry keep their
+    # stored CV values on the unshifted rows (the recompute does not
+    # reproduce the stored CV exactly, so prefer the stored values wherever
+    # they exist).
+    missing = [c for c in _BE_RECOMPUTED_COLS if c not in s.columns]
+    if missing:
+        for c in missing:
+            s[c] = np.nan
+        if (~shifted).any():
+            cvsub = s.iloc[~shifted].copy()
+            recompute_kinematics(cvsub)
+            for c in missing:
+                s.iloc[~shifted, s.columns.get_loc(c)] = cvsub[c].to_numpy()
+
+    for c in _BE_RECOMPUTED_COLS:
+        # the stored columns are float32; upcast so the float64 recompute
+        # assigns without pandas' incompatible-dtype warning
+        if s[c].dtype != np.float64:
+            s[c] = s[c].astype(np.float64)
+        s.iloc[shifted, s.columns.get_loc(c)] = sub[c].to_numpy()
+
+    return s
 
 def v_variation(df, setvars):
     df = df[[c for c in df.columns if "univ" not in c]].copy()
