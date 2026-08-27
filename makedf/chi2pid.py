@@ -92,7 +92,7 @@ def dedx_bias_scale(dedx):
     dx = x - X[i]
     return Y[i] + dx*(B[i] + dx*(C[i] + dx*D[i]))
 
-def chi2(hitdf, exprr, expdedx, experr, dedxname="dedx"):
+def chi2(hitdf, exprr, expdedx, experr, dedxname="dedx", rr_min=None):
     dedx_exp = pd.cut(hitdf.rr, exprr, labels=expdedx).astype(float)
     dedx_err = pd.cut(hitdf.rr, exprr, labels=experr).astype(float)
 
@@ -102,15 +102,19 @@ def chi2(hitdf, exprr, expdedx, experr, dedxname="dedx"):
 
     when_chi2 = (hitdf.rr < rr_max_cut_chi2) & ~hitdf.firsthit & ~hitdf.lasthit & (hitdf[dedxname] < 1000.)
 
+    # optionally drop hits nearest the track end (small residual range)
+    if rr_min is not None:
+        when_chi2 = when_chi2 & (hitdf.rr >= rr_min)
+
     chi2_group = v_chi2[when_chi2].groupby(level=list(range(hitdf.index.nlevels-1)))
 
     return chi2_group.sum() / chi2_group.size(), chi2_group.size()
 
-def chi2u(hitdf, dedxname="dedx"):
-    return chi2(hitdf, muon_rr, muon_dedx, muon_yerr, dedxname)
+def chi2u(hitdf, dedxname="dedx", rr_min=None):
+    return chi2(hitdf, muon_rr, muon_dedx, muon_yerr, dedxname, rr_min=rr_min)
 
-def chi2p(hitdf, dedxname="dedx"):
-    return chi2(hitdf, proton_rr, proton_dedx, proton_yerr, dedxname)
+def chi2p(hitdf, dedxname="dedx", rr_min=None):
+    return chi2(hitdf, proton_rr, proton_dedx, proton_yerr, dedxname, rr_min=rr_min)
 
 def chi2par(hitdf, dedxname="dedx", par=""):
     if par == "muon":

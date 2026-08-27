@@ -551,9 +551,95 @@ def fetch_info(f):
 
     return S, P, DETECTOR, RUN, ismc
 
-def PID_calcs(f, P, DETECTOR, ismc, do_calo_syst=True):
+# plane-flavor tags for the alternative chi2 calculations (do_alt_chi2)
+#   p0        -- front induction plane (plane 0)
+#   p1        -- middle induction plane (plane 1)
+#   bestplane -- per-pfp, the plane (0/1/2) with the most calo hits
+#   p2trim    -- collection plane with the last 1.5 cm of the track removed
+ALT_PLANE_TAGS = ["p0", "p1", "bestplane", "p2trim"]
+
+def _chi2_flavors(do_calo_syst):
+    """The per-plane chi2 flavors: nominal cafpyana + cafana, plus the full
+    calorimetric variation suite when do_calo_syst is on."""
+    flavors = ["cafpyana", "cafana"]
+    if do_calo_syst:
+        flavors = flavors + SCALE_SMEAR_VARIATIONS + CALO_VARIATIONS
+    return flavors
+
+def _add_dedx_variations(trkhitdf, DETECTOR, ismc, do_calo_syst):
+    """Add the recomputed dE/dx column (dedx_redo) and, when do_calo_syst is on,
+    all scale/smear and calorimetric-variation dedx columns to a plane's
+    trkhitdf (in place). Ported from gump make_pandora_no_cuts_df, including
+    the gump detector-specific scale sizes."""
+    # gump-style dE/dx on recomputed dE/dx (detector gains + calibration)
+    trkhitdf["dedx_redo"] = chi2pid.dedx(trkhitdf, gain=DETECTOR, calibrate=DETECTOR, isMC=ismc)
+    if not do_calo_syst:
+        return
+
+    if DETECTOR == "ICARUS":
+        scale_lo, scale_hi, scale_2lo, scale_2hi = 0.99, 1.01, 0.98, 1.02
+        calo_var_params = chi2pid.ICARUS_CALO_VARIATIONS
+    else:
+        scale_lo, scale_hi, scale_2lo, scale_2hi = 0.98, 1.02, 0.96, 1.04
+        calo_var_params = chi2pid.SBND_CALO_VARIATIONS
+    trkhitdf["dedx_lo"] = chi2pid.dedx(trkhitdf, gain=DETECTOR, calibrate=DETECTOR, isMC=ismc, scale=scale_lo)
+    trkhitdf["dedx_hi"] = chi2pid.dedx(trkhitdf, gain=DETECTOR, calibrate=DETECTOR, isMC=ismc, scale=scale_hi)
+    trkhitdf["dedx_2lo"] = chi2pid.dedx(trkhitdf, gain=DETECTOR, calibrate=DETECTOR, isMC=ismc, scale=scale_2lo)
+    trkhitdf["dedx_2hi"] = chi2pid.dedx(trkhitdf, gain=DETECTOR, calibrate=DETECTOR, isMC=ismc, scale=scale_2hi)
+    trkhitdf["dedx_smear5"] = chi2pid.dedx(trkhitdf, gain=DETECTOR, calibrate=DETECTOR, isMC=ismc, smear=0.05)
+    trkhitdf["dedx_smear13"] = chi2pid.dedx(trkhitdf, gain=DETECTOR, calibrate=DETECTOR, isMC=ismc, smear=0.13)
+    trkhitdf["dedx_sqsmear15"] = chi2pid.dedx(trkhitdf, gain=DETECTOR, calibrate=DETECTOR, isMC=ismc, sqrt_smear=0.15)
+    for c_var in CALO_VARIATIONS:
+        if c_var == "dedxbias":
+            # dedxbias is ICARUS-only: scale corrected dE/dx up by the dE/dx
+            # spline. In SBND it is a no-op equal to CV.
+            if DETECTOR == "ICARUS":
+                trkhitdf["dedx_dedxbias"] = chi2pid.dedx(
+                    trkhitdf, gain=DETECTOR, calibrate=DETECTOR, isMC=ismc,
+                    dedx_bias=True)
+            else:
+                trkhitdf["dedx_dedxbias"] = trkhitdf["dedx_cv"]
+        elif c_var == "R_p25":
+            # R_p25 is SBND-only (large R+0.25 recombination test); no-op = CV on ICARUS
+            if DETECTOR == "ICARUS":
+                trkhitdf["dedx_R_p25"] = trkhitdf["dedx_cv"]
+            else:
+                trkhitdf["dedx_R_p25"] = chi2pid.dedx(
+                    trkhitdf, gain=DETECTOR, calibrate=DETECTOR, isMC=ismc,
+                    new_calo_params=calo_var_params["R_p25"])
+        else:
+            trkhitdf["dedx_%s" % c_var] = chi2pid.dedx(
+                trkhitdf, gain=DETECTOR, calibrate=DETECTOR, isMC=ismc,
+                new_calo_params=calo_var_params[c_var])
+
+def _write_plane_chi2(trkhitdf, P, tag, do_calo_syst, cosmic, rr_min=None):
+    """Write chi2u_{tag}<flavor> / chi2p_{tag}<flavor> columns into P for one
+    plane's trkhitdf (dedx variation columns must already be attached via
+    _add_dedx_variations). tag="" reproduces the collection-plane column names;
+    otherwise use "p0_", "p1_", "p2trim_", etc. rr_min, if set, drops hits with
+    rr < rr_min from the chi2 hit selection."""
+    # gump-style chi2 on recomputed dE/dx
+    P["chi2u_%scafpyana" % tag] = chi2pid.chi2u(trkhitdf, dedxname="dedx_redo", rr_min=rr_min)[0]
+    P["chi2p_%scafpyana" % tag] = chi2pid.chi2p(trkhitdf, dedxname="dedx_redo", rr_min=rr_min)[0]
+
+    # CAFANA-compat chi2 on stored dedx
+    cafana = chi2pid_cafana.chi2_cafana(trkhitdf, rr_min=(rr_min if rr_min is not None else 0.0))
+    P["chi2u_%scafana" % tag] = cafana.chi2_mu
+    P["chi2p_%scafana" % tag] = cafana.chi2_pro
+
+    if do_calo_syst:
+        for var in SCALE_SMEAR_VARIATIONS + CALO_VARIATIONS:
+            P["chi2u_%s%s" % (tag, var)] = chi2pid.chi2u(trkhitdf, dedxname="dedx_%s" % var, rr_min=rr_min)[0]
+            P["chi2p_%s%s" % (tag, var)] = chi2pid.chi2p(trkhitdf, dedxname="dedx_%s" % var, rr_min=rr_min)[0]
+
+        # Don't apply variations to (Overlay) cosmics
+        for var in SCALE_SMEAR_VARIATIONS + CALO_VARIATIONS:
+            P.loc[cosmic, "chi2u_%s%s" % (tag, var)] = P.loc[cosmic, "chi2u_%scafpyana" % tag]
+            P.loc[cosmic, "chi2p_%s%s" % (tag, var)] = P.loc[cosmic, "chi2p_%scafpyana" % tag]
+
+def PID_calcs(f, P, DETECTOR, ismc, do_calo_syst=True, do_alt_chi2=True):
     # ------------------------------------------------------------------
-    # PID: both flavors
+    # PID: both flavors, on the collection plane (plane 2)
     # ------------------------------------------------------------------
     trkhitdf = make_trkhitdf(f)
 
@@ -561,68 +647,58 @@ def PID_calcs(f, P, DETECTOR, ismc, do_calo_syst=True):
     ncalo = trkhitdf.groupby(level=[0, 1, 2]).size()
     P["ncalo"] = _reindex(ncalo, P.index, 0).astype(int)
 
-    # CAFANA-compat chi2 on stored dedx
-    cafana = chi2pid_cafana.chi2_cafana(trkhitdf)
-    P["chi2u_cafana"] = cafana.chi2_mu
-    P["chi2p_cafana"] = cafana.chi2_pro
+    # cosmic (Overlay) mask -- variations are pinned to nominal for these
+    cosmic = P.true_genp_x.isna()
 
-    # gump-style chi2 on recomputed dE/dx (detector gains + calibration)
-    trkhitdf["dedx_redo"] = chi2pid.dedx(trkhitdf, gain=DETECTOR, calibrate=DETECTOR, isMC=ismc)
-    P["chi2u_cafpyana"] = chi2pid.chi2u(trkhitdf, dedxname="dedx_redo")[0]
-    P["chi2p_cafpyana"] = chi2pid.chi2p(trkhitdf, dedxname="dedx_redo")[0]
+    # dedx + chi2 on the collection plane (tag="" keeps the legacy column names)
+    _add_dedx_variations(trkhitdf, DETECTOR, ismc, do_calo_syst)
+    _write_plane_chi2(trkhitdf, P, "", do_calo_syst, cosmic)
 
-    # calorimetric variations (ported from gump make_pandora_no_cuts_df,
-    # including the gump detector-specific scale sizes)
-    if do_calo_syst:
-        if DETECTOR == "ICARUS":
-            scale_lo, scale_hi, scale_2lo, scale_2hi = 0.99, 1.01, 0.98, 1.02
-            calo_var_params = chi2pid.ICARUS_CALO_VARIATIONS
-        else:
-            scale_lo, scale_hi, scale_2lo, scale_2hi = 0.98, 1.02, 0.96, 1.04
-            calo_var_params = chi2pid.SBND_CALO_VARIATIONS
-        trkhitdf["dedx_lo"] = chi2pid.dedx(trkhitdf, gain=DETECTOR, calibrate=DETECTOR, isMC=ismc, scale=scale_lo)
-        trkhitdf["dedx_hi"] = chi2pid.dedx(trkhitdf, gain=DETECTOR, calibrate=DETECTOR, isMC=ismc, scale=scale_hi)
-        trkhitdf["dedx_2lo"] = chi2pid.dedx(trkhitdf, gain=DETECTOR, calibrate=DETECTOR, isMC=ismc, scale=scale_2lo)
-        trkhitdf["dedx_2hi"] = chi2pid.dedx(trkhitdf, gain=DETECTOR, calibrate=DETECTOR, isMC=ismc, scale=scale_2hi)
-        trkhitdf["dedx_smear5"] = chi2pid.dedx(trkhitdf, gain=DETECTOR, calibrate=DETECTOR, isMC=ismc, smear=0.05)
-        trkhitdf["dedx_smear13"] = chi2pid.dedx(trkhitdf, gain=DETECTOR, calibrate=DETECTOR, isMC=ismc, smear=0.13)
-        trkhitdf["dedx_sqsmear15"] = chi2pid.dedx(trkhitdf, gain=DETECTOR, calibrate=DETECTOR, isMC=ismc, sqrt_smear=0.15)
-        for c_var in CALO_VARIATIONS:
-            if c_var == "dedxbias":
-                # dedxbias is ICARUS-only: scale corrected dE/dx up by the dE/dx
-                # spline. In SBND it is a no-op equal to CV.
-                if DETECTOR == "ICARUS":
-                    trkhitdf["dedx_dedxbias"] = chi2pid.dedx(
-                        trkhitdf, gain=DETECTOR, calibrate=DETECTOR, isMC=ismc,
-                        dedx_bias=True)
-                else:
-                    trkhitdf["dedx_dedxbias"] = trkhitdf["dedx_cv"]
-            elif c_var == "R_p25":
-                # R_p25 is SBND-only (large R+0.25 recombination test); no-op = CV on ICARUS
-                if DETECTOR == "ICARUS":
-                    trkhitdf["dedx_R_p25"] = trkhitdf["dedx_cv"]
-                else:
-                    trkhitdf["dedx_R_p25"] = chi2pid.dedx(
-                        trkhitdf, gain=DETECTOR, calibrate=DETECTOR, isMC=ismc,
-                        new_calo_params=calo_var_params["R_p25"])
-            else:
-                trkhitdf["dedx_%s" % c_var] = chi2pid.dedx(
-                    trkhitdf, gain=DETECTOR, calibrate=DETECTOR, isMC=ismc,
-                    new_calo_params=calo_var_params[c_var])
+    # ------------------------------------------------------------------
+    # Alternative chi2 flavors: front/middle induction, best plane, and the
+    # collection plane with the last 1.5 cm of the track removed. Each carries
+    # the same full variation suite as the collection plane.
+    # ------------------------------------------------------------------
+    if do_alt_chi2:
+        flavors = _chi2_flavors(do_calo_syst)
 
-        for var in SCALE_SMEAR_VARIATIONS + CALO_VARIATIONS:
-            P["chi2u_%s" % var] = chi2pid.chi2u(trkhitdf, dedxname="dedx_%s" % var)[0]
-            P["chi2p_%s" % var] = chi2pid.chi2p(trkhitdf, dedxname="dedx_%s" % var)[0]
+        # front (p0) and middle (p1) induction planes: fresh hitdfs.
+        # make_trkhitdf sets hd["plane"]=plane so dedx() uses the right gains.
+        ncalo_by_plane = {2: P["ncalo"]}
+        for tag, plane in [("p0_", 0), ("p1_", 1)]:
+            hd = make_trkhitdf(f, plane)
+            ncalo_p = hd.groupby(level=[0, 1, 2]).size()
+            ncol = "ncalo_%s" % tag.rstrip("_")
+            P[ncol] = _reindex(ncalo_p, P.index, 0).astype(int)
+            ncalo_by_plane[plane] = P[ncol]
+            _add_dedx_variations(hd, DETECTOR, ismc, do_calo_syst)
+            _write_plane_chi2(hd, P, tag, do_calo_syst, cosmic)
 
-        # Don't apply variations to (Overlay) cosmics
-        cosmic = P.true_genp_x.isna()
-        for var in SCALE_SMEAR_VARIATIONS + CALO_VARIATIONS:
-            P.loc[cosmic, "chi2u_%s" % var] = P.loc[cosmic, "chi2u_cafpyana"]
-            P.loc[cosmic, "chi2p_%s" % var] = P.loc[cosmic, "chi2p_cafpyana"]
+        # collection plane with the last 1.5 cm removed (reuse plane-2 dedx cols)
+        _write_plane_chi2(trkhitdf, P, "p2trim_", do_calo_syst, cosmic, rr_min=1.5)
+
+        # bestplane: per-pfp select the plane with the most calo hits, preferring
+        # the collection plane on ties (stack order [p2, p0, p1] -> argmax).
+        ncalo_stack = np.vstack([ncalo_by_plane[2].values,
+                                 ncalo_by_plane[0].values,
+                                 ncalo_by_plane[1].values])
+        best = np.argmax(ncalo_stack, axis=0)  # 0 -> plane2, 1 -> plane0, 2 -> plane1
+        conds = [best == 0, best == 1, best == 2]
+        bestcols = {}
+        for flavor in flavors:
+            for uorp in ["chi2u", "chi2p"]:
+                bestcols["%s_bestplane_%s" % (uorp, flavor)] = np.select(
+                    conds,
+                    [P["%s_%s" % (uorp, flavor)],       # collection plane (untagged)
+                     P["%s_p0_%s" % (uorp, flavor)],
+                     P["%s_p1_%s" % (uorp, flavor)]],
+                    default=np.nan)
+        # concat all bestplane columns at once (avoids DataFrame fragmentation)
+        P = pd.concat([P, pd.DataFrame(bestcols, index=P.index)], axis=1)
 
     return P
 
-def fetch_candidates(S, P, do_calo_syst, use_chi2=True):
+def fetch_candidates(S, P, do_calo_syst, use_chi2=True, do_alt_chi2=True):
     # ------------------------------------------------------------------
     # fixed candidates; chi2 cuts are applied post-hoc (maple_sel)
     # ------------------------------------------------------------------
@@ -630,6 +706,12 @@ def fetch_candidates(S, P, do_calo_syst, use_chi2=True):
     chi2_suffixes = {"": "cafpyana", "cafana": "cafana"}
     if do_calo_syst:
         chi2_suffixes.update({v: v for v in SCALE_SMEAR_VARIATIONS + CALO_VARIATIONS})
+    if do_alt_chi2:
+        # alternative-plane flavors: per-pfp col name == evt-df suffix
+        for tag in ALT_PLANE_TAGS:
+            for flavor in _chi2_flavors(do_calo_syst):
+                key = "%s_%s" % (tag, flavor)
+                chi2_suffixes[key] = key
 
     mu_ilocs, is_prot_cand, counts = _find_candidates(P, use_chi2=use_chi2)
     counts = counts.reindex(S.index).fillna(0).astype(int)
@@ -872,7 +954,7 @@ def fetch_candidates(S, P, do_calo_syst, use_chi2=True):
 # =====================================================================
 # Main evt builder
 # =====================================================================
-def make_maple_evt_df(f, selection="none", do_calo_syst=True, use_chi2=True):
+def make_maple_evt_df(f, selection="none", do_calo_syst=True, use_chi2=True, do_alt_chi2=True):
     # use_chi2: muon-candidate selection behavior -- True (default) picks the
     # legacy-GUMP min-chi2u/chi2p-ratio track (len > 40 cm), False the
     # longest chi2-free base-mask track (see _find_candidates).
@@ -899,8 +981,8 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True, use_chi2=True):
     # Again, since we have limited trk info access after df prod
     # we want to grab information about candidate mu and p tracks here.
     # Start with PID calculations and then do some basic candidate ID.
-    P = PID_calcs(f, P, DETECTOR, ismc, do_calo_syst=do_calo_syst)
-    S = fetch_candidates(S, P, do_calo_syst, use_chi2=use_chi2)
+    P = PID_calcs(f, P, DETECTOR, ismc, do_calo_syst=do_calo_syst, do_alt_chi2=do_alt_chi2)
+    S = fetch_candidates(S, P, do_calo_syst, use_chi2=use_chi2, do_alt_chi2=do_alt_chi2)
 
     # ------------------------------------------------------------------
     # Reco_class (classification_type_debug port, via mcnu-level classification)
