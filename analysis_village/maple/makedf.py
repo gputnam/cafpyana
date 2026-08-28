@@ -552,16 +552,30 @@ def fetch_info(f):
     return S, P, DETECTOR, RUN, ismc
 
 # plane-flavor tags for the alternative chi2 calculations (do_alt_chi2)
-#   p0        -- front induction plane (plane 0)
-#   p1        -- middle induction plane (plane 1)
-#   bestplane -- per-pfp, the plane (0/1/2) with the most calo hits
-#   p2trim    -- collection plane with the last 1.5 cm of the track removed
-ALT_PLANE_TAGS = ["p0", "p1", "bestplane", "p2trim"]
+#   p2trim/p2trim2/p2trim3 -- collection plane with the last 1.5/2/3 cm of the
+#                             track removed (always built under do_alt_chi2)
+#   p0        -- front induction plane (plane 0)      (do_ind_chi2 only)
+#   p1        -- middle induction plane (plane 1)     (do_ind_chi2 only)
+#   bestplane -- per-pfp, the plane (0/1/2) with the most calo hits (do_ind_chi2 only)
+#
+# collection-plane trim variations: tag -> rr_min (cm of track-end hits dropped)
+TRIM_CHI2_TAGS = {"p2trim": 1.5, "p2trim2": 2.0, "p2trim3": 3.0}
+# induction-plane + best-plane tags (only built when do_ind_chi2 is on;
+# bestplane needs the p0/p1 chi2 to exist, so it rides with them)
+IND_PLANE_TAGS = ["p0", "p1", "bestplane"]
 
-def _chi2_flavors(do_calo_syst):
-    """The per-plane chi2 flavors: nominal cafpyana + cafana, plus the full
-    calorimetric variation suite when do_calo_syst is on."""
-    flavors = ["cafpyana", "cafana"]
+def _alt_plane_tags(do_ind_chi2):
+    tags = list(TRIM_CHI2_TAGS.keys())
+    if do_ind_chi2:
+        tags = IND_PLANE_TAGS + tags
+    return tags
+
+def _chi2_flavors(do_calo_syst, do_cafana_chi2):
+    """The per-plane chi2 flavors: nominal cafpyana (+ cafana when do_cafana_chi2
+    is on), plus the full calorimetric variation suite when do_calo_syst is on."""
+    flavors = ["cafpyana"]
+    if do_cafana_chi2:
+        flavors.append("cafana")
     if do_calo_syst:
         flavors = flavors + SCALE_SMEAR_VARIATIONS + CALO_VARIATIONS
     return flavors
@@ -612,7 +626,7 @@ def _add_dedx_variations(trkhitdf, DETECTOR, ismc, do_calo_syst):
                 trkhitdf, gain=DETECTOR, calibrate=DETECTOR, isMC=ismc,
                 new_calo_params=calo_var_params[c_var])
 
-def _write_plane_chi2(trkhitdf, P, tag, do_calo_syst, cosmic, rr_min=None):
+def _write_plane_chi2(trkhitdf, P, tag, do_calo_syst, cosmic, do_cafana_chi2, rr_min=None):
     """Write chi2u_{tag}<flavor> / chi2p_{tag}<flavor> columns into P for one
     plane's trkhitdf (dedx variation columns must already be attached via
     _add_dedx_variations). tag="" reproduces the collection-plane column names;
@@ -622,10 +636,11 @@ def _write_plane_chi2(trkhitdf, P, tag, do_calo_syst, cosmic, rr_min=None):
     P["chi2u_%scafpyana" % tag] = chi2pid.chi2u(trkhitdf, dedxname="dedx_redo", rr_min=rr_min)[0]
     P["chi2p_%scafpyana" % tag] = chi2pid.chi2p(trkhitdf, dedxname="dedx_redo", rr_min=rr_min)[0]
 
-    # CAFANA-compat chi2 on stored dedx
-    cafana = chi2pid_cafana.chi2_cafana(trkhitdf, rr_min=(rr_min if rr_min is not None else 0.0))
-    P["chi2u_%scafana" % tag] = cafana.chi2_mu
-    P["chi2p_%scafana" % tag] = cafana.chi2_pro
+    # CAFANA-compat chi2 on stored dedx (opt-in)
+    if do_cafana_chi2:
+        cafana = chi2pid_cafana.chi2_cafana(trkhitdf, rr_min=(rr_min if rr_min is not None else 0.0))
+        P["chi2u_%scafana" % tag] = cafana.chi2_mu
+        P["chi2p_%scafana" % tag] = cafana.chi2_pro
 
     if do_calo_syst:
         for var in SCALE_SMEAR_VARIATIONS + CALO_VARIATIONS:
@@ -637,9 +652,10 @@ def _write_plane_chi2(trkhitdf, P, tag, do_calo_syst, cosmic, rr_min=None):
             P.loc[cosmic, "chi2u_%s%s" % (tag, var)] = P.loc[cosmic, "chi2u_%scafpyana" % tag]
             P.loc[cosmic, "chi2p_%s%s" % (tag, var)] = P.loc[cosmic, "chi2p_%scafpyana" % tag]
 
-def PID_calcs(f, P, DETECTOR, ismc, do_calo_syst=True, do_alt_chi2=True):
+def PID_calcs(f, P, DETECTOR, ismc, do_calo_syst=True, do_alt_chi2=True,
+              do_cafana_chi2=False, do_ind_chi2=False):
     # ------------------------------------------------------------------
-    # PID: both flavors, on the collection plane (plane 2)
+    # PID on the collection plane (plane 2)
     # ------------------------------------------------------------------
     trkhitdf = make_trkhitdf(f)
 
@@ -652,64 +668,72 @@ def PID_calcs(f, P, DETECTOR, ismc, do_calo_syst=True, do_alt_chi2=True):
 
     # dedx + chi2 on the collection plane (tag="" keeps the legacy column names)
     _add_dedx_variations(trkhitdf, DETECTOR, ismc, do_calo_syst)
-    _write_plane_chi2(trkhitdf, P, "", do_calo_syst, cosmic)
+    _write_plane_chi2(trkhitdf, P, "", do_calo_syst, cosmic, do_cafana_chi2)
 
     # ------------------------------------------------------------------
-    # Alternative chi2 flavors: front/middle induction, best plane, and the
-    # collection plane with the last 1.5 cm of the track removed. Each carries
-    # the same full variation suite as the collection plane.
+    # Alternative chi2 flavors: the collection plane with the last 1.5/2/3 cm of
+    # the track removed (always) and, when do_ind_chi2 is on, the front/middle
+    # induction planes and the best plane. Each carries the same full variation
+    # suite as the collection plane.
     # ------------------------------------------------------------------
     if do_alt_chi2:
-        flavors = _chi2_flavors(do_calo_syst)
+        flavors = _chi2_flavors(do_calo_syst, do_cafana_chi2)
 
-        # front (p0) and middle (p1) induction planes: fresh hitdfs.
-        # make_trkhitdf sets hd["plane"]=plane so dedx() uses the right gains.
-        ncalo_by_plane = {2: P["ncalo"]}
-        for tag, plane in [("p0_", 0), ("p1_", 1)]:
-            hd = make_trkhitdf(f, plane)
-            ncalo_p = hd.groupby(level=[0, 1, 2]).size()
-            ncol = "ncalo_%s" % tag.rstrip("_")
-            P[ncol] = _reindex(ncalo_p, P.index, 0).astype(int)
-            ncalo_by_plane[plane] = P[ncol]
-            _add_dedx_variations(hd, DETECTOR, ismc, do_calo_syst)
-            _write_plane_chi2(hd, P, tag, do_calo_syst, cosmic)
+        # collection plane with the last 1.5/2/3 cm removed (reuse plane-2 dedx cols)
+        for tag, rr_min in TRIM_CHI2_TAGS.items():
+            _write_plane_chi2(trkhitdf, P, tag + "_", do_calo_syst, cosmic,
+                              do_cafana_chi2, rr_min=rr_min)
 
-        # collection plane with the last 1.5 cm removed (reuse plane-2 dedx cols)
-        _write_plane_chi2(trkhitdf, P, "p2trim_", do_calo_syst, cosmic, rr_min=1.5)
+        # induction planes + best-plane selection (opt-in)
+        if do_ind_chi2:
+            # front (p0) and middle (p1) induction planes: fresh hitdfs.
+            # make_trkhitdf sets hd["plane"]=plane so dedx() uses the right gains.
+            ncalo_by_plane = {2: P["ncalo"]}
+            for tag, plane in [("p0_", 0), ("p1_", 1)]:
+                hd = make_trkhitdf(f, plane)
+                ncalo_p = hd.groupby(level=[0, 1, 2]).size()
+                ncol = "ncalo_%s" % tag.rstrip("_")
+                P[ncol] = _reindex(ncalo_p, P.index, 0).astype(int)
+                ncalo_by_plane[plane] = P[ncol]
+                _add_dedx_variations(hd, DETECTOR, ismc, do_calo_syst)
+                _write_plane_chi2(hd, P, tag, do_calo_syst, cosmic, do_cafana_chi2)
 
-        # bestplane: per-pfp select the plane with the most calo hits, preferring
-        # the collection plane on ties (stack order [p2, p0, p1] -> argmax).
-        ncalo_stack = np.vstack([ncalo_by_plane[2].values,
-                                 ncalo_by_plane[0].values,
-                                 ncalo_by_plane[1].values])
-        best = np.argmax(ncalo_stack, axis=0)  # 0 -> plane2, 1 -> plane0, 2 -> plane1
-        conds = [best == 0, best == 1, best == 2]
-        bestcols = {}
-        for flavor in flavors:
-            for uorp in ["chi2u", "chi2p"]:
-                bestcols["%s_bestplane_%s" % (uorp, flavor)] = np.select(
-                    conds,
-                    [P["%s_%s" % (uorp, flavor)],       # collection plane (untagged)
-                     P["%s_p0_%s" % (uorp, flavor)],
-                     P["%s_p1_%s" % (uorp, flavor)]],
-                    default=np.nan)
-        # concat all bestplane columns at once (avoids DataFrame fragmentation)
-        P = pd.concat([P, pd.DataFrame(bestcols, index=P.index)], axis=1)
+            # bestplane: per-pfp select the plane with the most calo hits, preferring
+            # the collection plane on ties (stack order [p2, p0, p1] -> argmax).
+            ncalo_stack = np.vstack([ncalo_by_plane[2].values,
+                                     ncalo_by_plane[0].values,
+                                     ncalo_by_plane[1].values])
+            best = np.argmax(ncalo_stack, axis=0)  # 0 -> plane2, 1 -> plane0, 2 -> plane1
+            conds = [best == 0, best == 1, best == 2]
+            bestcols = {}
+            for flavor in flavors:
+                for uorp in ["chi2u", "chi2p"]:
+                    bestcols["%s_bestplane_%s" % (uorp, flavor)] = np.select(
+                        conds,
+                        [P["%s_%s" % (uorp, flavor)],       # collection plane (untagged)
+                         P["%s_p0_%s" % (uorp, flavor)],
+                         P["%s_p1_%s" % (uorp, flavor)]],
+                        default=np.nan)
+            # concat all bestplane columns at once (avoids DataFrame fragmentation)
+            P = pd.concat([P, pd.DataFrame(bestcols, index=P.index)], axis=1)
 
     return P
 
-def fetch_candidates(S, P, do_calo_syst, use_chi2=True, do_alt_chi2=True):
+def fetch_candidates(S, P, do_calo_syst, use_chi2=True, do_alt_chi2=True,
+                     do_cafana_chi2=False, do_ind_chi2=False):
     # ------------------------------------------------------------------
     # fixed candidates; chi2 cuts are applied post-hoc (maple_sel)
     # ------------------------------------------------------------------
     # evt-df chi2 suffix -> per-pfp chi2 flavor ("" = nominal cafpyana)
-    chi2_suffixes = {"": "cafpyana", "cafana": "cafana"}
+    chi2_suffixes = {"": "cafpyana"}
+    if do_cafana_chi2:
+        chi2_suffixes["cafana"] = "cafana"
     if do_calo_syst:
         chi2_suffixes.update({v: v for v in SCALE_SMEAR_VARIATIONS + CALO_VARIATIONS})
     if do_alt_chi2:
         # alternative-plane flavors: per-pfp col name == evt-df suffix
-        for tag in ALT_PLANE_TAGS:
-            for flavor in _chi2_flavors(do_calo_syst):
+        for tag in _alt_plane_tags(do_ind_chi2):
+            for flavor in _chi2_flavors(do_calo_syst, do_cafana_chi2):
                 key = "%s_%s" % (tag, flavor)
                 chi2_suffixes[key] = key
 
@@ -954,7 +978,8 @@ def fetch_candidates(S, P, do_calo_syst, use_chi2=True, do_alt_chi2=True):
 # =====================================================================
 # Main evt builder
 # =====================================================================
-def make_maple_evt_df(f, selection="none", do_calo_syst=True, use_chi2=True, do_alt_chi2=True):
+def make_maple_evt_df(f, selection="none", do_calo_syst=True, use_chi2=True, do_alt_chi2=True,
+                      do_cafana_chi2=False, do_ind_chi2=False):
     # use_chi2: muon-candidate selection behavior -- True (default) picks the
     # legacy-GUMP min-chi2u/chi2p-ratio track (len > 40 cm), False the
     # longest chi2-free base-mask track (see _find_candidates).
@@ -981,8 +1006,10 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True, use_chi2=True, do_
     # Again, since we have limited trk info access after df prod
     # we want to grab information about candidate mu and p tracks here.
     # Start with PID calculations and then do some basic candidate ID.
-    P = PID_calcs(f, P, DETECTOR, ismc, do_calo_syst=do_calo_syst, do_alt_chi2=do_alt_chi2)
-    S = fetch_candidates(S, P, do_calo_syst, use_chi2=use_chi2, do_alt_chi2=do_alt_chi2)
+    P = PID_calcs(f, P, DETECTOR, ismc, do_calo_syst=do_calo_syst, do_alt_chi2=do_alt_chi2,
+                  do_cafana_chi2=do_cafana_chi2, do_ind_chi2=do_ind_chi2)
+    S = fetch_candidates(S, P, do_calo_syst, use_chi2=use_chi2, do_alt_chi2=do_alt_chi2,
+                         do_cafana_chi2=do_cafana_chi2, do_ind_chi2=do_ind_chi2)
 
     # ------------------------------------------------------------------
     # Reco_class (classification_type_debug port, via mcnu-level classification)
