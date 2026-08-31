@@ -564,6 +564,15 @@ TRIM_CHI2_TAGS = {"p2trim": 1.5, "p2trim2": 2.0, "p2trim3": 3.0}
 # bestplane needs the p0/p1 chi2 to exist, so it rides with them)
 IND_PLANE_TAGS = ["p0", "p1", "bestplane"]
 
+# Default proton PID: the collection plane for proton candidates at a large
+# angle to the drift (X) direction (theta_x > 47 deg), and the last-2cm-trimmed
+# collection plane (p2trim2) for candidates nearly along the drift (theta_x <=
+# 47 deg), where the reconstructed track end -- which the collection-plane chi2
+# samples heavily -- is most distorted.  The muon candidate always uses the
+# untrimmed collection plane.
+PROT_TRIM_ANGLE_X_DEG = 47.0
+DEFAULT_PROT_TRIM_TAG = "p2trim2"   # must be a key of TRIM_CHI2_TAGS
+
 def _alt_plane_tags(do_ind_chi2):
     tags = list(TRIM_CHI2_TAGS.keys())
     if do_ind_chi2:
@@ -652,7 +661,7 @@ def _write_plane_chi2(trkhitdf, P, tag, do_calo_syst, cosmic, do_cafana_chi2, rr
             P.loc[cosmic, "chi2u_%s%s" % (tag, var)] = P.loc[cosmic, "chi2u_%scafpyana" % tag]
             P.loc[cosmic, "chi2p_%s%s" % (tag, var)] = P.loc[cosmic, "chi2p_%scafpyana" % tag]
 
-def PID_calcs(f, P, DETECTOR, ismc, do_calo_syst=True, do_alt_chi2=True,
+def PID_calcs(f, P, DETECTOR, ismc, do_calo_syst=True, do_alt_chi2=False,
               do_cafana_chi2=False, do_ind_chi2=False):
     # ------------------------------------------------------------------
     # PID on the collection plane (plane 2)
@@ -670,17 +679,25 @@ def PID_calcs(f, P, DETECTOR, ismc, do_calo_syst=True, do_alt_chi2=True,
     _add_dedx_variations(trkhitdf, DETECTOR, ismc, do_calo_syst)
     _write_plane_chi2(trkhitdf, P, "", do_calo_syst, cosmic, do_cafana_chi2)
 
+    # p2trim2 (collection plane, last 2 cm removed) is half of the default
+    # proton PID (the angle blend), so it is ALWAYS computed, independent of
+    # do_alt_chi2.  It reuses the plane-2 dedx columns attached just above.
+    _write_plane_chi2(trkhitdf, P, DEFAULT_PROT_TRIM_TAG + "_", do_calo_syst,
+                      cosmic, do_cafana_chi2, rr_min=TRIM_CHI2_TAGS[DEFAULT_PROT_TRIM_TAG])
+
     # ------------------------------------------------------------------
-    # Alternative chi2 flavors: the collection plane with the last 1.5/2/3 cm of
-    # the track removed (always) and, when do_ind_chi2 is on, the front/middle
-    # induction planes and the best plane. Each carries the same full variation
-    # suite as the collection plane.
+    # Alternative chi2 flavors: the collection plane with the last 1.5/3 cm of
+    # the track removed and, when do_ind_chi2 is on, the front/middle induction
+    # planes and the best plane. Each carries the same full variation suite as
+    # the collection plane. (p2trim2 is always built just above.)
     # ------------------------------------------------------------------
     if do_alt_chi2:
         flavors = _chi2_flavors(do_calo_syst, do_cafana_chi2)
 
-        # collection plane with the last 1.5/2/3 cm removed (reuse plane-2 dedx cols)
+        # collection plane with the last 1.5/3 cm removed (reuse plane-2 dedx cols)
         for tag, rr_min in TRIM_CHI2_TAGS.items():
+            if tag == DEFAULT_PROT_TRIM_TAG:
+                continue  # already built above (always)
             _write_plane_chi2(trkhitdf, P, tag + "_", do_calo_syst, cosmic,
                               do_cafana_chi2, rr_min=rr_min)
 
@@ -719,7 +736,7 @@ def PID_calcs(f, P, DETECTOR, ismc, do_calo_syst=True, do_alt_chi2=True,
 
     return P
 
-def fetch_candidates(S, P, do_calo_syst, use_chi2=True, do_alt_chi2=True,
+def fetch_candidates(S, P, do_calo_syst, use_chi2=True, do_alt_chi2=False,
                      do_cafana_chi2=False, do_ind_chi2=False):
     # ------------------------------------------------------------------
     # fixed candidates; chi2 cuts are applied post-hoc (maple_sel)
@@ -751,18 +768,49 @@ def fetch_candidates(S, P, do_calo_syst, use_chi2=True, do_alt_chi2=True,
     S["cut_np"] = counts.n_pfp >= 2
     S["cut_0shwother"] = (counts.n_shower == 0) & (counts.n_other == 0)
 
+    # Default proton PID is angle-dependent: the untrimmed collection plane for
+    # candidates at a large angle to the drift (theta_x > 47 deg) and p2trim2 for
+    # candidates nearly along the drift.  Build the per-pfp blend for every
+    # collection-plane flavor (nominal + calorimetric variations), then map each
+    # evt-df chi2 suffix to its (chi2u, chi2p) per-pfp columns: default-plane
+    # flavors use the blend, alternate-plane tags stay as computed, and (under
+    # do_alt_chi2) a "p2" tag exposes the pure untrimmed collection plane.
+    default_flavors = _chi2_flavors(do_calo_syst, do_cafana_chi2)
+    costh = np.cos(np.radians(PROT_TRIM_ANGLE_X_DEG))
+    use_trim = P.dir_x.abs() >= costh  # theta_x <= 47 deg (NaN dir -> False -> collection)
+    blend = {}
+    for fl in default_flavors:
+        for uorp in ("chi2u", "chi2p"):
+            base = P["%s_%s" % (uorp, fl)]
+            trim = P["%s_%s_%s" % (uorp, DEFAULT_PROT_TRIM_TAG, fl)]
+            blend["%s_protblend_%s" % (uorp, fl)] = base.where(~use_trim, trim)
+    P = pd.concat([P, pd.DataFrame(blend, index=P.index)], axis=1)
+
+    # evt-df chi2 suffix -> (per-pfp chi2u col, per-pfp chi2p col) for the proton
+    prot_chi2_cols = {}
+    for suff, fl in chi2_suffixes.items():
+        if fl in default_flavors:  # collection-plane flavor -> angle blend
+            prot_chi2_cols[suff] = ("chi2u_protblend_%s" % fl, "chi2p_protblend_%s" % fl)
+        else:                      # alternate-plane tag -> pure per-plane column
+            prot_chi2_cols[suff] = ("chi2u_%s" % fl, "chi2p_%s" % fl)
+    if do_alt_chi2:                # p2-only: the pure untrimmed collection plane
+        for fl in default_flavors:
+            prot_chi2_cols["p2_%s" % fl] = ("chi2u_%s" % fl, "chi2p_%s" % fl)
+
     # worst-case cut variables over the candidate protons (min for cuts
     # with direction >, max for cuts with direction <): min chi2u / max chi2p
     # over ALL non-muon candidate pfps, so the proton PID cut on the max chi2p
     # only passes when every candidate is proton-like
+    u_cols = list(dict.fromkeys(c for c, _ in prot_chi2_cols.values()))
+    p_cols = list(dict.fromkeys(c for _, c in prot_chi2_cols.values()))
     aggs = _proton_aggregates(
         P, is_prot_cand,
-        mincols=["trackScore", "ke_proton"] + ["chi2u_%s" % fl for fl in chi2_suffixes.values()],
-        maxcols=["dist_start"] + ["chi2p_%s" % fl for fl in chi2_suffixes.values()])
+        mincols=["trackScore", "ke_proton"] + u_cols,
+        maxcols=["dist_start"] + p_cols)
     aggs = aggs.reindex(S.index)
-    for suff, fl in chi2_suffixes.items():
-        S["mu_chi2%s_of_prot_cand" % suff] = aggs["min_chi2u_%s" % fl]
-        S["prot_chi2%s_of_prot_cand" % suff] = aggs["max_chi2p_%s" % fl]
+    for suff, (ucol, pcol) in prot_chi2_cols.items():
+        S["mu_chi2%s_of_prot_cand" % suff] = aggs["min_%s" % ucol]
+        S["prot_chi2%s_of_prot_cand" % suff] = aggs["max_%s" % pcol]
     S["min_proton_track_score"] = aggs.min_trackScore
     S["min_proton_ke"] = aggs.min_ke_proton
     S["max_proton_dist_start"] = aggs.max_dist_start
@@ -789,7 +837,9 @@ def fetch_candidates(S, P, do_calo_syst, use_chi2=True, do_alt_chi2=True,
     prodf = P[is_prot_cand & (P.len > 0)]
     pcols = ["len", "start_x", "start_y", "start_z", "end_x", "end_y", "end_z",
              "dir_x", "dir_y", "dir_z", "dist_start",
-             "p_proton", "ke_proton", "trackScore", "chi2u_cafpyana", "chi2p_cafpyana"] + truthcols
+             "p_proton", "ke_proton", "trackScore", "chi2u_cafpyana", "chi2p_cafpyana",
+             "chi2u_%s_cafpyana" % DEFAULT_PROT_TRIM_TAG,
+             "chi2p_%s_cafpyana" % DEFAULT_PROT_TRIM_TAG] + truthcols
     if len(prodf):
         p_ilocs = prodf.len.groupby(level=[0, 1]).idxmax()
         pro = P.loc[pd.Index(p_ilocs.values), pcols].copy()
@@ -926,8 +976,12 @@ def fetch_candidates(S, P, do_calo_syst, use_chi2=True, do_alt_chi2=True,
     S["p_dist_to_vertex"] = pro.dist_start  # legacy GUMP name
     S["p_trackScore"] = pro.trackScore
     S["p_track_score"] = pro.trackScore  # legacy GUMP alias
-    S["mu_chi2_of_lead_prot"] = pro.chi2u_cafpyana
-    S["prot_chi2_of_lead_prot"] = pro.chi2p_cafpyana
+    # leading-proton default chi2 = the same angle blend as *_of_prot_cand
+    use_trim_lead = pro.dir_x.abs() >= np.cos(np.radians(PROT_TRIM_ANGLE_X_DEG))
+    S["mu_chi2_of_lead_prot"] = pro.chi2u_cafpyana.where(
+        ~use_trim_lead, pro["chi2u_%s_cafpyana" % DEFAULT_PROT_TRIM_TAG])
+    S["prot_chi2_of_lead_prot"] = pro.chi2p_cafpyana.where(
+        ~use_trim_lead, pro["chi2p_%s_cafpyana" % DEFAULT_PROT_TRIM_TAG])
 
     # leading-proton-candidate truth (truth of the reco track matched to the
     # leading proton cand); GUMP kept both p_true_* and true_pcand_* names
@@ -978,7 +1032,7 @@ def fetch_candidates(S, P, do_calo_syst, use_chi2=True, do_alt_chi2=True,
 # =====================================================================
 # Main evt builder
 # =====================================================================
-def make_maple_evt_df(f, selection="none", do_calo_syst=True, use_chi2=True, do_alt_chi2=True,
+def make_maple_evt_df(f, selection="none", do_calo_syst=True, use_chi2=True, do_alt_chi2=False,
                       do_cafana_chi2=False, do_ind_chi2=False):
     # use_chi2: muon-candidate selection behavior -- True (default) picks the
     # legacy-GUMP min-chi2u/chi2p-ratio track (len > 40 cm), False the
