@@ -881,8 +881,8 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
     # exclusive selections split on n_pfp: gump = base chain & n_pfp==2 (1u1p),
     # maple = base chain & n_pfp>2 (1uN>1p). NB maple_sel used to be the
     # inclusive base chain; 1u1p analyses must use gump_sel.
-    S["gump_sel"] = chain.gump_sel
-    S["maple_sel"] = chain.maple_sel
+    S["m_gump_sel"] = chain.m_gump_sel
+    S["m_maple_sel"] = chain.m_maple_sel
 
     # ------------------------------------------------------------------
     # selection option
@@ -892,7 +892,7 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True):
     elif selection == "presel":
         S = S[S.cut_presel]
     elif selection == "full":
-        S = S[S.gump_sel | S.maple_sel]
+        S = S[S.m_gump_sel | S.m_maple_sel]
     else:
         raise ValueError("selection must be 'none', 'presel', or 'full'")
 

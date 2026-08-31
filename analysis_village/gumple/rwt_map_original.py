@@ -116,23 +116,23 @@ def plot_2d_hist_from_file(filename, plot_title, output_tag):
     plt.ylabel(r'$\delta p$ [GeV/c]')
     
     mesh.get_cmap().set_bad(color='gray')
-    plt.savefig('/exp/icarus/app/users/marterop/cafpyana/analysis_village/gumple/rwt_outputs/2d_ratio_'+output_tag+'.png', dpi=300)
+    plt.savefig('/exp/sbnd/app/users/nrowe/cafpyana/analysis_village/gump/rwt_outputs/2d_ratio_'+output_tag+'.png', dpi=300)
     plt.clf() 
 
-def remake_detvar_maps(detector, DF_DIR, selection=gmpl.all_maple_cuts, outdir="rwt_outputs"):
+def remake_detvar_maps(detector, DF_DIR, selection=gmpl.all_gump_cuts, outdir="rwt_outputs"):
     if not os.path.exists(outdir):
         os.makedirs(outdir)
     if detector == "ICARUS Run2":
         GOAL_POT = 2e20
-        DETVAR_FILES = [[DF_DIR + "ICARUSRun2_SpringMCOverlay_rewgt_%i.df" % i for i in range(3)], [DF_DIR + "ICARUSRun2_Spring_Overlay_WMXThXW.df"], [DF_DIR + "ICARUSRun2_Spring_Overlay_WMYZ.df"], [DF_DIR + "ICARUSRun2_Spring_Overlay_SCE.df"]]
+        DETVAR_FILES = [[DF_DIR + "ICARUSRun2_SpringMCOverlay_rewgt_%i.df" % i for i in range(4)], [DF_DIR + "ICARUSRun2_Spring_Overlay_WMXThXW.df"], [DF_DIR + "ICARUSRun2_Spring_Overlay_WMYZ.df"], [DF_DIR + "ICARUSRun2_Spring_Overlay_SCE.df"]]
         DETVAR_NAMES = ["Nominal", "WMXThetaXW", "WMYZ", "SCE"]
     elif detector == "ICARUS Run4":
         GOAL_POT = 3e20
-        DETVAR_FILES = [[DF_DIR + "ICARUSRun4_SpringMCOverlay_rewgt_%i.df" % i for i in range(4)], [DF_DIR + "ICARUSRun4_Spring_Overlay_WMXThXW.df"], [DF_DIR + "ICARUSRun4_Spring_Overlay_WMYZ.df"], [DF_DIR + "ICARUSRun4_Spring_Overlay_SCE.df"]]
+        DETVAR_FILES = [[DF_DIR + "ICARUSRun4_SpringMCOverlay_rewgt_%i.df" % i for i in range(8)], [DF_DIR + "ICARUSRun4_Spring_Overlay_WMXThXW.df"], [DF_DIR + "ICARUSRun4_Spring_Overlay_WMYZ.df"], [DF_DIR + "ICARUSRun4_Spring_Overlay_SCE.df"]]
         DETVAR_NAMES = ["Nominal", "WMXThetaXW", "WMYZ", "SCE"]
     elif detector == "SBND": 
         GOAL_POT = 1e20
-        DETVAR_FILES = [[DF_DIR + "SBNDMCCV_%i.df" % i for i in range(13)], 
+        DETVAR_FILES = [[DF_DIR + "SBNDMCCV_%i.df" % i for i in range(12)], 
                         [DF_DIR + "SBND_SpringMC_WMXThetaXW.df"], 
                         [DF_DIR + "SBND_SpringMC_WMYZ.df"], 
                        ]
@@ -152,8 +152,7 @@ def remake_detvar_maps(detector, DF_DIR, selection=gmpl.all_maple_cuts, outdir="
         DETVAR_NAMES_SMALL = ["Nominal", "2xSCE", "0xSCE", "DENT"]
   
 
-    ##b = [np.array([0.3, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.25, 1.5]), [0.0, 0.2, 0.4, 0.6]]
-    b = [np.array([0.3, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.25, 1.5]), [0.0, 1.0, 3.0]]
+    b = [np.array([0.3, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.25, 1.5]), [0.0, 0.2, 0.4, 0.6]]
 
     detvars, detvarsmatch, detvar_pots = zip(*tqdm([loaddf.loadl(f, preselection=gmpl.slcfv_cut, include_syst=False, detector=detector, lightmem=True, drops=loaddf.get_std_drops()) for f in DETVAR_FILES]))
     ## Binding E, track splitting req separate loads 
@@ -189,9 +188,8 @@ def remake_detvar_maps(detector, DF_DIR, selection=gmpl.all_maple_cuts, outdir="
         loaddf.scale_pot(detvars[i], detvar_pots[i], GOAL_POT)
     
     df = detvars[0]
-    detvars.extend([syst.v_chi2smear(df), syst.v_chi2hi(df), syst.v_chi2alpha(df), syst.v_chi2beta(df), syst.v_chi2dedxbias(df), syst.v_chi2R(df), syst.v_flashscale(df, 1), syst.v_flashscale(df, -1)])
-    DETVAR_NAMES.extend(["Smeared dE/dx", "Gain Hi", "EMB Alpha", "EMB Beta","dEdx Bias", "EMB R", "TrigEffPls", "TrigEffMin"])  
-    
+    detvars.extend([syst.v_chi2smear(df), syst.v_chi2hi(df), syst.v_chi2alpha(df), syst.v_chi2beta(df), syst.v_chi2R(df), syst.v_flashscale(df, 1), syst.v_flashscale(df, -1)])
+    DETVAR_NAMES.extend(["Smeared dE/dx", "Gain Hi", "EMB Alpha", "EMB Beta", "EMB R", "TrigEffPls", "TrigEffMin"]) 
 
     hists = []
 
@@ -214,9 +212,7 @@ def remake_detvar_maps(detector, DF_DIR, selection=gmpl.all_maple_cuts, outdir="
         for i in range(len(detvars)):
             loaddf.scale_pot(detvars[i], detvar_pots[i], GOAL_POT)
         
-        #b = [np.array([0.3, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.25, 1.5]), [0.0, 0.2, 0.4, 0.6]]
-        b = [np.array([0.3, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.25, 1.5]), [0.0, 1.0, 3.0]]
-
+        b = [np.array([0.3, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.25, 1.5]), [0.0, 0.2, 0.4, 0.6]]
         hists = []
         for d in detvars:
             d['selected'] = selection(d)
@@ -227,13 +223,13 @@ def remake_detvar_maps(detector, DF_DIR, selection=gmpl.all_maple_cuts, outdir="
 
 def resolve_function(func_string):
     """
-    Resolves strings like 'gmpl.all_maple_cuts', 'gmpl.coworker_cuts', or 
+    Resolves strings like 'gmpl.all_gump_cuts', 'gmpl.coworker_cuts', or 
     'my_cuts_module.custom_cut' into callable Python functions.
     """
     if "." not in func_string:
         if hasattr(gmpl, func_string):
             return getattr(gmpl, func_string)
-        raise ValueError(f"Function name must be 'module.function' (e.g. 'gmpl.all_maple_cuts'), got '{func_string}'")
+        raise ValueError(f"Function name must be 'module.function' (e.g. 'gmpl.all_gump_cuts'), got '{func_string}'")
 
     module_name, func_name = func_string.rsplit(".", 1)
 
@@ -251,8 +247,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "-s", "--selection",
         type=resolve_function,
-        default=gmpl.all_maple_cuts,
-        help="Selection function to run (e.g., 'gmpl.all_maple_cuts' or 'gmpl.coworker_cuts')"
+        default=gmpl.all_gump_cuts,
+        help="Selection function to run (e.g., 'gmpl.all_gump_cuts' or 'gmpl.coworker_cuts')"
     )
     parser.add_argument(
         "-o", "--outdir",
@@ -270,17 +266,6 @@ if __name__ == "__main__":
    
     args = parser.parse_args()
 
-    #remake_detvar_maps("SBND", args.dfdir, selection=args.selection, outdir=args.outdir)
-    #remake_detvar_maps("ICARUS Run2", args.dfdir, selection=args.selection, outdir=args.outdir)
-    #remake_detvar_maps("ICARUS Run4", args.dfdir,  selection=args.selection, outdir=args.outdir)
-    
-    plot_2d_hist_from_file(args.outdir+'/SBND_DENT.txt', 'DENT', 'DENT')
-    plot_2d_hist_from_file(args.outdir+'/ICARUSRun2_Z=0_TRKSPLT.txt', 'ICARUS2_z0', 'ICARUS2_z0')
-    plot_2d_hist_from_file(args.outdir+'/SBND_dEdxBias.txt', 'SBND_dedxbias', 'SBND_dedxbias')
-    plot_2d_hist_from_file(args.outdir+'/ICARUSRun2_dEdxBias.txt', 'ICARUS2_dedxbias', 'ICARUS2_dedxbias')
-    plot_2d_hist_from_file(args.outdir+'/ICARUSRun4_dEdxBias.txt', 'ICARUS4_dedxbias', 'ICARUS4_dedxbias')
-    plot_2d_hist_from_file(args.outdir+'/SBND_BIND.txt', 'SBND_BIND', 'SBND_BIND')
-    plot_2d_hist_from_file(args.outdir+'/ICARUSRun2_BIND.txt', 'ICARUSRun2_BIND', 'ICARUSRun2_BIND')
-    plot_2d_hist_from_file(args.outdir+'/ICARUSRun4_BIND.txt', 'ICARUSRun4_BIND', 'ICARUSRun4_BIND')
-
-
+    remake_detvar_maps("SBND", args.dfdir, selection=args.selection, outdir=args.outdir)
+    remake_detvar_maps("ICARUS Run2", args.dfdir, selection=args.selection, outdir=args.outdir)
+    remake_detvar_maps("ICARUS Run4", args.dfdir,  selection=args.selection, outdir=args.outdir)

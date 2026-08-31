@@ -85,7 +85,7 @@ def apply_map(df, map_file, col_name):
     weights = [[1]*len(df)] 
     for mf in map_files:
         func = FileHistogramFunction(mf)
-        weights.append(func(df.nu_E_calo.values, df.del_p.values))
+        weights.append(func(df.nu_E_calo.values, df.del_Tp.values))
     return pd.DataFrame({col_name: [[row[i] for row in weights] for i in range(len(weights[0]))]}, index=df.index)
 
 def plot_2d_hist_from_file(filename, plot_title, output_tag):
@@ -116,10 +116,9 @@ def plot_2d_hist_from_file(filename, plot_title, output_tag):
     plt.ylabel(r'$\delta p$ [GeV/c]')
     
     mesh.get_cmap().set_bad(color='gray')
-    plt.savefig('/exp/icarus/app/users/marterop/cafpyana/analysis_village/gumple/rwt_outputs/2d_ratio_'+output_tag+'.png', dpi=300)
+    plt.savefig('/exp/icarus/app/users/marterop/cafpyana/analysis_village/gumple/rwt_outputs_debug/2d_ratio_'+output_tag+'.png', dpi=300)
     plt.clf() 
-
-def remake_detvar_maps(detector, DF_DIR, selection=gmpl.all_maple_cuts, outdir="rwt_outputs"):
+def remake_detvar_maps(detector, DF_DIR, selection=gmpl.all_maple_cuts, outdir="rwt_outputs_debug"):
     if not os.path.exists(outdir):
         os.makedirs(outdir)
     if detector == "ICARUS Run2":
@@ -153,7 +152,7 @@ def remake_detvar_maps(detector, DF_DIR, selection=gmpl.all_maple_cuts, outdir="
   
 
     ##b = [np.array([0.3, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.25, 1.5]), [0.0, 0.2, 0.4, 0.6]]
-    b = [np.array([0.3, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.25, 1.5]), [0.0, 1.0, 3.0]]
+    b = [np.array([0.3, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.25, 1.5]), [0.0, 1.0, 2.0, 3.0]]
 
     detvars, detvarsmatch, detvar_pots = zip(*tqdm([loaddf.loadl(f, preselection=gmpl.slcfv_cut, include_syst=False, detector=detector, lightmem=True, drops=loaddf.get_std_drops()) for f in DETVAR_FILES]))
     ## Binding E, track splitting req separate loads 
@@ -167,8 +166,17 @@ def remake_detvar_maps(detector, DF_DIR, selection=gmpl.all_maple_cuts, outdir="
 
     cv_df['selected'] = selection(cv_df)
     bind_df['selected'] = selection(bind_df)
-    cv_hist = np.histogram2d(*cv_df.loc[cv_df['selected'], ['nu_E_calo', 'del_p']].to_numpy().T, bins=b, weights=cv_df.loc[cv_df['selected'], 'glob_scale'].to_numpy())[0]
-    bind_hist = np.histogram2d(*bind_df.loc[bind_df['selected'], ['nu_E_calo', 'del_p']].to_numpy().T, bins=b, weights=bind_df.loc[bind_df['selected'], 'glob_scale'].to_numpy())[0]
+
+    print(f"[{detector}] CV selected entries: {cv_df['selected'].sum()} (raw), "
+          f"{cv_df.loc[cv_df['selected'], 'glob_scale'].sum():.2f} (weighted)")
+    print(f"[{detector}] BIND selected entries: {bind_df['selected'].sum()} (raw), "
+          f"{bind_df.loc[bind_df['selected'], 'glob_scale'].sum():.2f} (weighted)")
+
+    cv_hist = np.histogram2d(*cv_df.loc[cv_df['selected'], ['nu_E_calo', 'del_Tp']].to_numpy().T, bins=b, weights=cv_df.loc[cv_df['selected'], 'glob_scale'].to_numpy())[0]
+    bind_hist = np.histogram2d(*bind_df.loc[bind_df['selected'], ['nu_E_calo', 'del_Tp']].to_numpy().T, bins=b, weights=bind_df.loc[bind_df['selected'], 'glob_scale'].to_numpy())[0]
+
+    print(f"[{detector}] cv_hist total: {cv_hist.sum():.2f}, bind_hist total: {bind_hist.sum():.2f}")
+
     save_histogram(f"{outdir}/{detector.replace(' ','')}_BIND.txt", bind_hist/cv_hist, b[0], b[1])
     del bind_df
 
@@ -178,7 +186,14 @@ def remake_detvar_maps(detector, DF_DIR, selection=gmpl.all_maple_cuts, outdir="
             trksplt_df, _, trksplt_pot = loaddf.loadl(DETVAR_FILES[0], preselection=gmpl.slcfv_cut, include_syst=False, detector=detector, lightmem=True, split_tracks=split_region, drops=loaddf.get_std_drops())
             loaddf.scale_pot(trksplt_df, trksplt_pot, GOAL_POT)
             trksplt_df['selected'] = selection(trksplt_df)
-            trksplt_hist = np.histogram2d(*trksplt_df.loc[trksplt_df['selected'], ['nu_E_calo', 'del_p']].to_numpy().T, bins=b, weights=trksplt_df.loc[trksplt_df['selected'], 'glob_scale'].to_numpy())[0]
+
+            print(f"[{detector}] TRKSPLT ({split_region}) selected entries: {trksplt_df['selected'].sum()} (raw), "
+                  f"{trksplt_df.loc[trksplt_df['selected'], 'glob_scale'].sum():.2f} (weighted)")
+
+            trksplt_hist = np.histogram2d(*trksplt_df.loc[trksplt_df['selected'], ['nu_E_calo', 'del_Tp']].to_numpy().T, bins=b, weights=trksplt_df.loc[trksplt_df['selected'], 'glob_scale'].to_numpy())[0]
+
+            print(f"[{detector}] trksplt_hist ({split_region}) total: {trksplt_hist.sum():.2f}, cv_hist total: {cv_hist.sum():.2f}")
+
             save_histogram(f"{outdir}/{detector.replace(' ','')}_{split_region.replace(' ','')}_TRKSPLT.txt", trksplt_hist/cv_hist, b[0], b[1])
             del trksplt_df
 
@@ -195,12 +210,15 @@ def remake_detvar_maps(detector, DF_DIR, selection=gmpl.all_maple_cuts, outdir="
 
     hists = []
 
-    for d in detvars:
+    for name, d in zip(DETVAR_NAMES, detvars):
         d['selected'] = selection(d)
-        hists.append(np.histogram2d(*d.loc[d['selected'], ['nu_E_calo', 'del_p']].to_numpy().T, bins=b, weights=d.loc[d['selected'], 'glob_scale'].to_numpy())[0])
+        print(f"[{detector}] {name} selected entries: {d['selected'].sum()} (raw), "
+              f"{d.loc[d['selected'], 'glob_scale'].sum():.2f} (weighted)")
+        hists.append(np.histogram2d(*d.loc[d['selected'], ['nu_E_calo', 'del_Tp']].to_numpy().T, bins=b, weights=d.loc[d['selected'], 'glob_scale'].to_numpy())[0])
 
     for name, h in zip(DETVAR_NAMES[1:], hists[1:]):
         cv = hists[0]
+        print(f"[{detector}] {name}: hist total {h.sum():.2f}, cv total {cv.sum():.2f}")
         if name == "Smeared dE/dx" and detector == "SBND":
             save_histogram(f"{outdir}/{detector.replace(' ','')}_{name.replace('/', '').replace(' ','')}.txt", (2*(h-cv)+cv)/cv, b[0], b[1])
         else:
@@ -214,17 +232,19 @@ def remake_detvar_maps(detector, DF_DIR, selection=gmpl.all_maple_cuts, outdir="
         for i in range(len(detvars)):
             loaddf.scale_pot(detvars[i], detvar_pots[i], GOAL_POT)
         
-        #b = [np.array([0.3, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.25, 1.5]), [0.0, 0.2, 0.4, 0.6]]
-        b = [np.array([0.3, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.25, 1.5]), [0.0, 1.0, 3.0]]
-
+        ##b = [np.array([0.3, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.25, 1.5]), [0.0, 0.2, 0.4, 0.6]]
+        b = [np.array([0.3, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.25, 1.5]), [0.0, 1.0, 2.0, 3.0]]
+        
         hists = []
-        for d in detvars:
+        for name, d in zip(DETVAR_NAMES_SMALL, detvars):
             d['selected'] = selection(d)
-            hists.append(np.histogram2d(*d.loc[d['selected'], ['nu_E_calo', 'del_p']].to_numpy().T, bins=b, weights=d.loc[d['selected'], 'glob_scale'].to_numpy())[0])
+            print(f"[{detector}] {name} (small) selected entries: {d['selected'].sum()} (raw), "
+                  f"{d.loc[d['selected'], 'glob_scale'].sum():.2f} (weighted)")
+            hists.append(np.histogram2d(*d.loc[d['selected'], ['nu_E_calo', 'del_Tp']].to_numpy().T, bins=b, weights=d.loc[d['selected'], 'glob_scale'].to_numpy())[0])
 
         for name, h in zip(DETVAR_NAMES_SMALL[1:], hists[1:]):
+            print(f"[{detector}] {name} (small): hist total {h.sum():.2f}, nominal (small) total {hists[0].sum():.2f}")
             save_histogram(f"{outdir}/{detector.replace(' ','')}_{name.replace('/', '').replace(' ','')}.txt", h/hists[0], b[0], b[1])
-
 def resolve_function(func_string):
     """
     Resolves strings like 'gmpl.all_maple_cuts', 'gmpl.coworker_cuts', or 
@@ -257,7 +277,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-o", "--outdir",
         type=str,
-        default="rwt_outputs",
+        default="rwt_outputs_debug",
         help="Output directory for reweight maps"
     )
     parser.add_argument(
@@ -270,17 +290,14 @@ if __name__ == "__main__":
    
     args = parser.parse_args()
 
-    #remake_detvar_maps("SBND", args.dfdir, selection=args.selection, outdir=args.outdir)
-    #remake_detvar_maps("ICARUS Run2", args.dfdir, selection=args.selection, outdir=args.outdir)
-    #remake_detvar_maps("ICARUS Run4", args.dfdir,  selection=args.selection, outdir=args.outdir)
+    remake_detvar_maps("SBND", args.dfdir, selection=args.selection, outdir=args.outdir)
+    remake_detvar_maps("ICARUS Run2", args.dfdir, selection=args.selection, outdir=args.outdir)
+    remake_detvar_maps("ICARUS Run4", args.dfdir,  selection=args.selection, outdir=args.outdir)
     
     plot_2d_hist_from_file(args.outdir+'/SBND_DENT.txt', 'DENT', 'DENT')
     plot_2d_hist_from_file(args.outdir+'/ICARUSRun2_Z=0_TRKSPLT.txt', 'ICARUS2_z0', 'ICARUS2_z0')
     plot_2d_hist_from_file(args.outdir+'/SBND_dEdxBias.txt', 'SBND_dedxbias', 'SBND_dedxbias')
     plot_2d_hist_from_file(args.outdir+'/ICARUSRun2_dEdxBias.txt', 'ICARUS2_dedxbias', 'ICARUS2_dedxbias')
     plot_2d_hist_from_file(args.outdir+'/ICARUSRun4_dEdxBias.txt', 'ICARUS4_dedxbias', 'ICARUS4_dedxbias')
-    plot_2d_hist_from_file(args.outdir+'/SBND_BIND.txt', 'SBND_BIND', 'SBND_BIND')
-    plot_2d_hist_from_file(args.outdir+'/ICARUSRun2_BIND.txt', 'ICARUSRun2_BIND', 'ICARUSRun2_BIND')
-    plot_2d_hist_from_file(args.outdir+'/ICARUSRun4_BIND.txt', 'ICARUSRun4_BIND', 'ICARUSRun4_BIND')
 
 
