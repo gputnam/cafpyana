@@ -14,10 +14,14 @@ import pyanalib.pandas_helpers as ph
 from multiprocess import Pool
 from functools import partial
 import syst
-import rwt_map as rw
 
+# rwt_map and gumple_cuts live in analysis_village/gumple/. The cwd-relative
+# entry is kept for compatibility with running from analysis_village/gump; the
+# file-relative one makes the import work regardless of cwd.
 workspace_root = os.getcwd()
 sys.path.insert(0, workspace_root + "/../gumple/")
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "gumple"))
+import rwt_map as rw
 import gumple_cuts as gmpl
 
 def tmatch(reco, mc):
