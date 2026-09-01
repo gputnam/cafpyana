@@ -40,6 +40,7 @@ void MakesBruceNew(const char* fileName = "input.root", const char* output_filen
         // Output trees expected by PROfit
         TTree *wgt_multisigma_outtree = new TTree("multisigmaTree", "Systematic weights formatted for PROfit. Using multisigma format."); //
         TTree *wgt_multisim_outtree = new TTree("multisimTree", "Systematic weights formatted for PROfit. Using multisim format."); //
+        TTree *wgt_fdwgt_outtree = new TTree("multisimTree", "Systematic weights formatted for PROfit. For use with fake data studies."); //
 
         // Dynamic vector storage maps
         std::map<std::string, std::vector<double>> vector_storage; //
@@ -47,13 +48,14 @@ void MakesBruceNew(const char* fileName = "input.root", const char* output_filen
 
         std::string multisigma_keyword = "multisigma"; //
         std::string multisim_keyword = "multisim"; //
+        std::string fdwgt_keyword = "fdwgt"; //
 
         // 1. Dynamic Branch Booking Loop
         for(int b = 0; b < nBranches; b++) {
             TBranch* branch = dynamic_cast<TBranch*>(allBranches->At(b)); //
             std::string bName = branch->GetName(); //
 
-            if (bName.find(multisigma_keyword) == std::string::npos && bName.find(multisim_keyword) == std::string::npos) { //
+            if (bName.find(multisigma_keyword) == std::string::npos && bName.find(multisim_keyword) == std::string::npos && bName.find(fdwgt_keyword) == std::string::npos) { //
                 continue;
             }
 
@@ -64,6 +66,13 @@ void MakesBruceNew(const char* fileName = "input.root", const char* output_filen
 
             if (bName.find(multisigma_keyword) != std::string::npos) { //
                 wgt_multisigma_outtree->Branch(bName.c_str(), &vector_storage[bName]); //
+                
+                std::string sigmaName = bName + "_sigma"; //
+                sigma_storage[sigmaName] = std::vector<double>(); //
+                wgt_multisigma_outtree->Branch(sigmaName.c_str(), &sigma_storage[sigmaName]); //
+            } 
+	    else if (bName.find(fdwgt_keyword) != std::string::npos) { //
+                wgt_fdwgt_outtree->Branch(bName.c_str(), &vector_storage[bName]); //
                 
                 std::string sigmaName = bName + "_sigma"; //
                 sigma_storage[sigmaName] = std::vector<double>(); //
@@ -97,7 +106,7 @@ void MakesBruceNew(const char* fileName = "input.root", const char* output_filen
                 }
 
                 // Assign the required Companion Sigmas based on the discovered array structure
-                if (bName.find(multisigma_keyword) != std::string::npos) { //
+                if (bName.find(multisigma_keyword) != std::string::npos || bName.find(fdwgt_keyword) != std::string::npos) { //
                     std::string sigmaName = bName + "_sigma"; //
                     std::vector<double>& current_sigma = sigma_storage[sigmaName];
                     
@@ -112,6 +121,7 @@ void MakesBruceNew(const char* fileName = "input.root", const char* output_filen
                     }
                 }
             }
+    	    wgt_fdwgt_outtree->Fill(); //
     	    wgt_multisigma_outtree->Fill(); //
             wgt_multisim_outtree->Fill(); //
         }
