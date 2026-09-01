@@ -317,16 +317,6 @@ def trk_cut(df):
     # evt df as diagnostics.
     return df.cut_np & df.has_muon
 
-def get_good_trk_prim(df, pref=""):
-
-    mask = (df[pref+"prim_pfp"].astype(bool)
-            & (df[pref+"ncalo"] > 0)
-            & (df[pref + "dist_start"] <= 10.0)
-            & (df[pref+"end_x"].notna())
-            & (df[pref+"len"].notna()))
-
-    return mask
-
 def get_base_muon_mask(df, level="slc"):
     if level == "trk":
         pref = ""
@@ -386,7 +376,7 @@ def pid_cut(df, variation=None):
     cut_protons = get_proton_mask(df, variation=variation)
     return cut_muon & cut_protons
 
-def maple_base_cuts(recodf, DETECTOR=None, det_run=None, variation=None):
+def gumple_base_cuts(recodf, DETECTOR=None, det_run=None, variation=None, do_cosmic_cut=True):
     """The shared (multiplicity-inclusive) cut chain: presel & cosmic & flash
     & trk & PID.  The GUMP/MAPLE selections split this on n_pfp (the number
     of candidate pfps in the slice, muon included)."""
@@ -401,7 +391,10 @@ def maple_base_cuts(recodf, DETECTOR=None, det_run=None, variation=None):
     presel_mask = presel_cut(recodf)
 
     ### cosmic cut
-    cosmic_mask = cosmic_cut(recodf)
+    if do_cosmic_cut:
+        cosmic_mask = cosmic_cut(recodf)
+    else:
+        cosmic_mask = pd.Series(True, index=recodf.index)
 
     ### flash cut
     flash_mask = flash_cut(recodf)
@@ -416,16 +409,24 @@ def maple_base_cuts(recodf, DETECTOR=None, det_run=None, variation=None):
 
 def all_gump_cuts(recodf, DETECTOR=None, det_run=None, variation=None):
     """GUMP (1u1p): base chain + exactly two candidate pfps (muon + proton)."""
-    return maple_base_cuts(recodf, DETECTOR=DETECTOR, det_run=det_run, variation=variation) & \
+    return gumple_base_cuts(recodf, DETECTOR=DETECTOR, det_run=det_run, variation=variation, do_cosmic_cut=True) & \
         (recodf.n_pfp == 2)
 
 def all_maple_cuts(recodf, DETECTOR=None, det_run=None, variation=None):
     """MAPLE (1uN>1p): base chain + more than two candidate pfps.
 
     NB semantic change: this used to be the multiplicity-INCLUSIVE chain
-    (now maple_base_cuts); it is now exclusive of the GUMP (n_pfp == 2)
+    (now gumple_base_cuts); it is now exclusive of the GUMP (n_pfp == 2)
     selection."""
-    return maple_base_cuts(recodf, DETECTOR=DETECTOR, det_run=det_run, variation=variation) & \
+    return gumple_base_cuts(recodf, DETECTOR=DETECTOR, det_run=det_run, variation=variation, do_cosmic_cut=True)
+
+def all_maplemp_cuts(recodf, DETECTOR=None, det_run=None, variation=None):
+    """MAPLE (1uN>1p): base chain + more than two candidate pfps.
+
+    NB semantic change: this used to be the multiplicity-INCLUSIVE chain
+    (now gumple_base_cuts); it is now exclusive of the GUMP (n_pfp == 2)
+    selection."""
+    return gumple_base_cuts(recodf, DETECTOR=DETECTOR, det_run=det_run, variation=variation, do_cosmic_cut=False) & \
         (recodf.n_pfp > 2)
 
 def maple_cut_chain(recodf, DETECTOR=None, det_run=None, variation=None):

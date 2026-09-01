@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # Define the absolute input storage directories
-gray_prefix='/exp/sbnd/data/users/gputnam/GUMPLE/sbn-rewgted-19-preview/'
+gray_prefix='/exp/sbnd/data/users/gputnam/GUMPLE/sbn-rewgted-21/'
 gumple_prefix='../gumple/'
-output='/exp/sbnd/data/users/nrowe/GUMP/sbn-rewgted-19-new/'
+output='/exp/sbnd/data/users/nrowe/GUMP/sbn-rewgted-21/'
 MAX_JOBS=8
 
 # Navigate to the working directory context
@@ -15,7 +15,7 @@ echo "Remaking det var maps..."
 selection="gmpl.all_gump_cuts"
 splinedir="${selection#*.}"
 
-python3 ${gumple_prefix}rwt_map.py -s ${selection} -o ${splinedir} -d ${gray_prefix}
+python3 ${gumple_prefix}rwt_map.py -s ${selection} -o ${splinedir} -d ${gray_prefix} -b "2D"
 
 ### 1. SBND MC (20 files, 0 to 9)
 echo "--> Staging SBND Spring MC Files..."

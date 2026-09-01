@@ -120,7 +120,8 @@ def plot_2d_hist_from_file(filename, plot_title, output_tag):
     plt.savefig('/exp/sbnd/app/users/nrowe/cafpyana/analysis_village/gump/rwt_outputs/2d_ratio_'+output_tag+'.png', dpi=300)
     plt.clf() 
 
-def remake_detvar_maps(detector, DF_DIR, selection=gmpl.all_gump_cuts, outdir="rwt_outputs"):
+def remake_detvar_maps(detector, DF_DIR, selection=gmpl.all_gump_cuts, binning="2D", outdir="rwt_outputs"):
+        
     if not os.path.exists(outdir):
         os.makedirs(outdir)
     if detector == "ICARUS Run2":
@@ -153,7 +154,13 @@ def remake_detvar_maps(detector, DF_DIR, selection=gmpl.all_gump_cuts, outdir="r
         DETVAR_NAMES_SMALL = ["Nominal", "2xSCE", "0xSCE", "DENT"]
   
 
-    b = [np.array([0.3, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.25, 1.5]), [0.0, 0.2, 0.4, 0.6]]
+    if binning == "1D":
+        b = [np.array([0.3, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.25, 1.5]), [-1000.0, 0.0, 1000.0]]
+    else:
+        b = [np.array([0.3, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.25, 1.5]), [0.0, 0.2, 0.4, 0.6]]
+
+    print(f"Using binning: {binning}")
+    print(b)
 
     detvars, detvarsmatch, detvar_pots = zip(*tqdm([loaddf.loadl(f, preselection=gmpl.slcfv_cut, include_syst=False, detector=detector, lightmem=True, drops=loaddf.get_std_drops()) for f in DETVAR_FILES]))
     ## Binding E, track splitting req separate loads 
@@ -189,11 +196,10 @@ def remake_detvar_maps(detector, DF_DIR, selection=gmpl.all_gump_cuts, outdir="r
         loaddf.scale_pot(detvars[i], detvar_pots[i], GOAL_POT)
     
     df = detvars[0]
-    detvars.extend([syst.v_chi2smear(df), syst.v_chi2hi(df), syst.v_chi2alpha(df), syst.v_chi2beta(df), syst.v_chi2R(df), syst.v_flashscale(df, 1), syst.v_flashscale(df, -1)])
-    DETVAR_NAMES.extend(["Smeared dE/dx", "Gain Hi", "EMB Alpha", "EMB Beta", "EMB R", "TrigEffPls", "TrigEffMin"]) 
-
+    detvars.extend([syst.v_chi2smear(df), syst.v_chi2dedxbias(df), syst.v_chi2hi(df), syst.v_chi2alpha(df), syst.v_chi2beta(df), syst.v_chi2R(df), syst.v_flashscale(df, 1), syst.v_flashscale(df, -1)])
+    DETVAR_NAMES.extend(["Smeared dE/dx", "Biased dE/dx", "Gain Hi", "EMB Alpha", "EMB Beta", "EMB R", "TrigEffPls", "TrigEffMin"]) 
     hists = []
-
+    
     for d in detvars:
         d['selected'] = selection(d)
         hists.append(np.histogram2d(*d.loc[d['selected'], ['nu_E_calo', 'del_p']].to_numpy().T, bins=b, weights=d.loc[d['selected'], 'glob_scale'].to_numpy())[0])
@@ -263,10 +269,15 @@ if __name__ == "__main__":
         default="/exp/sbnd/data/users/gputnam/GUMP/sbn-rewgted-14/",
         help="Output directory for reweight maps"
     )
-
+    parser.add_argument(
+        "-b", "--binning",
+        type=str,
+        default="2D",
+        help="Use 2D or 1D binning reweights."
+    )
    
     args = parser.parse_args()
 
-    remake_detvar_maps("SBND", args.dfdir, selection=args.selection, outdir=args.outdir)
-    remake_detvar_maps("ICARUS Run2", args.dfdir, selection=args.selection, outdir=args.outdir)
-    remake_detvar_maps("ICARUS Run4", args.dfdir,  selection=args.selection, outdir=args.outdir)
+    remake_detvar_maps("SBND", args.dfdir, selection=args.selection, outdir=args.outdir, binning=args.binning)
+    remake_detvar_maps("ICARUS Run2", args.dfdir, selection=args.selection, outdir=args.outdir, binning=args.binning)
+    remake_detvar_maps("ICARUS Run4", args.dfdir,  selection=args.selection, outdir=args.outdir, binning=args.binning)
