@@ -34,7 +34,12 @@ ICARUS_CUTS = {
     "nu_score_th": 0.35,
     "max_opening_angle": 160,
     "musel_track_score_min": 0.5,
-    "musel_muscore_th": 111,
+    # The chi2-under-muon-hypothesis (chi2u) cut on the ICARUS muon candidate is
+    # deliberately disabled: the ICARUS muon candidate is PID'd by the
+    # proton-hypothesis chi2 (musel_pscore_th) alone. The key is kept -- rather
+    # than deleted -- because _det_cut_th() indexes SBND_CUTS and ICARUS_CUTS
+    # with the same key. NB inf, not "no cut": a NaN chi2u still fails.
+    "musel_muscore_th": np.inf,
     "musel_pscore_th": 74,
     "musel_len_th_min": 40,
     "musel_len_th_max": 400,
