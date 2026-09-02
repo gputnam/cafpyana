@@ -32,7 +32,12 @@ SBND_CUTS = {
 ICARUS_CUTS = {
     "max_opening_angle": 160,
     "musel_track_score_min": 0.5,
-    "musel_muscore_th": 111,
+    # The chi2-under-muon-hypothesis (chi2u) cut on the ICARUS muon candidate is
+    # deliberately disabled: the ICARUS muon candidate is PID'd by the
+    # proton-hypothesis chi2 (musel_pscore_th) alone. The key is kept -- rather
+    # than deleted -- because _det_cut_th() indexes SBND_CUTS and ICARUS_CUTS
+    # with the same key. NB inf, not "no cut": a NaN chi2u still fails.
+    "musel_muscore_th": np.inf,
     "musel_pscore_th": 74,
     "musel_len_th_min": 40,
     "musel_len_th_max": 400,
@@ -413,12 +418,13 @@ def all_gump_cuts(recodf, DETECTOR=None, det_run=None, variation=None):
         (recodf.n_pfp == 2)
 
 def all_maple_cuts(recodf, DETECTOR=None, det_run=None, variation=None):
-    """MAPLE (1uN>1p): base chain + more than two candidate pfps.
+    """MAPLE (1uNp): base chain + more than two candidate pfps.
 
-    NB semantic change: this used to be the multiplicity-INCLUSIVE chain
-    (now gumple_base_cuts); it is now exclusive of the GUMP (n_pfp == 2)
-    selection."""
-    return gumple_base_cuts(recodf, DETECTOR=DETECTOR, det_run=det_run, variation=variation, do_cosmic_cut=True)
+    NB semantic change: this is the multiplicity-INCLUSIVE chain.
+    """
+    cut_far_shw = np.isnan(recodf.max_far_shw_len)
+    return gumple_base_cuts(recodf, DETECTOR=DETECTOR, det_run=det_run, variation=variation, do_cosmic_cut=True) & \
+        cut_far_shw
 
 def all_maplemp_cuts(recodf, DETECTOR=None, det_run=None, variation=None):
     """MAPLE (1uN>1p): base chain + more than two candidate pfps.
@@ -426,8 +432,10 @@ def all_maplemp_cuts(recodf, DETECTOR=None, det_run=None, variation=None):
     NB semantic change: this used to be the multiplicity-INCLUSIVE chain
     (now gumple_base_cuts); it is now exclusive of the GUMP (n_pfp == 2)
     selection."""
-    return gumple_base_cuts(recodf, DETECTOR=DETECTOR, det_run=det_run, variation=variation, do_cosmic_cut=False) & \
-        (recodf.n_pfp > 2)
+
+    cut_far_shw = np.isnan(recodf.max_far_shw_len)
+    return maple_base_cuts(recodf, DETECTOR=DETECTOR, det_run=det_run, variation=variation, do_cosmic_cut=False) & \
+        cut_far_shw & (recodf.n_pfp > 2)
 
 def maple_cut_chain(recodf, DETECTOR=None, det_run=None, variation=None):
     if DETECTOR:
@@ -453,6 +461,10 @@ def maple_cut_chain(recodf, DETECTOR=None, det_run=None, variation=None):
     cut_muon = get_muon_mask(recodf, variation=variation)
     cut_protons = get_proton_mask(recodf, variation=variation)
 
+    ### far-shower veto (MAPLE side only): reject slices with a displaced primary
+    ### shower (trackScore<0.5, 10-50 cm from the vertex). Passes iff none exists.
+    cut_far_shw = np.isnan(recodf.max_far_shw_len)
+
     ### base chain, split on candidate-pfp multiplicity into the exclusive
     ### gump (1u1p, n_pfp==2) and maple (1uN>1p, n_pfp>2) selections
     base_sel = presel_mask & cosmic_mask & flash_mask & trk_mask & cut_muon & cut_protons
@@ -464,6 +476,7 @@ def maple_cut_chain(recodf, DETECTOR=None, det_run=None, variation=None):
         "cut_trk": trk_mask,
         "cut_muon": cut_muon,
         "cut_protons": cut_protons,
+        "cut_far_shw": cut_far_shw,
         "gump_sel": base_sel & (recodf.n_pfp == 2),
-        "maple_sel": base_sel & (recodf.n_pfp > 2),
+        "maple_sel": base_sel & cut_far_shw & (recodf.n_pfp > 2),
     }, index=recodf.index)

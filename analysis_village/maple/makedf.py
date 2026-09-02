@@ -1020,6 +1020,13 @@ def fetch_candidates(S, P, do_calo_syst, use_chi2=True, do_alt_chi2=False,
     othr = P.len[~excl & P.len.notna()].groupby(level=[0, 1]).max()
     S["othr_pfp_length"] = othr.reindex(S.index)
 
+    # longest "far" primary shower: max length over primary pfps classified as
+    # showers (trackScore < 0.5) starting 10-50 cm from the slice vertex. Feeds
+    # the MAPLE-side far-shower veto (gumple_cuts). NaN if no such pfp.
+    far_shw = P.prim_pfp & (P.trackScore < 0.5) & P.dist_start.between(10.0, 50.0) & P.len.notna()
+    far = P.len[far_shw].groupby(level=[0, 1]).max()
+    S["max_far_shw_len"] = far.reindex(S.index)
+
     S["del_p"] = del_p
     S["del_Tp"] = del_Tp
     S["del_phi"] = del_phi
@@ -1100,6 +1107,7 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True, use_chi2=True, do_
     S["cut_trk"] = chain.cut_trk
     S["cut_muon"] = chain.cut_muon
     S["cut_protons"] = chain.cut_protons
+    S["cut_far_shw"] = chain.cut_far_shw
     # exclusive selections split on n_pfp: gump = base chain & n_pfp==2 (1u1p),
     # maple = base chain & n_pfp>2 (1uN>1p). NB maple_sel used to be the
     # inclusive base chain; 1u1p analyses must use gump_sel.
