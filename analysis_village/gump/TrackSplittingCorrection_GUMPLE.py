@@ -356,12 +356,12 @@ def load_all(detector, files, pot, include_dirt, log):
 
     log("loading ON: %s" % os.path.basename(files["ONBEAM"]))
     ondf, _, _ = loaddf.load(files["ONBEAM"], load_truth=False, include_syst=False,
-                             detector=detector, preselection=FV)
+                             detector=detector, preselection=FV, match_Enu=False)
     ondf = _slim(ondf)
 
     log("loading OFF: %s" % ", ".join(os.path.basename(f) for f in files["OFFBEAM_FILES"]))
     offs = [loaddf.load(f, load_truth=False, include_syst=False, detector=detector,
-                        preselection=FV, offbeampot=True)
+                        preselection=FV, offbeampot=True, match_Enu=False)
             for f in files["OFFBEAM_FILES"]]
     offdf = pd.concat([_slim(o[0]) for o in offs], ignore_index=True)
 
