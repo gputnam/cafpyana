@@ -5,7 +5,7 @@
 # figures land in the note.
 #
 #   usage: make_technote_plots.sh [--df-dir DIR] [--plotbase DIR] [--technote DIR]
-#                                 [--only STEP ...] [--no-install] [--no-compile]
+#                                 [--only STEP ...] [--no-install] [--no-compile] [--no-check]
 #
 #   steps (in order): tracksplit mcdata constraint pid signalbox corsika selection check install compile
 #     tracksplit  TrackSplittingCorrection_GUMPLE.py           -> <plotbase>/tracksplit/
@@ -28,15 +28,16 @@ set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GUMP_DIR="$(dirname "$HERE")"
 REPO="$(cd "$GUMP_DIR/../.." && pwd)"
-PY=/Users/gputnam-local/Work/fitter/env/bin/python
+PY=python3
 
-DF_DIR="${DF_DIR:-/Users/gputnam/Work/osc/sbn-rewgted-21/}"
+DF_DIR="${DF_DIR:-/exp/sbnd/data/users/gputnam/GUMPLE/sbn-rewgted-21/}"
 PLOTBASE="${PLOTBASE:-$REPO/plots-gumple-2026-09-02-rewgted21}"
 TECHNOTE="${TECHNOTE:-$REPO/6973acd1e6f673f7a8b495e7}"
 MANIFEST="$HERE/figure_manifest.tsv"
 ONLY=()
 DO_INSTALL=1
 DO_COMPILE=1
+DO_CHECK=1
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -47,6 +48,7 @@ while [[ $# -gt 0 ]]; do
     --only)       ONLY+=("$2"); shift 2 ;;
     --no-install) DO_INSTALL=0; shift ;;
     --no-compile) DO_COMPILE=0; shift ;;
+    --no-check)   DO_CHECK=0; shift ;;
     -h|--help)    sed -n '2,25p' "$0"; exit 0 ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
@@ -88,7 +90,7 @@ if [[ ${#SERIAL_STEPS[@]} -gt 0 ]]; then
 fi
 
 # --- manifest check / install ------------------------------------------------
-if want check; then
+if want check && [[ $DO_CHECK -eq 1 ]]; then
   python3 "$HERE/technote_figures.py" check --technote "$TECHNOTE" \
       --plotbase "$PLOTBASE" --manifest "$MANIFEST" 2>&1 | tee "$PLOTBASE/logs/technote-check.log"
   record "check" "${PIPESTATUS[0]}"

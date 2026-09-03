@@ -76,8 +76,8 @@ warnings.simplefilter(action="ignore", category=FutureWarning)
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 for _p in (_HERE, os.path.abspath(os.path.join(_HERE, "..", ".."))):
-    if _p not in sys.path:
-        sys.path.insert(0, _p)
+    #if _p not in sys.path:
+    sys.path.insert(0, _p)
 sys.path.insert(0, os.path.join(_HERE, "..", "gumple"))
 
 import gumple_cuts as gc  # noqa: E402
