@@ -774,7 +774,7 @@ def fetch_candidates(S, P, do_calo_syst, use_chi2=True, do_alt_chi2=False,
     # collection-plane flavor (nominal + calorimetric variations), then map each
     # evt-df chi2 suffix to its (chi2u, chi2p) per-pfp columns: default-plane
     # flavors use the blend, alternate-plane tags stay as computed, and (under
-    # do_alt_chi2) a "p2" tag exposes the pure untrimmed collection plane.
+    # always) a "p2" tag exposes the pure untrimmed collection plane.
     default_flavors = _chi2_flavors(do_calo_syst, do_cafana_chi2)
     costh = np.cos(np.radians(PROT_TRIM_ANGLE_X_DEG))
     use_trim = P.dir_x.abs() >= costh  # theta_x <= 47 deg (NaN dir -> False -> collection)
@@ -793,9 +793,9 @@ def fetch_candidates(S, P, do_calo_syst, use_chi2=True, do_alt_chi2=False,
             prot_chi2_cols[suff] = ("chi2u_protblend_%s" % fl, "chi2p_protblend_%s" % fl)
         else:                      # alternate-plane tag -> pure per-plane column
             prot_chi2_cols[suff] = ("chi2u_%s" % fl, "chi2p_%s" % fl)
-    if do_alt_chi2:                # p2-only: the pure untrimmed collection plane
-        for fl in default_flavors:
-            prot_chi2_cols["p2_%s" % fl] = ("chi2u_%s" % fl, "chi2p_%s" % fl)
+    # p2-only: the pure untrimmed collection plane (always exposed)
+    for fl in default_flavors:
+        prot_chi2_cols["p2_%s" % fl] = ("chi2u_%s" % fl, "chi2p_%s" % fl)
 
     # worst-case cut variables over the candidate protons (min for cuts
     # with direction >, max for cuts with direction <): min chi2u / max chi2p
