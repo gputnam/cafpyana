@@ -145,6 +145,7 @@ def main():
         pot_spline=args.weights,
         match_Enu=is_mc,
         load_truth=is_mc,
+        load_evtrec=is_mc,
         detvar_spline=args.weights,
         spline_dir=args.dvsplines,
         include_syst=args.weights,

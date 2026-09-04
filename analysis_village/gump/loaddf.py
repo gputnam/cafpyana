@@ -200,9 +200,9 @@ truthvars = {
   "true_isothernumucc": ("is_other_numucc", ""),
   "true_isfv": ("is_fv", ""),
   "genie_mode": ("genie_mode", ""),
-  "true_vtx_x": ("pos_x", ""),
-  "true_vtx_y": ("pos_y", ""),
-  "true_vtx_z": ("pos_z", ""),
+  "true_pos_x": ("pos_x", ""),# we were already getting something called true_vtx_x from recodf
+  "true_pos_y": ("pos_y", ""),# this was causing *_x, *_y to get appended to columns.
+  "true_pos_z": ("pos_z", ""),
   "true_nmu": ("nmu", ""),
   "true_np": ("np", ""),
   "true_nn": ("nn", ""),
@@ -875,6 +875,7 @@ def load_one(fname, idf,
     if n_dup_rows > 0:
         pot *= 1. - n_dup_rows / len(hdr)
 
+
     # LOAD TRUTH
     if load_truth:
         mcdf = pd.read_hdf(fname, mcname % idf)
@@ -967,6 +968,7 @@ def load_one(fname, idf,
     if not include_syst:
         if cache_dir is not None:
             _write_cache(cache_file, df, match, pot)
+        df["total_pot"] = pot
         return _apply_variations(df, shift_binding_E, split_tracks, shift_fraction, split_fraction), match, pot
 
     # LOAD WEIGHTS
@@ -1222,6 +1224,7 @@ def load_one(fname, idf,
     if cache_dir is not None:
         _write_cache(cache_file, mrg, match, pot)
 
+    mrg["total_pot"] = pot
     return _apply_variations(mrg, shift_binding_E, split_tracks, shift_fraction, split_fraction), match, pot
 
 
@@ -1241,6 +1244,7 @@ def load(fname, maxdf=None, **kwargs):
         dfs.append(df)
         matches.append(match)
     df = pd.concat(dfs).reset_index(drop=True)
+
     match = pd.concat(matches)
     n_match_before = len(match)
 
@@ -1273,6 +1277,7 @@ def load(fname, maxdf=None, **kwargs):
               f"{n_dup_pairs} duplicated {tuple(dedup_levels)} keys "
               f"({n_dup_rows} match rows)")
 
+    df["total_pot"] = pots
     return df, match, pots
     
 def loadl(flist, progress=True, njob=None, **kwargs):
@@ -1298,12 +1303,14 @@ def loadl(flist, progress=True, njob=None, **kwargs):
         dfs.append(df)
         matches.append(match)
     df = pd.concat(dfs, ignore_index=True)
+
     del dfs
     matches = pd.concat(matches)
 
     if njob is not None:
         pool.close()
 
+    df["total_pot"] = pots
     return df, matches, pots
 
 def match_common_evts(mrgs, dfs, pots):
