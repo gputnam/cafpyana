@@ -485,7 +485,7 @@ detvar_rwt_files = [
   'ICARUSRun2_WMYZ.txt',
   'ICARUSRun4_WMYZ.txt',
   'SBND_DENT.txt',
-  #['SBND_0xSCE.txt', 'SBND_2xSCE.txt'],
+  ['SBND_0xSCE.txt', 'SBND_2xSCE.txt'],
   'ICARUSRun2_SCE.txt',
   'ICARUSRun4_SCE.txt',
   'SBND_SmeareddEdx.txt',
@@ -500,14 +500,14 @@ detvar_rwt_files = [
   ['ICARUSRun2_GainLow.txt','ICARUSRun2_GainHi.txt'],
   ['ICARUSRun4_GainLow.txt','ICARUSRun4_GainHi.txt'],
   ['SBND_EMBAlpham.txt','SBND_EMBAlphap.txt'],
-  #['ICARUSRun2_EMBAlpham.txt','ICARUSRun2_EMBAlphap.txt'],
-  #['ICARUSRun4_EMBAlpham.txt','ICARUSRun4_EMBAlphap.txt'],
+  ['ICARUSRun2_EMBAlpham.txt','ICARUSRun2_EMBAlphap.txt'],
+  ['ICARUSRun4_EMBAlpham.txt','ICARUSRun4_EMBAlphap.txt'],
   ['SBND_EMBBetam.txt','SBND_EMBBetap.txt'],
-  #['ICARUSRun2_EMBBetam.txt','ICARUSRun2_EMBBetap.txt'],
-  #['ICARUSRun4_EMBBetam.txt','ICARUSRun4_EMBBetap.txt'],
+  ['ICARUSRun2_EMBBetam.txt','ICARUSRun2_EMBBetap.txt'],
+  ['ICARUSRun4_EMBBetam.txt','ICARUSRun4_EMBBetap.txt'],
   ['SBND_EMBRm.txt','SBND_EMBRp.txt'],
-  #['ICARUSRun2_EMBRm.txt','ICARUSRun2_EMBRp.txt'],
-  #['ICARUSRun4_EMBRm.txt','ICARUSRun4_EMBRp.txt'],
+  ['ICARUSRun2_EMBRm.txt','ICARUSRun2_EMBRp.txt'],
+  ['ICARUSRun4_EMBRm.txt','ICARUSRun4_EMBRp.txt'],
   ['SBND_TrigEffMin.txt', 'SBND_TrigEffPls.txt'],
   ['ICARUSRun2_TrigEffMin.txt', 'ICARUSRun2_TrigEffPls.txt'],
   ['ICARUSRun4_TrigEffMin.txt', 'ICARUSRun4_TrigEffPls.txt'],
@@ -528,7 +528,7 @@ detvar_rwt_lbls = [
   'WireMod_ICARUSRun2_multisigma_WMYZ',
   'WireMod_ICARUSRun4_multisigma_WMYZ',
   'DENT_SBND_multisigma_DENT',
-  #'SCE_SBND_multisigma_SCE',
+  'SCE_SBND_multisigma_SCE',
   'SCE_ICARUSRun2_multisigma_SCE',
   'SCE_ICARUSRun4_multisigma_SCE',
   'SBND_PID_Smear',
@@ -543,14 +543,14 @@ detvar_rwt_lbls = [
   'ICARUSRun2_PID_Gain',
   'ICARUSRun4_PID_Gain',
   'SBND_PID_Alpha',
-  #'ICARUSRun2_PID_Alpha',
-  #'ICARUSRun4_PID_Alpha',
+  'ICARUSRun2_PID_Alpha',
+  'ICARUSRun4_PID_Alpha',
   'SBND_PID_Beta',
-  #'ICARUSRun2_PID_Beta',
-  #'ICARUSRun4_PID_Beta',
+  'ICARUSRun2_PID_Beta',
+  'ICARUSRun4_PID_Beta',
   'SBND_PID_R',
-  #'ICARUSRun2_PID_R',
-  #'ICARUSRun4_PID_R',
+  'ICARUSRun2_PID_R',
+  'ICARUSRun4_PID_R',
   'SBND_TrigEff',
   'ICARUSRun2_TrigEff',
   'ICARUSRun4_TrigEff',
@@ -755,6 +755,15 @@ def _apply_variations(df, shift_binding_E, split_tracks,
 
 _DETECTOR_RUN = {"SBND": 1, "ICARUS Run2": 2, "ICARUS Run4": 4}
 
+# Flat factor on the POT of every SBND MC sample (2026-10-20): the MC POT is
+# scaled down by 3%, i.e. the SBND MC prediction at fixed data POT goes up by
+# 1/0.97. Applied to the returned POT only, after the cache, so cached entries
+# keep the raw POT.
+SBND_MC_POT_SCALE = 0.97
+
+def _mc_pot_scale(detector, ismc):
+    return SBND_MC_POT_SCALE if (ismc and detector == "SBND") else 1.
+
 def load_one(fname, idf,
     detector=None, # One of SBND, ICARUS, ICARUS Run4
     include_syst=True, nuniv=100, spline=False, xsec_univ=False, xsec_spline=False,# systematic handling
@@ -799,6 +808,8 @@ def load_one(fname, idf,
                 raise err 
             with h5py.File(cache_file, "r") as cf:
                 pot = float(cf.attrs["pot"])
+            if detector == "SBND":
+                pot *= _mc_pot_scale(detector, pd.read_hdf(fname, hdrname % idf).ismc.iloc[0] == 1)
             return _apply_variations(df, shift_binding_E, split_tracks, shift_fraction, split_fraction), match, pot
 
     df =  pd.read_hdf(fname, evtname % idf)
@@ -828,7 +839,6 @@ def load_one(fname, idf,
         evt_run = hdr.run.reindex(df.index.droplevel(-1)).to_numpy()
         keep = np.ones(len(df), dtype=bool)
         if data_quality:
-            print("USING DATAQUALITY")
             keep &= dq.data_quality_cut(evt_run, detector)
         if beam_quality and not offbeampot:
             # Overwrite each event's spill_FOM with the corrected FOM of its spill
@@ -836,7 +846,17 @@ def load_one(fname, idf,
             # beam-quality files keep the production value.
             with h5py.File(fname, "r") as _f:
                 _has_bnb = ("bnb_%i" % idf) in _f
-            if _has_bnb:
+            if dq.external_beam_file(fname) is not None:
+                # No spill information in the production (see dq.EXTERNAL_BEAM):
+                # fill every spill_* column the cut reads from the beam-quality
+                # file. Events absent from its spill tree stay NaN and fail.
+                spill = dq.external_event_spill(fname, hdr).reindex(df.index.droplevel(-1))
+                has = spill.mapped.eq(True).to_numpy()
+                print(f"[{os.path.basename(fname)} idf={idf}] spill info from "
+                      f"{os.path.basename(dq.external_beam_file(fname))}: {has.sum()}/{len(df)} slices mapped to a spill")
+                for c in ["TOR860", "TOR875", "THCURR", "FOM"]:
+                    df["spill_" + c] = spill[c].to_numpy(dtype=np.float64)
+            elif _has_bnb:
                 spill = dq.event_spill_fom(dq.spill_table(fname, idf, detector), hdr)
                 spill = spill.reindex(df.index.droplevel(-1))
                 has = spill.mapped.eq(True).to_numpy()
@@ -937,8 +957,9 @@ def load_one(fname, idf,
             trig = pd.read_hdf(fname, "trig_%i" % idf)
             N_GATES_ON_PER_5e12POT = 1.3886218026202426
             pot = trig.gate_delta.sum()*(1-1/20.)/N_GATES_ON_PER_5e12POT*5e12
-    elif not ismc and (beam_quality or data_quality):
-        # sum of TOR875 over the spills passing the data cuts
+    elif not ismc and (beam_quality or data_quality or dq.external_beam_file(fname) is not None):
+        # sum of TOR875 over the spills passing the data cuts (an EXTERNAL_BEAM
+        # file has hdr POT 0, so it always takes this branch)
         pot = dq.split_onbeam_pot(fname, idf, detector, beam_quality=beam_quality, data_quality=data_quality)
     else:
         pot = hdr.pot.sum()
@@ -1063,6 +1084,7 @@ def load_one(fname, idf,
     if not include_syst:
         if cache_dir is not None:
             _write_cache(cache_file, df, match, pot)
+        pot *= _mc_pot_scale(detector, ismc)
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=pd.errors.PerformanceWarning)
@@ -1322,6 +1344,7 @@ def load_one(fname, idf,
         mrg.drop(columns=drops, inplace=True, errors='ignore')
     if cache_dir is not None:
         _write_cache(cache_file, mrg, match, pot)
+    pot *= _mc_pot_scale(detector, ismc)
 
     mrg["total_pot_1e20"] = pot/1e20
     return _apply_variations(mrg, shift_binding_E, split_tracks, shift_fraction, split_fraction), match, pot

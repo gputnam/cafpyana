@@ -2,7 +2,7 @@
 
 Conclusive prefiltered / tagged-bad / good run lists for ICARUS Run 2, ICARUS Run 4 and SBND Run 1, in the tier structure of `ICARUSDataQualityCuts.h`.
 
-The three tiers are disjoint by construction: a prefiltered run is never evaluated, and an evaluated run is either tagged or good. ICARUS Run 2 is the one exception â€” its good-run list is curated by hand and is not exactly "everything not prefiltered or tagged" (see below).
+The three tiers are disjoint by construction: a prefiltered run is never evaluated, and an evaluated run is either tagged or good. ICARUS Run 2 is the one exception — its good-run list is curated by hand and is not exactly "everything not prefiltered or tagged" (see below).
 
 SBND Run 1 covers both the 1e20 and post-1e20 periods (runs 18250-18592), tagged against separate baselines; its total prefiltered count includes all of Run 1.
 
@@ -375,7 +375,7 @@ Runs more than 3 sigma from the BNB baseline in at least one variable, out of th
 
 ### Good (109)
 
-Within 3 sigma of the BNB baseline for every variable â€” i.e. the 121 evaluated runs minus the 12 tagged ones.
+Within 3 sigma of the BNB baseline for every variable — i.e. the 121 evaluated runs minus the 12 tagged ones.
 
 ```
 12966  12968  12970  12971  12974  12975  12976  12977  12978  12981
@@ -521,15 +521,15 @@ Runs more than 3 sigma from the 1e20 BNB baseline in at least one variable, out 
 | --- | ---: | --- |
 | Events per 1e15 POT | 2 | 18277, 18307 |
 | Number of Pandora Clear Cosmic / event | 1 | 18262 |
-| Number of PMT Flashes / event | 0 | â€” |
+| Number of PMT Flashes / event | 0 | — |
 | Number of Beam-Like Slices / event | 2 | 18277, 18280 |
-| Number of PFPs / event | 0 | â€” |
-| Number of Slices / event | 0 | â€” |
+| Number of PFPs / event | 0 | — |
+| Number of Slices / event | 0 | — |
 | Total Number of Hits in Tracks (plane 0) / event | 1 | 18352 |
 | Total Number of Hits in Tracks (plane 1) / event | 2 | 18307, 18352 |
 | Total Number of Hits in Tracks (plane 2) / event | 2 | 18277, 18352 |
-| Number of PMT Flashes per Clear Cosmic | 0 | â€” |
-| Average PE Per Flash | 0 | â€” |
+| Number of PMT Flashes per Clear Cosmic | 0 | — |
+| Average PE Per Flash | 0 | — |
 | Hits Per Track (plane 0) | 1 | 18266 |
 | Hits Per Track (plane 1) | 1 | 18277 |
 | Hits Per Track (plane 2) | 1 | 18277 |
@@ -570,15 +570,15 @@ Runs more than 3 sigma from the post-1e20 BNB baseline in at least one variable,
 | --- | ---: | --- |
 | Events per 1e15 POT | 1 | 18543 |
 | Number of Pandora Clear Cosmic / event | 1 | 18483 |
-| Number of PMT Flashes / event | 0 | â€” |
+| Number of PMT Flashes / event | 0 | — |
 | Number of Beam-Like Slices / event | 1 | 18543 |
 | Number of PFPs / event | 1 | 18483 |
 | Number of Slices / event | 1 | 18483 |
 | Total Number of Hits in Tracks (plane 0) / event | 1 | 18483 |
 | Total Number of Hits in Tracks (plane 1) / event | 1 | 18483 |
 | Total Number of Hits in Tracks (plane 2) / event | 1 | 18483 |
-| Number of PMT Flashes per Clear Cosmic | 0 | â€” |
-| Average PE Per Flash | 0 | â€” |
+| Number of PMT Flashes per Clear Cosmic | 0 | — |
+| Average PE Per Flash | 0 | — |
 | Hits Per Track (plane 0) | 1 | 18469 |
 | Hits Per Track (plane 1) | 1 | 18469 |
 | Hits Per Track (plane 2) | 1 | 18543 |
