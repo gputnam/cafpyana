@@ -51,7 +51,7 @@ RUN_SETS = {"SBND": "SBND Run 1", "ICARUS Run2": "ICARUS Run 2", "ICARUS Run4": 
 
 # (prefiltered, tagged bad, good) run counts quoted in the summary table of
 # run_lists.md -- the parser is checked against them.
-_EXPECTED_COUNTS = {"ICARUS Run2": (500, 18, 229), "ICARUS Run4": (162, 9, 62), "SBND": (318, 7, 59)}
+_EXPECTED_COUNTS = {"ICARUS Run2": (500, 18, 229), "ICARUS Run4": (112, 12, 109), "SBND": (382, 9, 102)}
 
 # Header-documented hand-curated exception to the ICARUS Run 2 good list
 # (the other one, 9610, is voltage-tagged but kept, and so is in the Good list).
@@ -85,8 +85,12 @@ def parse_run_lists(fname=RUN_LIST_FILE):
         sec = sec[0]
         sub = {s.split("\n", 1)[0].strip(): s for s in re.split(r"^### ", sec, flags=re.M)[1:]}
         pre = [v for k, v in sub.items() if k.startswith("Prefiltered")][0]
-        tag = [v for k, v in sub.items() if k.startswith("Tagged bad")][0]
         good = [v for k, v in sub.items() if k.startswith("Good")][0]
+        # "Tagged bad" may be a level-3 heading (one block per run set) or a
+        # level-4 heading under each period (SBND Run 1: 1e20 / post-1e20)
+        tags = [s for s in re.split(r"^#{3,4} ", sec, flags=re.M)[1:]
+                if s.startswith("Tagged bad")]
+        assert tags, "no 'Tagged bad' section for %r in %s" % (heading, fname)
 
         reasons = {}
         # prefilter categories: **Category** (N) followed by a code block
@@ -102,11 +106,12 @@ def parse_run_lists(fname=RUN_LIST_FILE):
         n_pre = len(reasons)
 
         # tagged: the "By run" table, rows "| run | nmetric | metrics |"
-        byrun = tag.split("**By metric**")[0]
         n_tag = 0
-        for r, _nm, metrics in re.findall(r"^\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(.+?)\s*\|\s*$", byrun, flags=re.M):
-            reasons[int(r)] = ("Tagged bad", metrics)
-            n_tag += 1
+        for tag in tags:
+            byrun = tag.split("**By metric**")[0]
+            for r, _nm, metrics in re.findall(r"^\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(.+?)\s*\|\s*$", byrun, flags=re.M):
+                reasons[int(r)] = ("Tagged bad", metrics)
+                n_tag += 1
 
         goodruns = set(_ints(re.search(r"```\n(.*?)```", good, flags=re.S).group(1)))
 
@@ -163,11 +168,11 @@ FOM_DETECTORS = {"SBND", "ICARUS Run2", "ICARUS Run4"}
 # Beam-quality ROOT files carrying the corrected FOM (FOM_best), per run set. The
 # SBND file covers runs 18255-18259 only (the FixedDev sample): FullOnBeam and
 # RollingDev spills are not matched and keep the production FOM.
-_DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+_DATA_DIR = "/exp/sbnd/data/users/nrowe/fom_data/"#os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 FOM_FILES = {
-    "SBND": [os.path.join(_DATA_DIR, "beamqual_sbnd_run1dev_fom.root")],
-    "ICARUS Run2": [os.path.join(_DATA_DIR, "beamqual_run2_fom.root")],
-    "ICARUS Run4": [os.path.join(_DATA_DIR, "beamqual_run4_fom.root")],
+    "SBND": [os.path.join(_DATA_DIR, "sbnd_run1_dev_fixed_fx.root")],
+    "ICARUS Run2": [os.path.join(_DATA_DIR, "icarus_run2_10percent_fixed_fx.root")],
+    "ICARUS Run4": [os.path.join(_DATA_DIR, "icarus_run4_10percent_fixed_fx.root")],
 }
 
 RUN_LISTS = parse_run_lists()

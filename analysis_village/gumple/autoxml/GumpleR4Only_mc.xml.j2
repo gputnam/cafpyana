@@ -1,11 +1,11 @@
 <?xml version="1.0" ?>
-<!-- Combined 1p + MP model with NO ICARUS Run 2, to pair with GumpleOct9_data.xml. Built from the repo template
-     analysis_village/gumple/autoxml/GumpleTemplate.xml.j2 rendered with the values of GumpANLOct9.xml (that render reproduces
-     GumpANLOct9.xml exactly for the 1p template). ICARUS = Run 4 only, scale 1.0 (-> 5e20), as in the data xml.
-     Removed: Run 2 MCFiles (GUMP + MAPLEMP), the Run2dirt subchannels, the 10 "ICARUS Run 2 Det" parameters + Run2 dirt norm,
-     the Run 2 POT spline, and the 8 ICARUSRun2 DetVarSections. MAPLEMP Run 4 entries use scale 1.0 with the real file pot
-     (the template had unfilled scales and pot="5e20").
-     The duplicated <friend treename="fakedataTree"/> that the template put on the GUMP overlay files is listed once. -->
+<!-- Combined 1p + MP model with NO ICARUS Run 2. Built from the repo template
+     analysis_village/gumple/autoxml/GumpleTemplate.xml.j2. ICARUS = Run 4 only: detector pot 3e20 with scale 1.0,
+     so the Run 4 MC is scaled to 3e20 POT (its 0.6 x 5e20 share in the combined template).
+     Removed: Run 2 MCFiles (GUMP + MAPLEMP), the icarus_r2_systematics block (the Run 2 detector splines and Run 2 POT spline) and the 8 ICARUSRun2 DetVarSections.
+     Kept as a zero-effect placeholder: the Run2dirt subchannel (declared, but nothing fills it) and the Run 2 dirt norm
+     acting on it, so the fractional-uncertainty breakdown has the same "ICARUS Run 2 Det" block as the combined fit.
+     Subchannel order and cvcc colour follow the original GumpleR4Only_mc.xml.j2, and the duplicated <friend treename="fakedataTree"/> on the overlay files is listed once. -->
 
 <mode name="nu" />
 
@@ -23,6 +23,7 @@
     <subchannel name="cvbkg" plotname="Other" color="#c89648"/>
     <subchannel name="intime" plotname="In Time Cosmics" color="#500000"/>
     <subchannel name="dirt" plotname="Dirt" color="#CC5500"/>
+    <subchannel name="Run2dirt" plotname="Run 2 Dirt" color="#CC5500"/>
     <subchannel name="Run4dirt" plotname="Run 4 Dirt" color="#CC5500"/>
 </channel>
 
@@ -37,6 +38,7 @@
     <subchannel name="cvbkg" plotname="Other" color="#c89648"/>
     <subchannel name="intime" plotname="In Time Cosmics" color="#500000"/>
     <subchannel name="dirt" plotname="Dirt" color="#CC5500"/>
+    <subchannel name="Run2dirt" plotname="Run 2 Dirt" color="#CC5500"/>
     <subchannel name="Run4dirt" plotname="Run 4 Dirt" color="#CC5500"/>
 </channel>
 
@@ -53,6 +55,11 @@
 {{ syst.common_systematics }}
 
 {{ syst.sbnd_systematics }}
+
+<!-- Placeholder so the fractional-uncertainty breakdown keeps an "ICARUS Run 2 Det" block:
+     the Run 2 dirt norm acts only on the empty Run2dirt subchannel, so it has zero effect.
+     The other Run 2 systematics (detector splines, POT spline) cannot be included without Run 2 files. -->
+<systematic type="norm" tag="ICARUS Run 2 Det" plotname="ICARUSRun2 Dirt">nu_ICARUS_numu.*_Run2dirt:1.0</systematic>
 
 {{ syst.icarus_r4_systematics }}
 </variation_list>
@@ -125,7 +132,6 @@
 	<variable>1.0</variable>
     </branch>
 </MCFile>
-
 
 <MCFile treename="SelectedEvents" filename="{{ BASE_DIR }}/GUMP/FD/ICARUSRun4_SpringMCOverlay_rewgt_*_sbruce_fakedata.root" scale = "1.0" pot="{{ icarus_r4_mc_pot }}">
     <friend treename="multisigmaTree" />
@@ -378,7 +384,6 @@
 		<subchannel>nu_SBND_numu1p_cvbkgnotcosmic</subchannel>
 	</DetVarSection>
 
-
 	<!-- ICARUSRun4: SCE_icarus4, matched to its own nominal -->
 	<DetVarSection treename="SelectedEvents">
 		<cv filename="{{ BASE_DIR }}/GUMP/sbruce_trees/ICARUSRun4_SCENominal_sbruce.root" pot="1" />
@@ -492,7 +497,6 @@
 		<subchannel>nu_SBND_numuMP_cvbkgcosmic</subchannel>
 		<subchannel>nu_SBND_numuMP_cvbkgnotcosmic</subchannel>
 	</DetVarSection>
-
 
 	<!-- ICARUSRun4: SCE_icarus4, matched to its own nominal -->
 	<DetVarSection treename="SelectedEvents">
