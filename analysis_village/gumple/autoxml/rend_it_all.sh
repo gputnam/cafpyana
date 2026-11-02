@@ -3,17 +3,18 @@
 ### -t, -d and -o are positionally paired, so the three lists must stay in step.
 
 ### Date label used in the ANL path, output names and plot tags
-LABEL=${LABEL:-Oct21}
+LABEL=${LABEL:-Oct29}
 
 HDF=/exp/sbnd/data/users/gputnam/GUMPLE/sbn-rewgted-25/
-EXP=/exp/sbnd/data/users/nrowe/sbn-rewgted-25-new
-ANL=/flare/neutrinoGPU/SBN_PROfit/sBruce/$LABEL/sbn-rewgted-25-new
-OUT=/exp/sbnd/data/users/nrowe/sbn-rewgted-25-new
+EXP=/exp/sbnd/data/users/nrowe/sbn-rewgted-25-dq
+ANL=/flare/neutrinoGPU/SBN_PROfit/sBruce/$LABEL/sbn-rewgted-25-dq
+OUT=/exp/sbnd/data/users/nrowe/sbn-rewgted-25-dq
 
 ### One render_config.py call, so each sample's POT is read once. -t, -d and -o are
 ### paired by position: keep the three lists in the same order, group by group.
 python3 render_config.py --hdf-dir $HDF \
     -t `# Combined analysis, SBND + ICARUS Runs 2 and 4` \
+       Gumple1DTemplate.xml.j2 \
        GumpleTemplate.xml.j2 \
        GumpTemplate.xml.j2 \
        MapleNPTemplate.xml.j2 \
@@ -56,6 +57,7 @@ python3 render_config.py --hdf-dir $HDF \
        $EXP \
        $EXP \
        $EXP \
+       $EXP \
        `# Run 2 only` \
        $EXP \
        $EXP \
@@ -88,6 +90,7 @@ python3 render_config.py --hdf-dir $HDF \
        $EXP \
        $EXP \
     -o `# Combined analysis` \
+       $OUT/MAPLEMP/Gumple1D$LABEL.xml \
        $OUT/MAPLEMP/Gumple$LABEL.xml \
        $OUT/GUMP/Gump$LABEL.xml \
        $OUT/MAPLENP/MapleNP$LABEL.xml \

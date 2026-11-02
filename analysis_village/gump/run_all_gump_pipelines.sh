@@ -3,7 +3,7 @@
 # Define the absolute input storage directories
 gray_prefix='/exp/sbnd/data/users/gputnam/GUMPLE/sbn-rewgted-25/'
 gumple_prefix='../gumple/'
-output='/exp/sbnd/data/users/nrowe/sbn-rewgted-25-new/GUMP/'
+output='/exp/sbnd/data/users/nrowe/sbn-rewgted-25-dq/GUMP/'
 MAX_JOBS=8
 
 # Navigate to the working directory context
@@ -41,6 +41,7 @@ done
 
 ### 4. ICARUS Run 2 OffBeam
 echo "--> Launching ICARUS Run 2 OffBeam Data..."
+
 python3 ${gumple_prefix}/run_gumple_pipeline.py \
     -c data \
     -q \
@@ -55,6 +56,7 @@ done
 
 ### 5. ICARUS Run 4 OffBeam
 echo "--> Launching ICARUS Run 4 OffBeam Data..."
+
 python3 ${gumple_prefix}/run_gumple_pipeline.py \
     -c data \
     -q \
@@ -139,6 +141,7 @@ done
 
 ### 6. SBND OffBeam
 echo "--> Launching SBND OffBeam Data..."
+
 python3 ${gumple_prefix}/run_gumple_pipeline.py \
     -c data \
     -q \
@@ -204,6 +207,8 @@ done
 echo "--> Launching SBND OnBeam Full..."
 python3 ${gumple_prefix}/run_gumple_pipeline.py \
     -c data \
+    -b \
+    -q \
     -s ${selection} \
     -i ${gray_prefix}SBND_SpringBNBData_FullOnBeam.df \
     -o ${output}SBND_SpringBNBData_FullOnBeam_sbruce.root &
@@ -211,9 +216,21 @@ python3 ${gumple_prefix}/run_gumple_pipeline.py \
 echo "--> Launching ICARUS Run 2 OnBeam Full..."
 python3 ${gumple_prefix}/run_gumple_pipeline.py \
     -c data \
+    -b \
+    -q \
     -s ${selection} \
     -i ${gray_prefix}ICARUS_SpringRun2BNB_FullOnBeam.df \
     -o ${output}ICARUS_SpringRun2BNB_FullOnBeam_sbruce.root &
+
+echo "--> Launching ICARUS Run 4 OnBeam Full..."
+python3 ${gumple_prefix}/run_gumple_pipeline.py \
+    -c data \
+    -b \
+    -q \
+    -s ${selection} \
+    -i ${gray_prefix}ICARUS_SpringRun4BNB_ReCAF2026.df \
+    -o ${output}ICARUS_SpringRun4BNB_FullOnBeam_sbruce.root &
+
 
 echo "--> Launching SBND Ar25..."
 python3 ${gumple_prefix}/run_gumple_pipeline.py \

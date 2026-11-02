@@ -15,7 +15,7 @@ mkdir -p $OUT/plots && cd $OUT/plots
 ### cache that plot builds, so those two run in order
 
 cv_only() {
-    $PROFIT -x $1 -t $2 --log $2.log plot
+    $PROFIT -x $1 -t $2 --log $2.log plot --with-covar
 }
 
 cv_and_surface() {
@@ -25,6 +25,7 @@ cv_and_surface() {
 
 cv_and_surface $OUT/GUMP/Gump$LABEL.xml       Gump$LABEL    > Gump${LABEL}_stdout.log    2>&1 &
 cv_and_surface $OUT/MAPLEMP/Gumple$LABEL.xml  Gumple$LABEL  > Gumple${LABEL}_stdout.log  2>&1 &
+cv_only $OUT/MAPLEMP/Gumple1D$LABEL.xml  Gumple1D$LABEL  > Gumple1D${LABEL}_stdout.log  2>&1 &
 cv_and_surface $OUT/MAPLENP/MapleNP$LABEL.xml MapleNP$LABEL > MapleNP${LABEL}_stdout.log 2>&1 &
 
 cv_only $OUT/GUMP/GumpR2Only$LABEL.xml       GumpR2$LABEL    > GumpR2${LABEL}_stdout.log    2>&1 &
@@ -41,4 +42,4 @@ wait
 
 PYTHONPATH=$PY_PATH $PY $HERE/../plotter.py \
     -f Gumple${LABEL}_surf_surface.txt Gump${LABEL}_surf_surface.txt MapleNP${LABEL}_surf_surface.txt \
-    -l Gumple Gump MapleNP -o surface_comparison_$LABEL.pdf
+    -l Gumple Gump MapleNP -i -o surface_comparison_$LABEL.pdf
