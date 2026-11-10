@@ -72,10 +72,25 @@ from makedf import chi2pid
 from analysis_village.gump.kinematics import *
 import analysis_village.gumple.gumple_cuts as gmpl
 from analysis_village.maple import chi2pid_cafana
+from analysis_village.maple.coltopo import coltopo_scores
 from makedf.branches import (
-    crtpmtbranches, shwbranches,
+    crtpmtbranches, shwbranches, trkbranch,
     mcbranches, mcprimbranches, mcprimvisEbranches, trueparticlebranches,
+    slc_mcbranches, slc_mcprimbranches,
 )
+
+# extra true-particle branches for the leading-particle truth sets: the Geant4
+# end process and the momentum at the end of the trajectory
+TRUE_END_VARS = ["end_process", "endp.x", "endp.y", "endp.z"]
+mcprimendbranches = ["rec.mc.nu.prim." + v for v in TRUE_END_VARS]
+slc_mcprimendbranches = ["rec.slc.truth.prim." + v for v in TRUE_END_VARS]
+trktrueendpbranches = [trkbranch + "truth.p.endp." + c for c in ["x", "y", "z"]]
+
+def _endp_mag(endp):
+    # |end momentum|; the CAF fills endp with -9999 for particles with no
+    # in-volume trajectory end (same as the end position) -> NaN
+    unset = (endp.x <= -9999) | (endp.y <= -9999) | (endp.z <= -9999)
+    return magdf(endp).where(~unset)
 
 # PFPID enum from the helper header
 PID_UNKNOWN, PID_PROTON, PID_PION, PID_SHOWER, PID_OTHER = 0, 1, 2, 3, 4
@@ -95,6 +110,14 @@ CHI2_VARIATIONS = SCALE_SMEAR_VARIATIONS + CALO_VARIATIONS + ["cafana"]
 # Sec. 6.1; the cut itself is gumple_cuts.beam_quality_cut).
 BEAM_QUALITY_VARS = ["TOR860", "TOR875", "LM875A", "LM875B", "LM875C", "THCURR", "FOM"]
 BEAM_SPILL_ID_VARS = ["spill_time_sec", "spill_time_nsec", "event"]
+
+# Muon-candidate end-hit mode (save_mu_endhits): the collection-plane calo
+# points of the muon candidate within the last MU_ENDHIT_RR_MAX cm of residual
+# range are stashed by the evt builder and written as a separate per-hit table
+# by make_maple_mu_endhit_df (index (entry, slc, hit) -> joins onto evt).
+MU_ENDHIT_RR_MAX = 25.0
+MU_ENDHIT_COLS = ["x", "y", "z", "rr"]
+_MU_ENDHIT_CACHE = {}
 
 CHI2_CAND_COLS = [
     "mu_chi2%s_of_mu_cand",
@@ -394,24 +417,25 @@ def add_crt(f, S):
     S["crthit_ismc"] = S.crthit_ismc.fillna(False).astype(bool)
     return S
 
-def add_pmt(f, S, DETECTOR):
-    # Flash value for trigger emulation. Note: these need to be scaled per-detector, per-Run
+def _flash_summary(f, DETECTOR):
+    # Per-event in-time (-5, 5 us) flash PE summary, indexed by entry. Events
+    # with no flashes at all are absent.
     flashes = make_opflashdf(f)
     if DETECTOR == "ICARUS":
         timename = "firsttime"
     elif DETECTOR == "SBND":
         timename = "time"
     intime = (flashes[timename] > -5) & (flashes[timename] < 5)
-    maxpe = (flashes.totalpe*intime).groupby(level=[0]).max().rename("flash_maxpe")
-    S = S.join(maxpe)
-    sumpe = (flashes.totalpe*intime).groupby(level=[0]).sum().rename("flash_sumpe")
-    S = S.join(sumpe)
+    return pd.DataFrame({
+        "flash_maxpe": (flashes.totalpe*intime).groupby(level=[0]).max(),
+        "flash_sumpe": (flashes.totalpe*intime).groupby(level=[0]).sum(),
+        "flash_maxpe_cryo0": (flashes.totalpe * intime * (flashes.cryo == 0)).groupby(level=[0]).max(),
+        "flash_maxpe_cryo1": (flashes.totalpe * intime * (flashes.cryo == 1)).groupby(level=[0]).max(),
+    })
 
-    flash_cryo0 = (flashes.totalpe * intime * (flashes.cryo == 0)).groupby(level=[0]).max().rename("flash_maxpe_cryo0")
-    flash_cryo1 = (flashes.totalpe * intime * (flashes.cryo == 1)).groupby(level=[0]).max().rename("flash_maxpe_cryo1")
-    S = S.join(flash_cryo0)
-    S = S.join(flash_cryo1)
-    return S
+def add_pmt(f, S, DETECTOR):
+    # Flash value for trigger emulation. Note: these need to be scaled per-detector, per-Run
+    return S.join(_flash_summary(f, DETECTOR))
 
 def _load_bnbinfo(f, leaf, varlist):
     # Load the requested SRBNBInfo fields of rec.hdr.<leaf> (bnbinfo or
@@ -461,7 +485,7 @@ def fetch_info(f):
     # ------------------------------------------------------------------
     # slice frame
     # ------------------------------------------------------------------
-    slcdf = make_slcdf(f)
+    slcdf = make_slcdf(f, slc_mcbranches, slc_mcprimbranches + slc_mcprimendbranches)
     S = pd.DataFrame({
         "slc_vtx_x": slcdf.slc.vertex.x,
         "slc_vtx_y": slcdf.slc.vertex.y,
@@ -503,6 +527,13 @@ def fetch_info(f):
         "true_p2_end_x": slcdf.slc.truth.p2.end.x,
         "true_p2_end_y": slcdf.slc.truth.p2.end.y,
         "true_p2_end_z": slcdf.slc.truth.p2.end.z,
+        "true_p3_p": slcdf.slc.truth.p3.totp,
+        "true_p3_dir_x": slcdf.slc.truth.p3.dir.x,
+        "true_p3_dir_y": slcdf.slc.truth.p3.dir.y,
+        "true_p3_dir_z": slcdf.slc.truth.p3.dir.z,
+        "true_p3_end_x": slcdf.slc.truth.p3.end.x,
+        "true_p3_end_y": slcdf.slc.truth.p3.end.y,
+        "true_p3_end_z": slcdf.slc.truth.p3.end.z,
         # slice-level true leading charged pion / photon / neutral pion
         "true_cpi_p": slcdf.slc.truth.cpi.totp,
         "true_cpi_dir_x": slcdf.slc.truth.cpi.dir.x,
@@ -527,7 +558,7 @@ def fetch_info(f):
         "true_pi0_end_z": slcdf.slc.truth.pi0.end.z,
         # neutrino flux ancestry (parent that decayed to the nu) -- needed by the
         # reBruce flux calculators (flux_horn_current, flux_hadron_production)
-        "true_parent_pdg": slcdf.slc.truth.parent_pdg,
+        "true_parent_dcy_pdg": slcdf.slc.truth.parent_pdg,
         "true_parent_dcy_mom_x": slcdf.slc.truth.parent_dcy_mom.x,
         "true_parent_dcy_mom_y": slcdf.slc.truth.parent_dcy_mom.y,
         "true_parent_dcy_mom_z": slcdf.slc.truth.parent_dcy_mom.z,
@@ -535,6 +566,15 @@ def fetch_info(f):
         "true_cpi_pdg": slcdf.slc.truth.cpi.pdg,
         "ismc" : ismc,
     })
+    # Geant4 end process and end-momentum magnitude of each slice-level true
+    # particle set
+    for sp in ["mu", "p", "p2", "p3", "cpi", "g", "pi0"]:
+        S["true_%s_end_process" % sp] = slcdf.slc.truth[sp].end_process
+        S["true_%s_end_p" % sp] = _endp_mag(slcdf.slc.truth[sp].endp)
+    # parent momentum magnitude and angle to the beam (parent_dcy_mom is in
+    # beam coordinates, so z is the beam axis)
+    S["true_parent_dcy_p"] = magdf(slcdf.slc.truth.parent_dcy_mom)
+    S["true_parent_dcy_costh"] = slcdf.slc.truth.parent_dcy_mom.z / S.true_parent_dcy_p
     S["slice_index"] = S.index.get_level_values(1)
     S["detector"] = DETECTOR
     S["Run"] = RUN
@@ -547,6 +587,8 @@ def fetch_info(f):
     keys = set(f["recTree"].keys())
     shwdf = loadbranches(f["recTree"], [b for b in shwbranches if b in keys]).rec.slc.reco.pfp.shw
     shwdf.index.names = trkdf.index.names
+    trkendp = loadbranches(f["recTree"], trktrueendpbranches).rec.slc.reco.pfp.trk.truth.p.endp
+    trkendp.index.names = trkdf.index.names
 
     P = pd.DataFrame({
         "start_x": trkdf.pfp.trk.start.x,
@@ -570,6 +612,9 @@ def fetch_info(f):
         "true_end_x": trkdf.pfp.trk.truth.p.end.x,
         "true_end_y": trkdf.pfp.trk.truth.p.end.y,
         "true_end_z": trkdf.pfp.trk.truth.p.end.z,
+        # NaN (not the CAF default) for pfps with no matched true particle
+        "true_end_process": trkdf.pfp.trk.truth.p.end_process.where(trkdf.pfp.trk.truth.p.genp.x.notna()),
+        "true_end_p": _endp_mag(trkendp),
         "shw_energy2": shwdf.plane.I2.energy,
     })
 
@@ -713,7 +758,7 @@ def _write_plane_chi2(trkhitdf, P, tag, do_calo_syst, cosmic, do_cafana_chi2, rr
             P.loc[cosmic, "chi2p_%s%s" % (tag, var)] = P.loc[cosmic, "chi2p_%scafpyana" % tag]
 
 def PID_calcs(f, P, DETECTOR, ismc, do_calo_syst=True, do_alt_chi2=False,
-              do_cafana_chi2=False, do_ind_chi2=False):
+              do_cafana_chi2=False, do_ind_chi2=False, return_trkhitdf=False):
     # ------------------------------------------------------------------
     # PID on the collection plane (plane 2)
     # ------------------------------------------------------------------
@@ -785,10 +830,12 @@ def PID_calcs(f, P, DETECTOR, ismc, do_calo_syst=True, do_alt_chi2=False,
             # concat all bestplane columns at once (avoids DataFrame fragmentation)
             P = pd.concat([P, pd.DataFrame(bestcols, index=P.index)], axis=1)
 
+    if return_trkhitdf:
+        return P, trkhitdf
     return P
 
 def fetch_candidates(S, P, do_calo_syst, use_chi2=True, do_alt_chi2=False,
-                     do_cafana_chi2=False, do_ind_chi2=False):
+                     do_cafana_chi2=False, do_ind_chi2=False, return_mu_ilocs=False):
     # ------------------------------------------------------------------
     # fixed candidates; chi2 cuts are applied post-hoc (maple_sel)
     # ------------------------------------------------------------------
@@ -870,7 +917,7 @@ def fetch_candidates(S, P, do_calo_syst, use_chi2=True, do_alt_chi2=False,
     # candidate variables (muon + leading candidate proton)
     # ------------------------------------------------------------------
     truthcols = ["true_pdg", "true_genp_x", "true_genp_y", "true_genp_z",
-                 "true_end_x", "true_end_y", "true_end_z"]
+                 "true_end_x", "true_end_y", "true_end_z", "true_end_process", "true_end_p"]
     mucols = ["len", "start_x", "start_y", "start_z", "end_x", "end_y", "end_z", "dir_x", "dir_y", "dir_z",
               "p_muon", "trackScore", "dist_start", "prim_pfp", "contained10"] + truthcols + \
         ["chi2u_%s" % fl for fl in chi2_suffixes.values()] + \
@@ -1011,6 +1058,8 @@ def fetch_candidates(S, P, do_calo_syst, use_chi2=True, do_alt_chi2=False,
     S["true_mucand_end_x"] = mu.true_end_x
     S["true_mucand_end_y"] = mu.true_end_y
     S["true_mucand_end_z"] = mu.true_end_z
+    S["true_mucand_end_process"] = mu.true_end_process
+    S["true_mucand_end_p"] = mu.true_end_p
 
     S["p_len"] = pro.len
     S["p_ke"] = pro.ke_proton  # GeV, range-based
@@ -1047,6 +1096,8 @@ def fetch_candidates(S, P, do_calo_syst, use_chi2=True, do_alt_chi2=False,
     S["true_pcand_end_x"] = pro.true_end_x
     S["true_pcand_end_y"] = pro.true_end_y
     S["true_pcand_end_z"] = pro.true_end_z
+    S["true_pcand_end_process"] = pro.true_end_process
+    S["true_pcand_end_p"] = pro.true_end_p
 
     # sub-leading proton length: 2nd-longest proton candidate (same is_prot_cand
     # set as the leading proton -> no track-score gate). Sort ascending by len,
@@ -1085,16 +1136,39 @@ def fetch_candidates(S, P, do_calo_syst, use_chi2=True, do_alt_chi2=False,
     S["mu_E"] = mu_E
     S["p_E"] = p_E
 
+    if return_mu_ilocs:
+        return S, mu_ilocs
     return S
+
+def _mu_endhits(trkhitdf, mu_ilocs, rr_max=MU_ENDHIT_RR_MAX):
+    """Collection-plane calo points of the muon candidate with rr <= rr_max
+    (the last rr_max cm of the track). Returns columns MU_ENDHIT_COLS indexed
+    (entry, slc, hit) -- the pfp level is dropped, since there is one muon
+    candidate per slice, so the table joins directly onto the evt df."""
+    if len(mu_ilocs) == 0 or len(trkhitdf) == 0:
+        # int64 levels: a plain [] gives object levels, which concat then
+        # propagates onto the populated tables of the same job
+        idx = pd.MultiIndex.from_arrays([np.array([], dtype=np.int64)] * 3,
+                                        names=[trkhitdf.index.names[i] for i in (0, 1, -1)])
+        return pd.DataFrame({c: pd.Series(dtype=float) for c in MU_ENDHIT_COLS}, index=idx)
+    is_mu = trkhitdf.index.droplevel(-1).isin(pd.Index(mu_ilocs.values))
+    hits = trkhitdf.loc[is_mu & (trkhitdf.rr <= rr_max), MU_ENDHIT_COLS].copy()
+    hits.index = hits.index.droplevel(2)
+    return hits
 
 # =====================================================================
 # Main evt builder
 # =====================================================================
 def make_maple_evt_df(f, selection="none", do_calo_syst=True, use_chi2=True, do_alt_chi2=False,
-                      do_cafana_chi2=False, do_ind_chi2=False):
+                      do_cafana_chi2=False, do_ind_chi2=False, save_mu_endhits=False, do_coltopo=True):
     # use_chi2: muon-candidate selection behavior -- True (default) picks the
     # legacy-GUMP min-chi2u/chi2p-ratio track (len > 40 cm), False the
     # longest chi2-free base-mask track (see _find_candidates).
+    # save_mu_endhits: also stash the muon candidate's last-25cm hit positions
+    # for make_maple_mu_endhit_df (which must follow this builder in DFS).
+    # do_coltopo: add the muon candidate's end-point topology BDT score
+    # coltopo_trkscore (and the ang2_med-shifted coltopo_trkscore_a2shift, MC
+    # only), computed from the same end hits (see coltopo.py).
     # Get a slice level df (S) a pfp level df (P) and some meta-data
     S, P, DETECTOR, RUN, ismc = fetch_info(f)
 
@@ -1118,10 +1192,15 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True, use_chi2=True, do_
     # Again, since we have limited trk info access after df prod
     # we want to grab information about candidate mu and p tracks here.
     # Start with PID calculations and then do some basic candidate ID.
-    P = PID_calcs(f, P, DETECTOR, ismc, do_calo_syst=do_calo_syst, do_alt_chi2=do_alt_chi2,
-                  do_cafana_chi2=do_cafana_chi2, do_ind_chi2=do_ind_chi2)
-    S = fetch_candidates(S, P, do_calo_syst, use_chi2=use_chi2, do_alt_chi2=do_alt_chi2,
-                         do_cafana_chi2=do_cafana_chi2, do_ind_chi2=do_ind_chi2)
+    P, trkhitdf = PID_calcs(f, P, DETECTOR, ismc, do_calo_syst=do_calo_syst, do_alt_chi2=do_alt_chi2,
+                            do_cafana_chi2=do_cafana_chi2, do_ind_chi2=do_ind_chi2,
+                            return_trkhitdf=True)
+    S, mu_ilocs = fetch_candidates(S, P, do_calo_syst, use_chi2=use_chi2, do_alt_chi2=do_alt_chi2,
+                                   do_cafana_chi2=do_cafana_chi2, do_ind_chi2=do_ind_chi2,
+                                   return_mu_ilocs=True)
+    if save_mu_endhits or do_coltopo:
+        mu_endhits = _mu_endhits(trkhitdf, mu_ilocs)
+    del trkhitdf
 
     # ------------------------------------------------------------------
     # Reco_class (classification_type_debug port, via mcnu-level classification)
@@ -1177,7 +1256,32 @@ def make_maple_evt_df(f, selection="none", do_calo_syst=True, use_chi2=True, do_
     else:
         raise ValueError("selection must be 'none', 'presel', or 'full'")
 
+    if save_mu_endhits or do_coltopo:
+        # keep only the hits of slices surviving the selection
+        keep = mu_endhits.index.droplevel(-1).isin(S.index)
+    if do_coltopo:
+        # slices without a muon candidate (or without end hits) get NaN
+        C = coltopo_scores(mu_endhits[keep], DETECTOR, ismc)
+        S = S.copy()
+        for c in C.columns:
+            S[c] = C[c].reindex(S.index).to_numpy()
+    if save_mu_endhits:
+        # one file at a time per process, so drop anything left over from a
+        # previous file
+        _MU_ENDHIT_CACHE.clear()
+        _MU_ENDHIT_CACHE[f.file_path] = mu_endhits[keep]
+
     return S
+
+def make_maple_mu_endhit_df(f):
+    """Muon-candidate end hits (x, y, z, rr of the collection-plane calo points
+    with rr <= MU_ENDHIT_RR_MAX), index (entry, slc, hit), for the slices kept
+    in the evt df. Requires a make_maple_evt_df(..., save_mu_endhits=True)
+    builder earlier in DFS for the same file."""
+    if f.file_path not in _MU_ENDHIT_CACHE:
+        raise RuntimeError("make_maple_mu_endhit_df: no cached muon end hits for %s -- "
+                           "a save_mu_endhits=True evt builder must precede it in DFS" % f.file_path)
+    return _MU_ENDHIT_CACHE.pop(f.file_path)
 
 
 # thin wrappers for configs -----------------------------------------------
@@ -1204,6 +1308,17 @@ def make_maple_evt_fullsel_df(f):
 def make_maple_evt_fullsel_data_df(f):
     return make_maple_evt_df(f, selection="full", do_calo_syst=False)
 
+# muon-candidate end-hit mode: as above, plus stash the muon end hits for
+# make_maple_mu_endhit_df (list it after the evt builder in DFS)
+def make_maple_evt_presel_muendhit_df(f):
+    return make_maple_evt_df(f, selection="presel", do_calo_syst=True, save_mu_endhits=True)
+
+def make_maple_evt_presel_nocalo_muendhit_df(f):
+    return make_maple_evt_df(f, selection="presel", do_calo_syst=False, save_mu_endhits=True)
+
+def make_maple_evt_presel_data_muendhit_df(f):
+    return make_maple_evt_df(f, selection="presel", do_calo_syst=False, save_mu_endhits=True)
+
 
 # =====================================================================
 # mcnu builder
@@ -1222,6 +1337,18 @@ def make_maple_bnbdf(f):
             B[v] = np.nan
     B["good_spill"] = gmpl.beam_quality_cut(B, prefix="").astype(bool)
     return B
+
+def make_maple_flashdf(f):
+    # Per-event in-time flash summary (flash_sumpe, flash_maxpe,
+    # flash_maxpe_cryo0/1; see _flash_summary) for EVERY event, independent of
+    # any slice selection. Indexed like hdr; events without flashes get 0 PE.
+    # SBND flashes have cryo == -5, so the cryo columns are 0 there.
+    meta = fetch_metadata(f)
+    if isinstance(meta, pd.DataFrame):
+        return pd.DataFrame()
+    DETECTOR, _, _ = meta
+    entries = loadbranches(f["recTree"], ["rec.hdr.run"]).rec.hdr.run.index
+    return _flash_summary(f, DETECTOR).reindex(entries).fillna(0.)
 
 def make_maple_nudf(f):
     mc = _flatcols(loadbranches(f["recTree"], mcbranches).rec.mc.nu)
@@ -1264,11 +1391,15 @@ def make_maple_nudf(f):
         "true_visible_Enu": cls.true_visible_Enu,
         # neutrino flux ancestry (parent that decayed to the nu) -- needed by the
         # reBruce flux calculators (flux_horn_current, flux_hadron_production)
-        "parent_pdg": mc.parent_pdg,
+        "parent_dcy_pdg": mc.parent_pdg,
         "parent_dcy_mom_x": mc.parent_dcy_mom_x,
         "parent_dcy_mom_y": mc.parent_dcy_mom_y,
         "parent_dcy_mom_z": mc.parent_dcy_mom_z,
     })
+    # parent momentum magnitude and angle to the beam (beam coordinates: z is
+    # the beam axis)
+    nudf["parent_dcy_p"] = np.sqrt(mc.parent_dcy_mom_x**2 + mc.parent_dcy_mom_y**2 + mc.parent_dcy_mom_z**2)
+    nudf["parent_dcy_costh"] = mc.parent_dcy_mom_z / nudf.parent_dcy_p
     nudf["is_sig"] = (cls.maple_class == CLS_1MU1P) | (cls.maple_class == CLS_1MUNP)
     nudf["is_other_numucc"] = cls.maple_class == CLS_1MUNP
     nudf["is_fv"] = gmpl.prefix_fv_cut(nudf, "pos")
@@ -1280,12 +1411,13 @@ def make_maple_nudf(f):
     # Standard per-particle truth kinematics for the leading muon and proton.
     # Reuse make_mcdf, which already reduces rec.mc.nu.prim to the leading
     # particle of each species with the momentum (totp), unit direction (dir),
-    # generated energy (genE) and endpoint (end); it shares the (entry, inu)
+    # generated energy (genE), endpoint (end), Geant4 end process and end
+    # momentum (endp); it shares the (entry, inu)
     # index with nudf. All new columns are gathered in `extra` and appended in
     # a single pd.concat below to avoid DataFrame fragmentation.
     # -------------------------------------------------------------------------
     idx = nudf.index
-    mcdf = make_mcdf(f)
+    mcdf = make_mcdf(f, mcbranches, mcprimbranches + mcprimendbranches)
     extra = {}
     for sp in ["mu", "p"]:
         extra[sp + "_p"] = mcdf[(sp, "totp", "")].reindex(idx)
@@ -1296,6 +1428,8 @@ def make_maple_nudf(f):
         extra[sp + "_end_x"] = mcdf[(sp, "end", "x")].reindex(idx)
         extra[sp + "_end_y"] = mcdf[(sp, "end", "y")].reindex(idx)
         extra[sp + "_end_z"] = mcdf[(sp, "end", "z")].reindex(idx)
+        extra[sp + "_end_process"] = mcdf[(sp, "end_process", "")].reindex(idx)
+        extra[sp + "_end_p"] = _endp_mag(mcdf[sp].endp).reindex(idx)
 
     # -------------------------------------------------------------------------
     # Truth calorimetric energy (Ecalo) and TKI variables, summed over ALL
