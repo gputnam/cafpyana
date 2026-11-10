@@ -11,6 +11,7 @@
         {{ syst.sbnd_systematics }}        SBND only (detector, dirt, cosmics, POT)
         {{ syst.icarus_r2_systematics }}   ICARUS Run 2 only (detector, dirt, POT)
         {{ syst.icarus_r4_systematics }}   ICARUS Run 4 only (detector, dirt, POT)
+        {{ syst.pot_correlations([...]) }} POT correlations for the listed periods
 
     Subchannel naming is not the same in every template, so the patterns the
     systematics attach to are variables. The defaults below match the joint
@@ -168,7 +169,10 @@
     <systematic name="WM-Xtheta_xw_sbnd"{{ _detvar_smooth }} apply_to_subchannel="{{ syst_sbnd_det_subchannels }}" type="spline" xvar="var0" binning="var0" mirror="false" restrict="0, 1" plotname="SBND XThetaXW" tag="SBND Det" />
     <systematic name="WM-YZ_sbnd"{{ _detvar_smooth }} apply_to_subchannel="{{ syst_sbnd_det_subchannels }}" type="spline" xvar="var0" binning="var0" mirror="false" restrict="0, 1" plotname="SBND YZ" tag="SBND Det" />
     <systematic name="Dent_sbnd"{{ _detvar_smooth }} apply_to_subchannel="{{ syst_sbnd_det_subchannels }}" type="spline" xvar="var0" binning="var0" mirror="false" restrict="0, 1" plotname="DENT" tag="SBND Det" />
-    <systematic type="spline" tag="POT" apply_to_subchannel="{{ syst_xsec_subchannels }}" plotname="POT SBND">multisigma_SBND_POT</systematic>
+    <systematic type="spline" tag="POT" apply_to_subchannel="{{ syst_xsec_subchannels }}" plotname="POT SBND Run1 p1 Toroid">multisigma_SBNDRun1p1_POTToroid</systematic>
+    <systematic type="spline" tag="POT" apply_to_subchannel="{{ syst_xsec_subchannels }}" plotname="POT SBND Run1 p1 FOM">multisigma_SBNDRun1p1_POTFOM</systematic>
+    <systematic type="spline" tag="POT" apply_to_subchannel="{{ syst_xsec_subchannels }}" plotname="POT SBND Run1 p2 Toroid">multisigma_SBNDRun1p2_POTToroid</systematic>
+    <systematic type="spline" tag="POT" apply_to_subchannel="{{ syst_xsec_subchannels }}" plotname="POT SBND Run1 p2 FOM">multisigma_SBNDRun1p2_POTFOM</systematic>
 {%- endset %}
 
 {%# ===================== ICARUS Run 2 ===================== #%}
@@ -184,7 +188,8 @@
     <systematic name="z0_icarus2"{{ _detvar_smooth }} apply_to_subchannel="{{ syst_icarus_r2_det_subchannels }}" type="spline" xvar="var0" binning="var0" mirror="false" restrict="0, 1" plotname="ICARUS Run 2 Trk Split Z=0" tag="ICARUS Run 2 Det" />
     <systematic name="ECathode_icarus2"{{ _detvar_smooth }} apply_to_subchannel="{{ syst_icarus_r2_det_subchannels }}" type="spline" xvar="var0" binning="var0" mirror="false" restrict="0, 1" plotname="ICARUS Run 2 Trk Split East Cathode" tag="ICARUS Run 2 Det" />
     <systematic name="WCathode_icarus2"{{ _detvar_smooth }} apply_to_subchannel="{{ syst_icarus_r2_det_subchannels }}" type="spline" xvar="var0" binning="var0" mirror="false" restrict="0, 1" plotname="ICARUS Run 2 Trk Split West Cathode" tag="ICARUS Run 2 Det" />
-    <systematic type="spline" tag="POT" apply_to_subchannel="{{ syst_xsec_subchannels }}" plotname="POT ICARUS Run2">multisigma_ICARUSRun2_POT</systematic>
+    <systematic type="spline" tag="POT" apply_to_subchannel="{{ syst_xsec_subchannels }}" plotname="POT ICARUS Run2 Toroid">multisigma_ICARUSRun2_POTToroid</systematic>
+    <systematic type="spline" tag="POT" apply_to_subchannel="{{ syst_xsec_subchannels }}" plotname="POT ICARUS Run2 FOM">multisigma_ICARUSRun2_POTFOM</systematic>
 {%- endset %}
 
 {%# ===================== ICARUS Run 4 ===================== #%}
@@ -200,5 +205,29 @@
     <systematic name="z0_icarus4"{{ _detvar_smooth }} apply_to_subchannel="{{ syst_icarus_r4_det_subchannels }}" type="spline" xvar="var0" binning="var0" mirror="false" restrict="0, 1" plotname="ICARUS Run 4 Trk Split Z=0" tag="ICARUS Run 4 Det" />
     <systematic name="ECathode_icarus4"{{ _detvar_smooth }} apply_to_subchannel="{{ syst_icarus_r4_det_subchannels }}" type="spline" xvar="var0" binning="var0" mirror="false" restrict="0, 1" plotname="ICARUS Run 4 Trk Split East Cathode" tag="ICARUS Run 4 Det" />
     <systematic name="WCathode_icarus4"{{ _detvar_smooth }} apply_to_subchannel="{{ syst_icarus_r4_det_subchannels }}" type="spline" xvar="var0" binning="var0" mirror="false" restrict="0, 1" plotname="ICARUS Run 4 Trk Split West Cathode" tag="ICARUS Run 4 Det" />
-    <systematic type="spline" tag="POT" apply_to_subchannel="{{ syst_xsec_subchannels }}" plotname="POT ICARUS Run4">multisigma_ICARUSRun4_POT</systematic>
+    <systematic type="spline" tag="POT" apply_to_subchannel="{{ syst_xsec_subchannels }}" plotname="POT ICARUS Run4 Toroid">multisigma_ICARUSRun4_POTToroid</systematic>
+    <systematic type="spline" tag="POT" apply_to_subchannel="{{ syst_xsec_subchannels }}" plotname="POT ICARUS Run4 FOM">multisigma_ICARUSRun4_POTFOM</systematic>
 {%- endset %}
+
+
+{%# POT correlations between data-taking periods (SBN-doc-49735).
+    Toroid: rho = c^2/(t_i t_j), c = smallest t. FOM: fully correlated (0.99 keeps the prior invertible). #%}
+{% set _pot_correlations = [
+    ["Toroid", "ICARUSRun2", "SBNDRun1p1", 0.694],
+    ["Toroid", "ICARUSRun2", "SBNDRun1p2", 0.727],
+    ["Toroid", "ICARUSRun2", "ICARUSRun4", 0.739],
+    ["Toroid", "SBNDRun1p1", "SBNDRun1p2", 0.923],
+    ["Toroid", "SBNDRun1p1", "ICARUSRun4", 0.938],
+    ["Toroid", "SBNDRun1p2", "ICARUSRun4", 0.984],
+    ["FOM", "ICARUSRun2", "SBNDRun1p1", 0.99],
+    ["FOM", "ICARUSRun2", "SBNDRun1p2", 0.99],
+    ["FOM", "ICARUSRun2", "ICARUSRun4", 0.99],
+    ["FOM", "SBNDRun1p1", "SBNDRun1p2", 0.99],
+    ["FOM", "SBNDRun1p1", "ICARUSRun4", 0.99],
+    ["FOM", "SBNDRun1p2", "ICARUSRun4", 0.99]
+] %}
+{% macro pot_correlations(periods) %}
+{% for dial, a, b, rho in _pot_correlations if a in periods and b in periods %}
+<correlation>multisigma_{{ a }}_POT{{ dial }} multisigma_{{ b }}_POT{{ dial }} {{ rho }}</correlation>
+{% endfor %}
+{% endmacro %}

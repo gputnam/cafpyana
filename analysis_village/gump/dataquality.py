@@ -157,7 +157,7 @@ FOM_DETECTORS = {"SBND", "ICARUS Run2", "ICARUS Run4"}
 # part1/part2 the FullOnBeam ones; SBND RollingDev is not covered (keeps the
 # production FOM). The Run 2 full file contains every spill of the 10% (unblind)
 # sample, and the Run 4 full file covers the ReCAF2026 sample and the unblind one.
-_DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+_DATA_DIR = "/exp/sbnd/data/users/nrowe/fom_data"#os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 FOM_FILES = {
     "SBND": [os.path.join(_DATA_DIR, f) for f in
              ("sbnd_run1_dev_fixed_fx.root", "sbnd_run1_part1_fixed_fx.root", "sbnd_run1_part2_fixed_fx.root")],
