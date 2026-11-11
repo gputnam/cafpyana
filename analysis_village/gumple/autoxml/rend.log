@@ -1,0 +1,327 @@
+--- Calculating POT and Scale Factors ---
+[SBNDMCCV_6.df idf=0] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_6.df idf=1] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_6.df idf=2] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_6.df idf=3] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_6.df idf=4] dedup: dropped 14 duplicated ('run', 'evt', 'nu_E0') keys (28 hdr rows)
+[SBNDMCCV_6.df idf=5] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_6.df idf=6] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_6.df idf=7] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_6.df idf=8] dedup: dropped 16 duplicated ('run', 'evt', 'nu_E0') keys (32 hdr rows)
+[SBNDMCCV_6.df idf=9] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_6.df idf=10] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_6.df idf=11] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_6.df idf=12] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_6.df] cross-idf dedup: dropped 395 duplicated ('run', 'evt', 'nu_E0') keys (790 match rows)
+[SBNDMCCV_11.df idf=0] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_11.df idf=1] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_11.df idf=2] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_11.df idf=3] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_11.df idf=4] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_11.df idf=5] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_11.df idf=6] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_11.df idf=7] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_11.df idf=8] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_11.df idf=9] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_11.df idf=10] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_11.df idf=11] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_11.df idf=12] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_11.df] cross-idf dedup: dropped 125 duplicated ('run', 'evt', 'nu_E0') keys (250 match rows)
+[SBNDMCCV_9.df idf=0] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_9.df idf=1] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_9.df idf=2] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_9.df idf=3] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_9.df idf=4] dedup: dropped 33 duplicated ('run', 'evt', 'nu_E0') keys (66 hdr rows)
+[SBNDMCCV_9.df idf=5] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_9.df idf=6] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_9.df idf=7] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_9.df idf=8] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_9.df idf=9] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_9.df idf=10] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_9.df idf=11] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_9.df idf=12] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_9.df] cross-idf dedup: dropped 258 duplicated ('run', 'evt', 'nu_E0') keys (516 match rows)
+[SBNDMCCV_10.df idf=0] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_10.df idf=1] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_10.df idf=2] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_10.df idf=3] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_10.df idf=4] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_10.df idf=5] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_10.df idf=6] dedup: dropped 17 duplicated ('run', 'evt', 'nu_E0') keys (34 hdr rows)
+[SBNDMCCV_10.df idf=7] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_10.df idf=8] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_10.df idf=9] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_10.df idf=10] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_10.df idf=11] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_10.df idf=12] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_10.df] cross-idf dedup: dropped 281 duplicated ('run', 'evt', 'nu_E0') keys (562 match rows)
+[SBNDMCCV_2.df idf=0] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_2.df idf=1] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_2.df idf=2] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_2.df idf=3] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_2.df idf=4] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_2.df idf=5] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_2.df idf=6] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_2.df idf=7] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_2.df idf=8] dedup: dropped 20 duplicated ('run', 'evt', 'nu_E0') keys (40 hdr rows)
+[SBNDMCCV_2.df idf=9] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_2.df idf=10] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_2.df idf=11] dedup: dropped 24 duplicated ('run', 'evt', 'nu_E0') keys (48 hdr rows)
+[SBNDMCCV_2.df idf=12] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_2.df] cross-idf dedup: dropped 267 duplicated ('run', 'evt', 'nu_E0') keys (534 match rows)
+[SBNDMCCV_7.df idf=0] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_7.df idf=1] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_7.df idf=2] dedup: dropped 22 duplicated ('run', 'evt', 'nu_E0') keys (44 hdr rows)
+[SBNDMCCV_7.df idf=3] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_7.df idf=4] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_7.df idf=5] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_7.df idf=6] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_7.df idf=7] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_7.df idf=8] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_7.df idf=9] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_7.df idf=10] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_7.df idf=11] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_7.df idf=12] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_7.df] cross-idf dedup: dropped 215 duplicated ('run', 'evt', 'nu_E0') keys (430 match rows)
+[SBNDMCCV_1.df idf=0] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_1.df idf=1] dedup: dropped 19 duplicated ('run', 'evt', 'nu_E0') keys (38 hdr rows)
+[SBNDMCCV_1.df idf=2] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_1.df idf=3] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_1.df idf=4] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_1.df idf=5] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_1.df idf=6] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_1.df idf=7] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_1.df idf=8] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_1.df idf=9] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_1.df idf=10] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_1.df idf=11] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_1.df idf=12] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_1.df] cross-idf dedup: dropped 179 duplicated ('run', 'evt', 'nu_E0') keys (358 match rows)
+[SBNDMCCV_3.df idf=0] dedup: dropped 18 duplicated ('run', 'evt', 'nu_E0') keys (36 hdr rows)
+[SBNDMCCV_3.df idf=1] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_3.df idf=2] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_3.df idf=3] dedup: dropped 15 duplicated ('run', 'evt', 'nu_E0') keys (30 hdr rows)
+[SBNDMCCV_3.df idf=4] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_3.df idf=5] dedup: dropped 23 duplicated ('run', 'evt', 'nu_E0') keys (46 hdr rows)
+[SBNDMCCV_3.df idf=6] dedup: dropped 25 duplicated ('run', 'evt', 'nu_E0') keys (50 hdr rows)
+[SBNDMCCV_3.df idf=7] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_3.df idf=8] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_3.df idf=9] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_3.df idf=10] dedup: dropped 20 duplicated ('run', 'evt', 'nu_E0') keys (40 hdr rows)
+[SBNDMCCV_3.df idf=11] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_3.df idf=12] dedup: dropped 15 duplicated ('run', 'evt', 'nu_E0') keys (30 hdr rows)
+[SBNDMCCV_3.df] cross-idf dedup: dropped 397 duplicated ('run', 'evt', 'nu_E0') keys (794 match rows)
+[SBNDMCCV_4.df idf=0] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_4.df idf=1] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_4.df idf=2] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_4.df idf=3] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_4.df idf=4] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_4.df idf=5] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_4.df idf=6] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_4.df idf=7] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_4.df idf=8] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_4.df idf=9] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_4.df idf=10] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_4.df idf=11] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_4.df idf=12] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_4.df] cross-idf dedup: dropped 272 duplicated ('run', 'evt', 'nu_E0') keys (544 match rows)
+[SBNDMCCV_12.df idf=0] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_12.df idf=1] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_12.df idf=2] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_12.df idf=3] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_12.df idf=4] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_12.df] cross-idf dedup: dropped 22 duplicated ('run', 'evt', 'nu_E0') keys (44 match rows)
+[SBNDMCCV_8.df idf=0] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_8.df idf=1] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_8.df idf=2] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_8.df idf=3] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_8.df idf=4] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_8.df idf=5] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_8.df idf=6] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_8.df idf=7] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_8.df idf=8] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_8.df idf=9] dedup: dropped 22 duplicated ('run', 'evt', 'nu_E0') keys (44 hdr rows)
+[SBNDMCCV_8.df idf=10] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_8.df idf=11] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_8.df idf=12] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_8.df] cross-idf dedup: dropped 445 duplicated ('run', 'evt', 'nu_E0') keys (890 match rows)
+[SBNDMCCV_5.df idf=0] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_5.df idf=1] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_5.df idf=2] dedup: dropped 16 duplicated ('run', 'evt', 'nu_E0') keys (32 hdr rows)
+[SBNDMCCV_5.df idf=3] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_5.df idf=4] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_5.df idf=5] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_5.df idf=6] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_5.df idf=7] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_5.df idf=8] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_5.df idf=9] dedup: dropped 22 duplicated ('run', 'evt', 'nu_E0') keys (44 hdr rows)
+[SBNDMCCV_5.df idf=10] dedup: dropped 17 duplicated ('run', 'evt', 'nu_E0') keys (34 hdr rows)
+[SBNDMCCV_5.df idf=11] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_5.df idf=12] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_5.df] cross-idf dedup: dropped 597 duplicated ('run', 'evt', 'nu_E0') keys (1194 match rows)
+[SBNDMCCV_0.df idf=0] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_0.df idf=1] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_0.df idf=2] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_0.df idf=3] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_0.df idf=4] dedup: dropped 16 duplicated ('run', 'evt', 'nu_E0') keys (32 hdr rows)
+[SBNDMCCV_0.df idf=5] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_0.df idf=6] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_0.df idf=7] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_0.df idf=8] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_0.df idf=9] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_0.df idf=10] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_0.df idf=11] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_0.df idf=12] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBNDMCCV_0.df] cross-idf dedup: dropped 106 duplicated ('run', 'evt', 'nu_E0') keys (212 match rows)
+  /exp/sbnd/data/users/gputnam/GUMPLE/sbn-rewgted-25/SBNDMCCV_*.df  ->  POT = 5.2948e+20
+[SBNDAr25.df idf=0] dedup: dropped 249 duplicated ('run', 'evt', 'nu_E0') keys (498 hdr rows)
+  /exp/sbnd/data/users/gputnam/GUMPLE/sbn-rewgted-25/SBNDAr25.df  ->  POT = 1.1450e+20
+[SBND_SpringBNBOffData.df idf=0] data cuts (BQ=False, DQ=True): kept 14730/35645 slices
+[SBND_SpringBNBOffData.df idf=0] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+  /exp/sbnd/data/users/gputnam/GUMPLE/sbn-rewgted-25/SBND_SpringBNBOffData.df  ->  POT = 1.5788e+20
+[SBND_SpringLowEMC.df idf=0] dedup: dropped 140 duplicated ('run', 'evt', 'nu_E0') keys (280 hdr rows)
+  /exp/sbnd/data/users/gputnam/GUMPLE/sbn-rewgted-25/SBND_SpringLowEMC.df  ->  POT = 3.6362e+20
+     950,943 spills  sbnd_run1_dev_fixed_fx.root:bnbinfo
+[SBND_SpringBNBData_FixedDev.df idf=0] corrected FOM: matched 950943/950943 spills (100.00%), production FOM reproduced 99.9996%, run agreement 100.0000%
+[SBND_SpringBNBData_FixedDev.df idf=0] corrected spill_FOM: 6068/6070 slices mapped to a spill, TOR875 agreement 100.0000%
+[SBND_SpringBNBData_FixedDev.df idf=0] data cuts (BQ=True, DQ=True): kept 5989/6070 slices
+[SBND_SpringBNBData_FixedDev.df idf=0] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[SBND_SpringBNBData_FixedDev.df idf=0] corrected FOM: matched 950943/950943 spills (100.00%), production FOM reproduced 99.9996%, run agreement 100.0000%
+  /exp/sbnd/data/users/gputnam/GUMPLE/sbn-rewgted-25/SBND_SpringBNBData_FixedDev.df  ->  POT = 4.5278e+18
+[ICARUSRun2_SpringMCOverlay_rewgt_1.df idf=0] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun2_SpringMCOverlay_rewgt_1.df idf=1] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun2_SpringMCOverlay_rewgt_1.df idf=2] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun2_SpringMCOverlay_rewgt_1.df idf=3] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun2_SpringMCOverlay_rewgt_1.df idf=4] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun2_SpringMCOverlay_rewgt_1.df idf=5] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun2_SpringMCOverlay_rewgt_1.df idf=6] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun2_SpringMCOverlay_rewgt_1.df idf=7] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun2_SpringMCOverlay_rewgt_1.df idf=8] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun2_SpringMCOverlay_rewgt_1.df idf=9] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun2_SpringMCOverlay_rewgt_1.df idf=10] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun2_SpringMCOverlay_rewgt_1.df idf=11] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun2_SpringMCOverlay_rewgt_0.df idf=0] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun2_SpringMCOverlay_rewgt_0.df idf=1] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun2_SpringMCOverlay_rewgt_0.df idf=2] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun2_SpringMCOverlay_rewgt_0.df idf=3] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun2_SpringMCOverlay_rewgt_0.df idf=4] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun2_SpringMCOverlay_rewgt_0.df idf=5] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun2_SpringMCOverlay_rewgt_0.df idf=6] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun2_SpringMCOverlay_rewgt_0.df idf=7] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun2_SpringMCOverlay_rewgt_0.df idf=8] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun2_SpringMCOverlay_rewgt_0.df idf=9] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun2_SpringMCOverlay_rewgt_0.df idf=10] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun2_SpringMCOverlay_rewgt_0.df idf=11] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun2_SpringMCOverlay_rewgt_2.df idf=0] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun2_SpringMCOverlay_rewgt_2.df idf=1] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+  /exp/sbnd/data/users/gputnam/GUMPLE/sbn-rewgted-25/ICARUSRun2_SpringMCOverlay_rewgt_*.df  ->  POT = 1.1358e+21
+[ICARUS_SpringRun2BNBOff_unblind.df idf=0] data cuts (BQ=False, DQ=True): kept 88983/100627 slices
+[ICARUS_SpringRun2BNBOff_unblind.df idf=0] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+  /exp/sbnd/data/users/gputnam/GUMPLE/sbn-rewgted-25/ICARUS_SpringRun2BNBOff_unblind.df  ->  POT = 1.5511e+20
+[ICARUSRun2_Spring_Overlay_Dirt.df idf=0] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+  /exp/sbnd/data/users/gputnam/GUMPLE/sbn-rewgted-25/ICARUSRun2_Spring_Overlay_Dirt.df  ->  POT = 1.3146e+21
+   5,345,446 spills  icarus_run2_10percent_fixed_fx.root:bnbinfo
+[ICARUS_SpringRun2BNB_unblind.df idf=0] corrected FOM: matched 5345446/5345446 spills (100.00%), production FOM reproduced 100.0000%, run agreement 100.0000%
+[ICARUS_SpringRun2BNB_unblind.df idf=0] corrected spill_FOM: 16191/16204 slices mapped to a spill, TOR875 agreement 100.0000%
+[ICARUS_SpringRun2BNB_unblind.df idf=0] data cuts (BQ=True, DQ=True): kept 12964/16204 slices
+[ICARUS_SpringRun2BNB_unblind.df idf=0] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUS_SpringRun2BNB_unblind.df idf=0] corrected FOM: matched 5345446/5345446 spills (100.00%), production FOM reproduced 100.0000%, run agreement 100.0000%
+  /exp/sbnd/data/users/gputnam/GUMPLE/sbn-rewgted-25/ICARUS_SpringRun2BNB_unblind.df  ->  POT = 1.6675e+19
+[ICARUSRun4_SpringMCOverlay_rewgt_0.df idf=0] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_0.df idf=1] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_0.df idf=2] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_0.df idf=3] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_0.df idf=4] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_0.df idf=5] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_0.df idf=6] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_0.df idf=7] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_0.df idf=8] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_0.df idf=9] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_0.df idf=10] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_0.df idf=11] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_0.df idf=12] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_1.df idf=0] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_1.df idf=1] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_1.df idf=2] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_1.df idf=3] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_1.df idf=4] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_1.df idf=5] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_1.df idf=6] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_1.df idf=7] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_1.df idf=8] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_1.df idf=9] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_1.df idf=10] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_1.df idf=11] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_1.df idf=12] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_2.df idf=0] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_2.df idf=1] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_2.df idf=2] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_2.df idf=3] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_2.df idf=4] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_2.df idf=5] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_2.df idf=6] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_2.df idf=7] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_2.df idf=8] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_2.df idf=9] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_2.df idf=10] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_2.df idf=11] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_2.df idf=12] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_3.df idf=0] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_3.df idf=1] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_3.df idf=2] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_3.df idf=3] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_3.df idf=4] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_3.df idf=5] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_3.df idf=6] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_3.df idf=7] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_3.df idf=8] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_3.df idf=9] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_3.df idf=10] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+[ICARUSRun4_SpringMCOverlay_rewgt_3.df idf=11] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+  /exp/sbnd/data/users/gputnam/GUMPLE/sbn-rewgted-25/ICARUSRun4_SpringMCOverlay_rewgt_*.df  ->  POT = 2.1441e+21
+[ICARUSRun4_AR25.df idf=0] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+  /exp/sbnd/data/users/gputnam/GUMPLE/sbn-rewgted-25/ICARUSRun4_AR25.df  ->  POT = 3.9429e+20
+[ICARUS_SpringRun4BNBOff_ReCAF2026.df idf=0] data cuts (BQ=False, DQ=True): kept 241043/256767 slices
+[ICARUS_SpringRun4BNBOff_ReCAF2026.df idf=0] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+  /exp/sbnd/data/users/gputnam/GUMPLE/sbn-rewgted-25/ICARUS_SpringRun4BNBOff_ReCAF2026.df  ->  POT = 3.1986e+20
+[ICARUSRun4_Spring_Overlay_Dirt.df idf=0] dedup: dropped 0 duplicated ('run', 'evt', 'nu_E0') keys (0 hdr rows)
+  /exp/sbnd/data/users/gputnam/GUMPLE/sbn-rewgted-25/ICARUSRun4_Spring_Overlay_Dirt.df  ->  POT = 1.6461e+21
+   4,186,820 spills  icarus_run4_10percent_fixed_fx.root:bnbinfo
+[ICARUS_SpringRun4BNB_unblind.df idf=0] corrected FOM: matched 4188026/4236676 spills (98.85%), production FOM reproduced 99.9993%, run agreement 100.0000%
+[ICARUS_SpringRun4BNB_unblind.df idf=0] corrected spill_FOM: 23345/23512 slices mapped to a spill, TOR875 agreement 100.0000%
+[ICARUS_SpringRun4BNB_unblind.df idf=0] data cuts (BQ=True, DQ=True): kept 20779/23512 slices
+[ICARUS_SpringRun4BNB_unblind.df idf=0] dedup: dropped 1039 duplicated ('run', 'evt', 'nu_E0') keys (2098 hdr rows)
+[ICARUS_SpringRun4BNB_unblind.df idf=0] corrected FOM: matched 4188026/4236676 spills (98.85%), production FOM reproduced 99.9993%, run agreement 100.0000%
+  /exp/sbnd/data/users/gputnam/GUMPLE/sbn-rewgted-25/ICARUS_SpringRun4BNB_unblind.df  ->  POT = 1.7387e+19
+
+--- Rendering Jinja2 Configuration ---
+Successfully written configuration to /exp/sbnd/data/users/nrowe/sbn-rewgted-25-fresh/MAPLEMP/GumpleOct20.xml
+Successfully written configuration to /exp/sbnd/data/users/nrowe/sbn-rewgted-25-fresh/GUMP/GumpOct20.xml
+Successfully written configuration to /exp/sbnd/data/users/nrowe/sbn-rewgted-25-fresh/MAPLENP/MapleNPOct20.xml
+Successfully written configuration to /exp/sbnd/data/users/nrowe/sbn-rewgted-25-fresh/MAPLEMP/GumpleR4OnlyOct20.xml
+Successfully written configuration to /exp/sbnd/data/users/nrowe/sbn-rewgted-25-fresh/MAPLEMP/GumpleAr25Oct20.xml
+Successfully written configuration to /exp/sbnd/data/users/nrowe/sbn-rewgted-25-fresh/MAPLEMP/GumpleNoCVWgtOct20.xml
+Successfully written configuration to /exp/sbnd/data/users/nrowe/sbn-rewgted-25-fresh/MAPLEMP/GumpleANLOct20.xml
+Successfully written configuration to /exp/sbnd/data/users/nrowe/sbn-rewgted-25-fresh/GUMP/GumpANLOct20.xml
+Successfully written configuration to /exp/sbnd/data/users/nrowe/sbn-rewgted-25-fresh/MAPLENP/MapleNPANLOct20.xml
+Successfully written configuration to /exp/sbnd/data/users/nrowe/sbn-rewgted-25-fresh/MAPLEMP/GumpleANLR4OnlyOct20.xml
+Successfully written configuration to /exp/sbnd/data/users/nrowe/sbn-rewgted-25-fresh/MAPLEMP/GumpleANLAr25Oct20.xml
+Successfully written configuration to /exp/sbnd/data/users/nrowe/sbn-rewgted-25-fresh/MAPLEMP/GumpleANLNoCVWgtOct20.xml
+Successfully written configuration to /exp/sbnd/data/users/nrowe/sbn-rewgted-25-fresh/GUMP/sbnd_bash_rwt_GUMP.xml
+Successfully written configuration to /exp/sbnd/data/users/nrowe/sbn-rewgted-25-fresh/GUMP/sbnd_data_bash_GUMP.xml
+Successfully written configuration to /exp/sbnd/data/users/nrowe/sbn-rewgted-25-fresh/GUMP/icarus2_bash_rwt_GUMP.xml
+Successfully written configuration to /exp/sbnd/data/users/nrowe/sbn-rewgted-25-fresh/GUMP/icarus4_bash_rwt_GUMP.xml
+Successfully written configuration to /exp/sbnd/data/users/nrowe/sbn-rewgted-25-fresh/GUMP/icarus_data2_bash_GUMP.xml
+Successfully written configuration to /exp/sbnd/data/users/nrowe/sbn-rewgted-25-fresh/GUMP/icarus4_data_bash_GUMP.xml
+Successfully written configuration to /exp/sbnd/data/users/nrowe/sbn-rewgted-25-fresh/MAPLEMP/sbnd_bash_rwt_MAPLEMP.xml
+Successfully written configuration to /exp/sbnd/data/users/nrowe/sbn-rewgted-25-fresh/MAPLEMP/sbnd_data_bash_MAPLEMP.xml
+Successfully written configuration to /exp/sbnd/data/users/nrowe/sbn-rewgted-25-fresh/MAPLEMP/icarus2_bash_rwt_MAPLEMP.xml
+Successfully written configuration to /exp/sbnd/data/users/nrowe/sbn-rewgted-25-fresh/MAPLEMP/icarus4_bash_rwt_MAPLEMP.xml
+Successfully written configuration to /exp/sbnd/data/users/nrowe/sbn-rewgted-25-fresh/MAPLEMP/icarus_data2_bash_MAPLEMP.xml
+Successfully written configuration to /exp/sbnd/data/users/nrowe/sbn-rewgted-25-fresh/MAPLEMP/icarus4_data_bash_MAPLEMP.xml
+Successfully written configuration to /exp/sbnd/data/users/nrowe/sbn-rewgted-25-fresh/MAPLENP/sbnd_bash_rwt_MAPLENP.xml
+Successfully written configuration to /exp/sbnd/data/users/nrowe/sbn-rewgted-25-fresh/MAPLENP/sbnd_data_bash_MAPLENP.xml
+Successfully written configuration to /exp/sbnd/data/users/nrowe/sbn-rewgted-25-fresh/MAPLENP/icarus2_bash_rwt_MAPLENP.xml
+Successfully written configuration to /exp/sbnd/data/users/nrowe/sbn-rewgted-25-fresh/MAPLENP/icarus4_bash_rwt_MAPLENP.xml
+Successfully written configuration to /exp/sbnd/data/users/nrowe/sbn-rewgted-25-fresh/MAPLENP/icarus_data2_bash_MAPLENP.xml
+Successfully written configuration to /exp/sbnd/data/users/nrowe/sbn-rewgted-25-fresh/MAPLENP/icarus4_data_bash_MAPLENP.xml

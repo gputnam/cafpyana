@@ -51,7 +51,55 @@ CRT = "crt_%i"
 FLASH = "flash_%i"
 EVTREC = "evtrec_%i"
 
-pot_syst = {'ms3': 0.982714, 'ms2': 0.9887274, 'ms1': 0.99474195, 'cv': 1.0, 'ps1': 1.005, 'ps2': 1.01, 'ps3': 1.015}
+# POT splines per data-taking period (SBN-doc-49735). FOM is one-sided.
+POT_SYST_KNOTS = ["ms3", "ms2", "ms1", "cv", "ps1", "ps2", "ps3"]
+POT_SPLINES = {
+    "ICARUSRun2": {
+        "Toroid": {'ms3': 0.9835, 'ms2': 0.989, 'ms1': 0.9945, 'cv': 1.0, 'ps1': 1.0055, 'ps2': 1.011, 'ps3': 1.0165},
+        "FOM":    {'ms3': 0.99786477, 'ms2': 0.99878665, 'ms1': 0.99979889, 'cv': 1.0, 'ps1': 1.0, 'ps2': 1.0, 'ps3': 1.0},
+    },
+    "SBNDRun1p1": {
+        "Toroid": {'ms3': 0.987, 'ms2': 0.9913, 'ms1': 0.9957, 'cv': 1.0, 'ps1': 1.0043, 'ps2': 1.0087, 'ps3': 1.013},
+        "FOM":    {'ms3': 0.99736575, 'ms2': 0.99848684, 'ms1': 0.9996987, 'cv': 1.0, 'ps1': 1.0, 'ps2': 1.0, 'ps3': 1.0},
+    },
+    "SBNDRun1p2": {
+        "Toroid": {'ms3': 0.9876, 'ms2': 0.9917, 'ms1': 0.9959, 'cv': 1.0, 'ps1': 1.0041, 'ps2': 1.0083, 'ps3': 1.0124},
+        "FOM":    {'ms3': 0.9954435, 'ms2': 0.9972774, 'ms1': 0.99879506, 'cv': 1.0, 'ps1': 1.0, 'ps2': 1.0, 'ps3': 1.0},
+    },
+    "ICARUSRun4": {
+        "Toroid": {'ms3': 0.9878, 'ms2': 0.9919, 'ms1': 0.9959, 'cv': 1.0, 'ps1': 1.0041, 'ps2': 1.0081, 'ps3': 1.0122},
+        "FOM":    {'ms3': 0.99605183, 'ms2': 0.99778203, 'ms1': 0.99939753, 'cv': 1.0, 'ps1': 1.0, 'ps2': 1.0, 'ps3': 1.0},
+    },
+}
+POT_PERIOD_DETECTOR = {
+    "ICARUSRun2": "ICARUS Run2",
+    "SBNDRun1p1": "SBND",
+    "SBNDRun1p2": "SBND",
+    "ICARUSRun4": "ICARUS Run4",
+}
+# Fraction of the detector's data POT in each period
+POT_PERIOD_FRACTION = {
+    "ICARUSRun2": 1.0,
+    "SBNDRun1p1": 8.330e19 / (8.330e19 + 1.529e20),
+    "SBNDRun1p2": 1.529e20 / (8.330e19 + 1.529e20),
+    "ICARUSRun4": 1.0,
+}
+
+def pot_spline_knots(period, dial, detector):
+    """Knots of one POT dial for `detector`; 1.0's for other detectors."""
+    if POT_PERIOD_DETECTOR[period] != detector:
+        return [1.0] * len(POT_SYST_KNOTS)
+    f = POT_PERIOD_FRACTION[period]
+    w = POT_SPLINES[period][dial]
+    return [1. + f * (w[k] / w["cv"] - 1.) for k in POT_SYST_KNOTS]
+
+def pot_syst_total(detector):
+    """Product of all POT dials for `detector`."""
+    tot = np.ones(len(POT_SYST_KNOTS))
+    for period in POT_SPLINES:
+        for dial in POT_SPLINES[period]:
+            tot *= pot_spline_knots(period, dial, detector)
+    return dict(zip(POT_SYST_KNOTS, tot.tolist()))
 
 xsec_syst = [
     # CCQE
@@ -1152,44 +1200,30 @@ def load_one(fname, idf,
         for i in range(min(100, nuniv)):
             skim["g4_univ%i" % i] = np.prod([_scale_g4(wgt[s]["univ_%i" % i]) for s in g4_syst], axis=0)
 
+    pot_syst = pot_syst_total(detector)
     if pot_univ:
         rng = np.random.default_rng(seed=24601) # repeatable random numbers
         rnd = np.clip(rng.normal(size=nuniv), -3, 3)
+        w = pot_syst
+        if spline:
+            pot_spline_ = CubicSpline([-3, -2, -1, 0, 1, 2, 3], [w[k]/w["cv"] for k in POT_SYST_KNOTS])
         for i in range(nuniv):
-            wgt_vs = []
             r = rnd[i]
-        
-            if "ps1" in pot_syst:
-                if spline:
-                    w = pot_syst
-                    spline_ = CubicSpline([-3, -2, -1, 0, 1, 2, 3], 
-                            [w["ms3"]/w["cv"], w["ms2"]/w["cv"], w["ms1"]/w["cv"], pd.Series(1, w.index), w["ps1"]/w["cv"], w["ps2"]/w["cv"], w["ps3"]/w["cv"]])
-                    s = spline_(r)
-                else:
-                    s = 1 + (pot_syst["ps1"]/pot_syst["cv"] - 1)*r
-            else:
-                assert(False)
-
-            wgt_vs.append(s)
-            
-            skim["pot_univ%i" % i] = np.prod(wgt_vs, axis=0)
+            s = float(pot_spline_(r)) if spline else 1 + (w["ps1"]/w["cv"] - 1)*r
+            skim["pot_univ%i" % i] = s
     else:
-        if "ps1" in pot_syst:
-            skim["pot_univ"] = pot_syst["ps1"]/pot_syst["cv"]
-        else:
-            assert(False)
+        skim["pot_univ"] = pot_syst["ps1"]/pot_syst["cv"]
 
     multisim_cols = []
     multisigma_cols = []
 
     if pot_spline:
-        for d in ["SBND", "ICARUS Run2", "ICARUS Run4"]:
-            col_str = f"multisigma_{d.replace(' ', '')}_POT"
-            multisigma_cols.append(col_str)
-            if detector == d:
-                skim[f"{col_str}"] = [list(pot_syst.values()) for _ in range(len(wgt))]
-            else:
-                skim[f"{col_str}"] = [[1.0]*7 for _ in range(len(wgt))]
+        for period in POT_SPLINES:
+            for dial in POT_SPLINES[period]:
+                col_str = f"multisigma_{period}_POT{dial}"
+                multisigma_cols.append(col_str)
+                knots = pot_spline_knots(period, dial, detector)
+                skim[col_str] = [list(knots) for _ in range(len(wgt))]
 
     if sep_flux_univ:
         for j, s in enumerate(flux_syst):

@@ -170,9 +170,14 @@
     <systematic type="covariance" tag="NonRES" apply_to_subchannel="numu.*_cv.*" plotname="NonRESBGvbarnCC2pi">GENIEReWeight_SBN_v1_multisim_NonRESBGvbarnCC2pi</systematic>
     <systematic type="covariance" tag="NonRES" apply_to_subchannel="numu.*_cv.*" plotname="NonRESBGvbarnNC1pi">GENIEReWeight_SBN_v1_multisim_NonRESBGvbarnNC1pi</systematic>
     <systematic type="covariance" tag="NonRES" apply_to_subchannel="numu.*_cv.*" plotname="NonRESBGvbarnNC2pi">GENIEReWeight_SBN_v1_multisim_NonRESBGvbarnNC2pi</systematic>
-    <systematic type="spline" tag="POT" apply_to_subchannel="numu.*_cv.*" plotname="POT ICARUS Run2">multisigma_ICARUSRun2_POT</systematic>
-    <systematic type="spline" tag="POT" apply_to_subchannel="numu.*_cv.*" plotname="POT ICARUS Run4">multisigma_ICARUSRun4_POT</systematic>
-    <systematic type="spline" tag="POT" apply_to_subchannel="numu.*_cv.*" plotname="POT SBND">multisigma_SBND_POT</systematic>
+    <systematic type="spline" tag="POT" apply_to_subchannel="numu.*_cv.*" plotname="POT ICARUS Run2 Toroid">multisigma_ICARUSRun2_POTToroid</systematic>
+    <systematic type="spline" tag="POT" apply_to_subchannel="numu.*_cv.*" plotname="POT ICARUS Run2 FOM">multisigma_ICARUSRun2_POTFOM</systematic>
+    <systematic type="spline" tag="POT" apply_to_subchannel="numu.*_cv.*" plotname="POT ICARUS Run4 Toroid">multisigma_ICARUSRun4_POTToroid</systematic>
+    <systematic type="spline" tag="POT" apply_to_subchannel="numu.*_cv.*" plotname="POT ICARUS Run4 FOM">multisigma_ICARUSRun4_POTFOM</systematic>
+    <systematic type="spline" tag="POT" apply_to_subchannel="numu.*_cv.*" plotname="POT SBND Run1 p1 Toroid">multisigma_SBNDRun1p1_POTToroid</systematic>
+    <systematic type="spline" tag="POT" apply_to_subchannel="numu.*_cv.*" plotname="POT SBND Run1 p1 FOM">multisigma_SBNDRun1p1_POTFOM</systematic>
+    <systematic type="spline" tag="POT" apply_to_subchannel="numu.*_cv.*" plotname="POT SBND Run1 p2 Toroid">multisigma_SBNDRun1p2_POTToroid</systematic>
+    <systematic type="spline" tag="POT" apply_to_subchannel="numu.*_cv.*" plotname="POT SBND Run1 p2 FOM">multisigma_SBNDRun1p2_POTFOM</systematic>
                                         
     <systematic type="covariance" tag="Flux" apply_to_subchannel="numu.*_cv.*" plotname="nucleoninexsec">multisim_nucleoninexsec_Flux</systematic>
     <systematic type="covariance" tag="Flux" apply_to_subchannel="numu.*_cv.*" plotname="kminus">multisim_kminus_Flux</systematic>
@@ -479,4 +484,16 @@
 
 </DetVarFiles>
 
-<correlation>multisigma_SBND_POT multisigma_ICARUSRun4_POT 0.33</correlation>
+<!-- POT correlations: copy of systematics.xml.j2 -->
+<correlation>multisigma_ICARUSRun2_POTToroid multisigma_SBNDRun1p1_POTToroid 0.694</correlation>
+<correlation>multisigma_ICARUSRun2_POTToroid multisigma_SBNDRun1p2_POTToroid 0.727</correlation>
+<correlation>multisigma_ICARUSRun2_POTToroid multisigma_ICARUSRun4_POTToroid 0.739</correlation>
+<correlation>multisigma_SBNDRun1p1_POTToroid multisigma_SBNDRun1p2_POTToroid 0.923</correlation>
+<correlation>multisigma_SBNDRun1p1_POTToroid multisigma_ICARUSRun4_POTToroid 0.938</correlation>
+<correlation>multisigma_SBNDRun1p2_POTToroid multisigma_ICARUSRun4_POTToroid 0.984</correlation>
+<correlation>multisigma_ICARUSRun2_POTFOM multisigma_SBNDRun1p1_POTFOM 0.99</correlation>
+<correlation>multisigma_ICARUSRun2_POTFOM multisigma_SBNDRun1p2_POTFOM 0.99</correlation>
+<correlation>multisigma_ICARUSRun2_POTFOM multisigma_ICARUSRun4_POTFOM 0.99</correlation>
+<correlation>multisigma_SBNDRun1p1_POTFOM multisigma_SBNDRun1p2_POTFOM 0.99</correlation>
+<correlation>multisigma_SBNDRun1p1_POTFOM multisigma_ICARUSRun4_POTFOM 0.99</correlation>
+<correlation>multisigma_SBNDRun1p2_POTFOM multisigma_ICARUSRun4_POTFOM 0.99</correlation>

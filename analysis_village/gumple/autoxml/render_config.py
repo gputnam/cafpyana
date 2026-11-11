@@ -75,6 +75,9 @@ def build_context(base_dir, hdf_dir, target_sbnd_pot=1e20, target_icarus_r2_pot=
     sbnd_ar25_pattern = os.path.join(hdf_dir, "SBNDAr25.df")
     sbnd_ar25_pot = get_sample_pot(sbnd_ar25_pattern, detector="SBND")
 
+    sbnd_gibuu_pattern = os.path.join(hdf_dir, "SBNDGIBUU.df")
+    sbnd_gibuu_pot = get_sample_pot(sbnd_gibuu_pattern, detector="SBND")
+
     # 6. SBND OffBeam (Data)
     sbnd_offbeam_pattern = os.path.join(hdf_dir, "SBND_SpringBNBOffData.df")
     sbnd_offbeam_pot = get_sample_pot(sbnd_offbeam_pattern, detector="SBND",
@@ -114,6 +117,9 @@ def build_context(base_dir, hdf_dir, target_sbnd_pot=1e20, target_icarus_r2_pot=
     icarus_r4_ar25_pattern = os.path.join(hdf_dir, "ICARUSRun4_AR25.df")
     icarus_r4_ar25_pot = get_sample_pot(icarus_r4_ar25_pattern, detector="ICARUS Run4")
 
+    icarus_r4_gibuu_pattern = os.path.join(hdf_dir, "ICARUSRun4_GIBUU.df")
+    icarus_r4_gibuu_pot = get_sample_pot(icarus_r4_gibuu_pattern, detector="ICARUS Run4")
+
     # 5. ICARUS Run 4 OffBeam (Data)
     icarus_r4_offbeam_pattern = os.path.join(hdf_dir, "ICARUS_SpringRun4BNBOff_ReCAF2026.df")
     icarus_r4_offbeam_pot = get_sample_pot(icarus_r4_offbeam_pattern, detector="ICARUS Run4",
@@ -136,6 +142,7 @@ def build_context(base_dir, hdf_dir, target_sbnd_pot=1e20, target_icarus_r2_pot=
         # SBND POT values
         "sbnd_mc_pot": format_sci(sbnd_mc_pot, 3),
         "sbnd_ar25_pot": format_sci(sbnd_ar25_pot, 3),
+        "sbnd_gibuu_pot": format_sci(sbnd_gibuu_pot, 3),
         "sbnd_offbeam_pot": format_sci(sbnd_offbeam_pot, 3),
         "sbnd_dirt_pot": format_sci(sbnd_dirt_pot, 3),
 
@@ -152,6 +159,7 @@ def build_context(base_dir, hdf_dir, target_sbnd_pot=1e20, target_icarus_r2_pot=
         # ICARUS Run 4 sample POTs
         "icarus_r4_mc_pot": format_sci(icarus_r4_mc_pot, 3),
         "icarus_r4_ar25_pot": format_sci(icarus_r4_ar25_pot, 3),
+        "icarus_r4_gibuu_pot": format_sci(icarus_r4_gibuu_pot, 3),
         "icarus_r4_offbeam_pot": format_sci(icarus_r4_offbeam_pot, 3),
         "icarus_r4_dirt_pot": format_sci(icarus_r4_dirt_pot, 3),
     }

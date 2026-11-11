@@ -185,7 +185,7 @@ def plotFile(FileStr, linestyleStr, labelStr, colorStr, level):
   #plt.contourf(xi, yi, zi, levels=[nlevels[0], np.inf], colors=[colorStr], alpha=0.3)
   plt.contour(xi, yi, zi, nlevels, linestyles=linestyleStr, colors = [colorStr], linewidths=3)
 
-DEFAULT_BASE_DIR = "/home/nathanielerowe/SBN/PROfit"
+DEFAULT_BASE_DIR = "/exp/sbnd/app/users/nrowe/cafpyana/analysis_village/gumple/external/"
 
 def main(files, labels, linestyles, colors, output, proposal_path, sigma_bool, icarus_dir, excluded, title, level, points):
   if labels:
