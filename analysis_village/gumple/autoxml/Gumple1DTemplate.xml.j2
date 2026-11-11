@@ -3,7 +3,7 @@
 <mode name="nu" />
 
 <detector name="SBND" pot="1e20"/>
-<detector name="ICARUS" pot="5e20"/>
+<detector name="ICARUS" pot="5.5e20"/>
 
 <channel name="numu1p" unit="Reconstructed Neutrino Energy [GeV]">
     <bins unit="RecoE" edges="0.3 0.4 0.45 0.5 0.55 0.6 0.65 0.7 0.75 0.8 0.85 0.9 0.95 1.0 1.5" />
@@ -124,7 +124,7 @@
     </branch>
 </MCFile>
 
-<MCFile treename="SelectedEvents" filename="{{ BASE_DIR }}/GUMP/FD/ICARUSRun2_SpringMCOverlay_rewgt_*sbruce_fakedata.root" scale = "0.4" pot="{{ icarus_r2_mc_pot }}">
+<MCFile treename="SelectedEvents" filename="{{ BASE_DIR }}/GUMP/FD/ICARUSRun2_SpringMCOverlay_rewgt_*sbruce_fakedata.root" scale = "0.364" pot="{{ icarus_r2_mc_pot }}">
     <friend treename="multisigmaTree" />
     <friend treename="fakedataTree" />
     <friend treename="multisimTree" />
@@ -165,7 +165,7 @@
 
 </MCFile>
 
-<MCFile treename="SelectedEvents" filename="{{ BASE_DIR }}/GUMP/FD/ICARUS_SpringRun2BNBOff_unblind_sbruce_fakedata.root" scale = "0.4" pot="{{ icarus_r2_offbeam_pot }}">
+<MCFile treename="SelectedEvents" filename="{{ BASE_DIR }}/GUMP/FD/ICARUS_SpringRun2BNBOff_unblind_sbruce_fakedata.root" scale = "0.364" pot="{{ icarus_r2_offbeam_pot }}">
     <branch
         associated_subchannel = "nu_ICARUS_numu1p_intime"
         model_rule            = "0"
@@ -176,7 +176,7 @@
     </branch>
 </MCFile>
 
-<MCFile treename="SelectedEvents" filename="{{ BASE_DIR }}/GUMP/FD/ICARUSRun2_Spring_Overlay_Dirt_sbruce_fakedata.root" scale = "0.4" pot="{{ icarus_r2_dirt_pot }}">
+<MCFile treename="SelectedEvents" filename="{{ BASE_DIR }}/GUMP/FD/ICARUSRun2_Spring_Overlay_Dirt_sbruce_fakedata.root" scale = "0.364" pot="{{ icarus_r2_dirt_pot }}">
     <branch
         associated_subchannel = "nu_ICARUS_numu1p_Run2dirt"
         model_rule            = "0"
@@ -187,7 +187,7 @@
     </branch>
 </MCFile>
 
-<MCFile treename="SelectedEvents" filename="{{ BASE_DIR }}/GUMP/FD/ICARUSRun4_SpringMCOverlay_rewgt_*_sbruce_fakedata.root" scale = "0.6" pot="{{ icarus_r4_mc_pot }}">
+<MCFile treename="SelectedEvents" filename="{{ BASE_DIR }}/GUMP/FD/ICARUSRun4_SpringMCOverlay_rewgt_*_sbruce_fakedata.root" scale = "0.634" pot="{{ icarus_r4_mc_pot }}">
     <friend treename="multisigmaTree" />
     <friend treename="fakedataTree" />
     <friend treename="multisimTree" />
@@ -225,7 +225,7 @@
     </branch>
 </MCFile>
 
-<MCFile treename="SelectedEvents" filename="{{ BASE_DIR }}/GUMP/FD/ICARUS_SpringRun4BNBOff_unblind_sbruce_fakedata.root" scale = "0.6" pot="{{ icarus_r4_offbeam_pot }}">
+<MCFile treename="SelectedEvents" filename="{{ BASE_DIR }}/GUMP/FD/ICARUS_SpringRun4BNBOff_unblind_sbruce_fakedata.root" scale = "0.634" pot="{{ icarus_r4_offbeam_pot }}">
     <branch
         associated_subchannel = "nu_ICARUS_numu1p_intime"
         model_rule            = "0"
@@ -236,7 +236,7 @@
     </branch>
 </MCFile>
 
-<MCFile treename="SelectedEvents" filename="{{ BASE_DIR }}/GUMP/FD/ICARUSRun4_Spring_Overlay_Dirt_sbruce_fakedata.root" scale = "0.6" pot="{{ icarus_r4_dirt_pot }}">
+<MCFile treename="SelectedEvents" filename="{{ BASE_DIR }}/GUMP/FD/ICARUSRun4_Spring_Overlay_Dirt_sbruce_fakedata.root" scale = "0.634" pot="{{ icarus_r4_dirt_pot }}">
     <branch
         associated_subchannel = "nu_ICARUS_numu1p_Run4dirt"
         model_rule            = "0"
@@ -316,7 +316,7 @@
     </branch>
 </MCFile>
 
-<MCFile treename="SelectedEvents" filename="{{ BASE_DIR }}/MAPLEMP/FD/ICARUSRun2_SpringMCOverlay_rewgt*_sbruce_fakedata.root" scale = "0.4" pot="{{icarus_r2_mc_pot}}">
+<MCFile treename="SelectedEvents" filename="{{ BASE_DIR }}/MAPLEMP/FD/ICARUSRun2_SpringMCOverlay_rewgt*_sbruce_fakedata.root" scale = "0.364" pot="{{icarus_r2_mc_pot}}">
     <friend treename="multisigmaTree" />
     <friend treename="multisimTree" />
     <friend treename="fakedataTree" />
@@ -356,7 +356,7 @@
 
 </MCFile>
 
-<MCFile treename="SelectedEvents" filename="{{ BASE_DIR }}/MAPLEMP/FD/ICARUS_SpringRun2BNBOff_unblind_sbruce_fakedata.root" scale = "0.4" pot="{{icarus_r2_offbeam_pot}}">
+<MCFile treename="SelectedEvents" filename="{{ BASE_DIR }}/MAPLEMP/FD/ICARUS_SpringRun2BNBOff_unblind_sbruce_fakedata.root" scale = "0.364" pot="{{icarus_r2_offbeam_pot}}">
     <branch
         associated_subchannel = "nu_ICARUS_numuMP_intime"
         model_rule            = "0"
@@ -367,7 +367,7 @@
     </branch>
 </MCFile>
 
-<MCFile treename="SelectedEvents" filename="{{ BASE_DIR }}/MAPLEMP/FD/ICARUSRun2_Spring_Overlay_Dirt_sbruce_fakedata.root" scale = "0.4" pot="{{icarus_r2_dirt_pot}}">
+<MCFile treename="SelectedEvents" filename="{{ BASE_DIR }}/MAPLEMP/FD/ICARUSRun2_Spring_Overlay_Dirt_sbruce_fakedata.root" scale = "0.364" pot="{{icarus_r2_dirt_pot}}">
     <branch
         associated_subchannel = "nu_ICARUS_numuMP_Run2dirt"
         model_rule            = "0"
@@ -379,7 +379,7 @@
 </MCFile>
 
 
-<MCFile treename="SelectedEvents" filename="{{ BASE_DIR }}/MAPLEMP/FD/ICARUSRun4_SpringMCOverlay_rewgt_*_sbruce_fakedata.root" scale = "0.6" pot="{{icarus_r4_mc_pot}}">
+<MCFile treename="SelectedEvents" filename="{{ BASE_DIR }}/MAPLEMP/FD/ICARUSRun4_SpringMCOverlay_rewgt_*_sbruce_fakedata.root" scale = "0.634" pot="{{icarus_r4_mc_pot}}">
     <friend treename="multisigmaTree" />
     <friend treename="multisimTree" />
     <friend treename="fakedataTree" />
@@ -416,7 +416,7 @@
     </branch>
 </MCFile>
 
-<MCFile treename="SelectedEvents" filename="{{ BASE_DIR }}/MAPLEMP/FD/ICARUS_SpringRun4BNBOff_unblind_sbruce_fakedata.root" scale = "0.6" pot="{{icarus_r4_offbeam_pot}}">
+<MCFile treename="SelectedEvents" filename="{{ BASE_DIR }}/MAPLEMP/FD/ICARUS_SpringRun4BNBOff_unblind_sbruce_fakedata.root" scale = "0.634" pot="{{icarus_r4_offbeam_pot}}">
     <branch
         associated_subchannel = "nu_ICARUS_numuMP_intime"
         model_rule            = "0"
@@ -427,7 +427,7 @@
     </branch>
 </MCFile>
 
-<MCFile treename="SelectedEvents" filename="{{ BASE_DIR }}/MAPLEMP/FD/ICARUSRun4_Spring_Overlay_Dirt_sbruce_fakedata.root" scale = "0.6" pot="{{icarus_r4_dirt_pot}}">
+<MCFile treename="SelectedEvents" filename="{{ BASE_DIR }}/MAPLEMP/FD/ICARUSRun4_Spring_Overlay_Dirt_sbruce_fakedata.root" scale = "0.634" pot="{{icarus_r4_dirt_pot}}">
     <branch
         associated_subchannel = "nu_ICARUS_numuMP_Run4dirt"
         model_rule            = "0"

@@ -543,7 +543,7 @@ detvar_rwt_files = [
   'ICARUSRun2_WMYZ.txt',
   'ICARUSRun4_WMYZ.txt',
   'SBND_DENT.txt',
-  ['SBND_0xSCE.txt', 'SBND_2xSCE.txt'],
+  #['SBND_0xSCE.txt', 'SBND_2xSCE.txt'],
   'ICARUSRun2_SCE.txt',
   'ICARUSRun4_SCE.txt',
   'SBND_SmeareddEdx.txt',
@@ -586,7 +586,7 @@ detvar_rwt_lbls = [
   'WireMod_ICARUSRun2_multisigma_WMYZ',
   'WireMod_ICARUSRun4_multisigma_WMYZ',
   'DENT_SBND_multisigma_DENT',
-  'SCE_SBND_multisigma_SCE',
+  #'SCE_SBND_multisigma_SCE',
   'SCE_ICARUSRun2_multisigma_SCE',
   'SCE_ICARUSRun4_multisigma_SCE',
   'SBND_PID_Smear',
@@ -858,7 +858,7 @@ def _mc_pot_scale(detector, ismc):
 
 def load_one(fname, idf,
     detector=None, # One of SBND, ICARUS, ICARUS Run4
-    include_syst=True, nuniv=100, spline=False, xsec_univ=False, xsec_spline=False,# systematic handling
+    include_syst=True, nuniv=250, spline=False, xsec_univ=False, xsec_spline=False,# systematic handling
     reweight_aFF=False, pot_univ=False, flux_univ=True, sep_flux_univ=False, g4_univ=True, sep_g4_univ=False,
     pot_spline=False, detvar_spline=False, spline_dir="rwt_outputs",
     load_truth=True, load_crt=False, load_evtrec=False, match_Enu=True, # load extra information
@@ -1182,7 +1182,8 @@ def load_one(fname, idf,
     skim = {}
 
     if flux_univ:
-        num_to_process = min(100, nuniv)
+        #num_to_process = min(100, nuniv)
+        num_to_process = nuniv
         
         # Pre-cache the system lookups to avoid doing it inside the inner loops
         system_data = [wgt[s] for s in flux_syst]
@@ -1197,7 +1198,7 @@ def load_one(fname, idf,
         skim.update(new_columns_dict)
 
     if g4_univ:
-        for i in range(min(100, nuniv)):
+        for i in range(nuniv):
             skim["g4_univ%i" % i] = np.prod([_scale_g4(wgt[s]["univ_%i" % i]) for s in g4_syst], axis=0)
 
     pot_syst = pot_syst_total(detector)
@@ -1229,7 +1230,8 @@ def load_one(fname, idf,
         for j, s in enumerate(flux_syst):
             w = wgt[s]
             col_str = s if 'multisim' in s else 'multisim_' + s
-            n_univs = min(100, nuniv)
+            #n_univs = min(100, nuniv)
+            n_univs = nuniv
             univ_cols = [f"univ_{i}" for i in range(n_univs)]
             stacked_variants = w[univ_cols].to_numpy(dtype=np.float32).T
             np.nan_to_num(stacked_variants, copy=False, nan=1.0, posinf=1.0, neginf=1.0)
@@ -1255,12 +1257,13 @@ def load_one(fname, idf,
             else:
                 col_str = s
             multisim_cols.append(col_str)
-            w = _scale_g4(wgt[s][["univ_%i" % i for i in range(min(100, nuniv))]])
+            w = _scale_g4(wgt[s][["univ_%i" % i for i in range(nuniv)]])
+            #w = _scale_g4(wgt[s][["univ_%i" % i for i in range(min(100, nuniv))]])
             if lightmem:
                 float64_cols = w.select_dtypes(include=["float64"]).columns
                 if len(float64_cols) > 0:
                             w.loc[:, float64_cols] = w.loc[:, float64_cols].astype("float32")
-            stacked_variants = np.vstack([np.nan_to_num(w["univ_%i" % i].to_numpy(), nan=1.0, posinf=1.0, neginf=1.0) for i in range(min(100, nuniv))])
+            stacked_variants = np.vstack([np.nan_to_num(w["univ_%i" % i].to_numpy(), nan=1.0, posinf=1.0, neginf=1.0) for i in range(nuniv)])
             skim[col_str] = stacked_variants.T.tolist()
 
     if xsec_univ:
@@ -1327,7 +1330,8 @@ def load_one(fname, idf,
                 multisigma_cols.append(col_str)
             elif "multisim" in s:
                 w = wgt[s]
-                n_univs = min(100, nuniv)
+                n_univs = nuniv
+                #n_univs = min(100, nuniv)
                 univ_cols = [f"univ_{i}" for i in range(n_univs)]
                 stacked_variants = w[univ_cols].to_numpy(dtype=np.float32).T
                 np.nan_to_num(stacked_variants, copy=False, nan=1.0, posinf=1.0, neginf=1.0)

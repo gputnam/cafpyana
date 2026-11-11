@@ -2,15 +2,8 @@
 
 <mode name="nu" />
 
-<!--detector name="SBND" pot="1e20"/-->
-<!--detector name="SBND" pot="8.3722e19"/--> 
 <detector name="SBND" pot="{{ sbnd_data_pot }}"/> 
 
-<!--
-<detector name="SBND" pot="4.57e18"/>
-<detector name="ICARUS2" pot="1.985e19"/>
-<detector name="ICARUS4" pot="1.916e19"/>
--->
 <channel name="numu" unit="Reconstructed Neutrino Energy [GeV]">
     <!--bins unit="RecoE" edges="0.3 0.4 0.45 0.5 0.55 0.6 0.65 0.7 0.75 0.8 0.85 0.9 0.95 1.0 1.5"/-->
     BINS
@@ -111,8 +104,8 @@
 	<DetVarSection treename="SelectedEvents">
 	<!--DetVarSection treename="events/selectedAll" cv_variation_matching_vars="Run,Subrun,Evt" extra_weight="selected"-->
 
-		<cv filename="{{ BASE_DIR }}/MAPLENP/sbruce_trees/SBND_WMXThetaXWNominal_sbruce.root" pot="1" />       <!-- 1.4614e20 -->
-        <variation name="WM-Xtheta_xw_sbnd"    filename="{{ BASE_DIR }}/MAPLENP/sbruce_trees/SBND_WMXThetaXW_sbruce.root" pot="1" knobval="+1"/>         <!-- 5.9415e20 -->
+		<cv filename="{{ BASE_DIR }}/MAPLENP/sbruce_trees/SBND_WMXThetaXWNominal_sbruce.root" pot="1" />       
+        <variation name="WM-Xtheta_xw_sbnd"    filename="{{ BASE_DIR }}/MAPLENP/sbruce_trees/SBND_WMXThetaXW_sbruce.root" pot="1" knobval="+1"/>         
 
 		<subchannel>nu_SBND_numu_Run1intime</subchannel>
 		<subchannel>nu_SBND_numu_Run1dirt</subchannel>
@@ -126,8 +119,8 @@
 	<DetVarSection treename="SelectedEvents">
 	<!--DetVarSection treename="events/selectedAll" cv_variation_matching_vars="Run,Subrun,Evt" extra_weight="selected"-->
 
-		<cv filename="{{ BASE_DIR }}/MAPLENP/sbruce_trees/SBND_WMYZNominal_sbruce.root" pot="1" />       <!-- 1.4614e20 -->
-        <variation name="WM-YZ_sbnd"    filename="{{ BASE_DIR }}/MAPLENP/sbruce_trees/SBND_WMYZ_sbruce.root" pot="1" knobval="+1"/>                        <!-- 6.03e20 -->
+		<cv filename="{{ BASE_DIR }}/MAPLENP/sbruce_trees/SBND_WMYZNominal_sbruce.root" pot="1" />       
+        <variation name="WM-YZ_sbnd"    filename="{{ BASE_DIR }}/MAPLENP/sbruce_trees/SBND_WMYZ_sbruce.root" pot="1" knobval="+1"/>                        
 
 		<subchannel>nu_SBND_numu_Run1intime</subchannel>
 		<subchannel>nu_SBND_numu_Run1dirt</subchannel>
@@ -141,8 +134,8 @@
 	<DetVarSection treename="SelectedEvents">
 	<!--DetVarSection treename="events/selectedAll" cv_variation_matching_vars="Run,Subrun,Evt" extra_weight="selected"-->
 
-		<cv filename="{{ BASE_DIR }}/MAPLENP/sbruce_trees/SBND_DENTNominal_sbruce.root" pot="1" />       <!-- 1.4614e20 -->
-        <variation name="Dent_sbnd"    filename="{{ BASE_DIR }}/MAPLENP/sbruce_trees/SBND_DENT_sbruce.root" pot="1" knobval="+1"/>                        <!-- 1.449e20 -->
+		<cv filename="{{ BASE_DIR }}/MAPLENP/sbruce_trees/SBND_DENTNominal_sbruce.root" pot="1" />       
+        <variation name="Dent_sbnd"    filename="{{ BASE_DIR }}/MAPLENP/sbruce_trees/SBND_DENT_sbruce.root" pot="1" knobval="+1"/>                        
 
 		<subchannel>nu_SBND_numu_Run1intime</subchannel>
 		<subchannel>nu_SBND_numu_Run1dirt</subchannel>

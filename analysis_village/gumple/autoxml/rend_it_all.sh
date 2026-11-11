@@ -3,12 +3,12 @@
 ### -t, -d and -o are positionally paired, so the three lists must stay in step.
 
 ### Date label used in the ANL path, output names and plot tags
-LABEL=${LABEL:-Nov7}
+LABEL=${LABEL:-Nov10}
 
 HDF=/exp/sbnd/data/users/gputnam/GUMPLE/sbn-rewgted-26/
-EXP=/exp/sbnd/data/users/nrowe/sbn-rewgted-26
-ANL=/flare/neutrinoGPU/SBN_PROfit/sBruce/$LABEL/sbn-rewgted-26
-OUT=/exp/sbnd/data/users/nrowe/sbn-rewgted-26
+EXP=/exp/sbnd/data/users/nrowe/sbn-rewgted-26-1
+ANL=/flare/neutrinoGPU/SBN_PROfit/sBruce/$LABEL/sbn-rewgted-26-1
+OUT=/exp/sbnd/data/users/nrowe/sbn-rewgted-26-1
 
 ### One render_config.py call, so each sample's POT is read once. -t, -d and -o are
 ### paired by position: keep the three lists in the same order, group by group.

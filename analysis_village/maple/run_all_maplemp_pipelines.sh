@@ -3,7 +3,7 @@
 # Define the absolute input storage directories
 gray_prefix='/exp/sbnd/data/users/gputnam/GUMPLE/sbn-rewgted-26/'
 gumple_prefix='../gumple/'
-output='/exp/sbnd/data/users/nrowe/sbn-rewgted-26/MAPLEMP/'
+output='/exp/sbnd/data/users/nrowe/sbn-rewgted-26-1/MAPLEMP/'
 MAX_JOBS=8
 
 # Navigate to the working directory context

@@ -86,9 +86,6 @@ CV_DERIVED_VARIATIONS = [
     ("TrigEffMin",    lambda df: syst.v_flashscale(df, -1)),
 ]
 
-# The EMB systematics are only used for SBND (see "skip_variations" in DETECTOR_CONFIG).
-EMB_VARIATIONS = [name for name, _ in CV_DERIVED_VARIATIONS if name.startswith("EMB")]
-
 # --- sbruce tree settings ---
 SBRUCE_SUBDIR = "sbruce_trees"   # created inside the output directory
 DEFAULT_WEIGHT_COL = "cvwgt"
@@ -104,7 +101,6 @@ def _icarus_config(run, goal_pot):
         "cv": f"ICARUSRun{run}_SpringMCOverlay_rewgt_*.df",
         "trksplt_regions": ["Z=0", "East Cathode", "West Cathode"],
         "ratio_scales": {},
-        "skip_variations": EMB_VARIATIONS,  # EMB systematics are SBND-only
         "match_sets": [
             {
                 "cv": None,  # None -> use the main CV above
