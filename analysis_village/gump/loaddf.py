@@ -253,6 +253,43 @@ def _scale_g4(w):
     """Scale the universe weight(s) w (Series or DataFrame) by G4_UNC_SCALE about 1."""
     return (1 + G4_UNC_SCALE*(w - 1)).clip(lower=0)
 
+# Default number of random throws for the universes that aren't read from the
+# file (pot_univ, xsec_univ) when nuniv=None asks for "all available".
+DEFAULT_NTHROW = 250
+
+def _n_univ_available(w):
+    """Number of contiguous universes univ_0..univ_{n-1} stored for one systematic.
+
+    The weight-table columns are usually a MultiIndex padded with empty strings
+    (e.g. ("univ_0", "")), so match on the first level rather than the full label.
+    """
+    cols = w.columns
+    names = cols.get_level_values(0) if isinstance(cols, pd.MultiIndex) else cols
+    have = set(c for c in names if isinstance(c, str) and c.startswith("univ_"))
+    n = 0
+    while ("univ_%i" % n) in have:
+        n += 1
+    return n
+
+def _n_univ(wgt, systs, nuniv):
+    """Universes to use for the systematic(s) in systs.
+
+    nuniv=None -> every universe available; an int -> min(nuniv, available).
+    For several systematics that are multiplied universe-by-universe (flux_univ,
+    g4_univ) the count is the smallest available across them, so every product
+    has a factor from each systematic.
+    """
+    if isinstance(systs, str):
+        systs = [systs]
+    counts = {s: _n_univ_available(wgt[s]) for s in systs}
+    empty = [s for s, c in counts.items() if c == 0]
+    if empty:
+        raise ValueError("No univ_* columns found in the weight table for: %s" % ", ".join(map(str, empty)))
+    n = min(counts.values())
+    if nuniv is not None:
+        n = min(n, nuniv)
+    return n
+
 truthvars = {
   "baseline": ("baseline", ""),
   "true_E": ("nu_E", ""),
@@ -858,7 +895,7 @@ def _mc_pot_scale(detector, ismc):
 
 def load_one(fname, idf,
     detector=None, # One of SBND, ICARUS, ICARUS Run4
-    include_syst=True, nuniv=250, spline=False, xsec_univ=False, xsec_spline=False,# systematic handling
+    include_syst=True, nuniv=None, spline=False, xsec_univ=False, xsec_spline=False,# systematic handling; nuniv: max universes per systematic (None -> all available)
     reweight_aFF=False, pot_univ=False, flux_univ=True, sep_flux_univ=False, g4_univ=True, sep_g4_univ=False,
     pot_spline=False, detvar_spline=False, spline_dir="rwt_outputs",
     load_truth=True, load_crt=False, load_evtrec=False, match_Enu=True, # load extra information
@@ -1182,8 +1219,7 @@ def load_one(fname, idf,
     skim = {}
 
     if flux_univ:
-        #num_to_process = min(100, nuniv)
-        num_to_process = nuniv
+        num_to_process = _n_univ(wgt, flux_syst, nuniv)
         
         # Pre-cache the system lookups to avoid doing it inside the inner loops
         system_data = [wgt[s] for s in flux_syst]
@@ -1198,17 +1234,18 @@ def load_one(fname, idf,
         skim.update(new_columns_dict)
 
     if g4_univ:
-        for i in range(nuniv):
+        for i in range(_n_univ(wgt, g4_syst, nuniv)):
             skim["g4_univ%i" % i] = np.prod([_scale_g4(wgt[s]["univ_%i" % i]) for s in g4_syst], axis=0)
 
     pot_syst = pot_syst_total(detector)
     if pot_univ:
         rng = np.random.default_rng(seed=24601) # repeatable random numbers
-        rnd = np.clip(rng.normal(size=nuniv), -3, 3)
+        n_throw = DEFAULT_NTHROW if nuniv is None else nuniv
+        rnd = np.clip(rng.normal(size=n_throw), -3, 3)
         w = pot_syst
         if spline:
             pot_spline_ = CubicSpline([-3, -2, -1, 0, 1, 2, 3], [w[k]/w["cv"] for k in POT_SYST_KNOTS])
-        for i in range(nuniv):
+        for i in range(n_throw):
             r = rnd[i]
             s = float(pot_spline_(r)) if spline else 1 + (w["ps1"]/w["cv"] - 1)*r
             skim["pot_univ%i" % i] = s
@@ -1216,6 +1253,7 @@ def load_one(fname, idf,
         skim["pot_univ"] = pot_syst["ps1"]/pot_syst["cv"]
 
     multisim_cols = []
+    multisim_len = {}  # universes stored per multisim column (can differ between systematics)
     multisigma_cols = []
 
     if pot_spline:
@@ -1230,13 +1268,13 @@ def load_one(fname, idf,
         for j, s in enumerate(flux_syst):
             w = wgt[s]
             col_str = s if 'multisim' in s else 'multisim_' + s
-            #n_univs = min(100, nuniv)
-            n_univs = nuniv
+            n_univs = _n_univ(wgt, s, nuniv)
             univ_cols = [f"univ_{i}" for i in range(n_univs)]
             stacked_variants = w[univ_cols].to_numpy(dtype=np.float32).T
             np.nan_to_num(stacked_variants, copy=False, nan=1.0, posinf=1.0, neginf=1.0)
             skim[col_str] = stacked_variants.T.tolist()
             multisim_cols.append(col_str)
+            multisim_len[col_str] = n_univs
 
             #if not 'multisim' in s:
             #    col_str = 'multisim_'+s
@@ -1257,19 +1295,21 @@ def load_one(fname, idf,
             else:
                 col_str = s
             multisim_cols.append(col_str)
-            w = _scale_g4(wgt[s][["univ_%i" % i for i in range(nuniv)]])
-            #w = _scale_g4(wgt[s][["univ_%i" % i for i in range(min(100, nuniv))]])
+            n_univs = _n_univ(wgt, s, nuniv)
+            multisim_len[col_str] = n_univs
+            w = _scale_g4(wgt[s][["univ_%i" % i for i in range(n_univs)]])
             if lightmem:
                 float64_cols = w.select_dtypes(include=["float64"]).columns
                 if len(float64_cols) > 0:
                             w.loc[:, float64_cols] = w.loc[:, float64_cols].astype("float32")
-            stacked_variants = np.vstack([np.nan_to_num(w["univ_%i" % i].to_numpy(), nan=1.0, posinf=1.0, neginf=1.0) for i in range(nuniv)])
+            stacked_variants = np.vstack([np.nan_to_num(w["univ_%i" % i].to_numpy(), nan=1.0, posinf=1.0, neginf=1.0) for i in range(n_univs)])
             skim[col_str] = stacked_variants.T.tolist()
 
     if xsec_univ:
         rng = np.random.default_rng(seed=24601) # repeatable random numbers
-        rnd = np.clip(rng.normal(size=(len(xsec_syst), nuniv)), -3, 3)
-        for i in range(nuniv):
+        n_throw = DEFAULT_NTHROW if nuniv is None else nuniv
+        rnd = np.clip(rng.normal(size=(len(xsec_syst), n_throw)), -3, 3)
+        for i in range(n_throw):
             wgt_vs = []
             for j, s in enumerate(xsec_syst):
                 r = rnd[j][i]
@@ -1330,14 +1370,14 @@ def load_one(fname, idf,
                 multisigma_cols.append(col_str)
             elif "multisim" in s:
                 w = wgt[s]
-                n_univs = nuniv
-                #n_univs = min(100, nuniv)
+                n_univs = _n_univ(wgt, s, nuniv)
                 univ_cols = [f"univ_{i}" for i in range(n_univs)]
                 stacked_variants = w[univ_cols].to_numpy(dtype=np.float32).T
                 np.nan_to_num(stacked_variants, copy=False, nan=1.0, posinf=1.0, neginf=1.0)
                 skim[s] = stacked_variants.T.tolist()
                 col_str = s if 'multisim' in s else 'multisim_' + s
                 multisim_cols.append(s)
+                multisim_len[s] = n_univs
 
     else:
         for i, s in enumerate(xsec_syst):
@@ -1406,7 +1446,7 @@ def load_one(fname, idf,
             nan_mask = mrg[col].isna()
             n_missing = nan_mask.sum()
             valid_rows = mrg.loc[~nan_mask, col]
-            col_len = 100#len(mrg[col].iloc[0]) 
+            col_len = multisim_len[col]
 
             # 2. Vectorized assignment: Create the block of lists all at once
             default_val = [1.0] * col_len
