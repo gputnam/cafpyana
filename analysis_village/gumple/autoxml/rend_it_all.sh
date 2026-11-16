@@ -3,12 +3,61 @@
 ### -t, -d and -o are positionally paired, so the three lists must stay in step.
 
 ### Date label used in the ANL path, output names and plot tags
-LABEL=${LABEL:-Nov10}
+LABEL=${LABEL:-$(date +%b%-d)}
 
 HDF=/exp/sbnd/data/users/gputnam/GUMPLE/sbn-rewgted-26/
 EXP=/exp/sbnd/data/users/nrowe/sbn-rewgted-26-1
 ANL=/flare/neutrinoGPU/SBN_PROfit/sBruce/$LABEL/sbn-rewgted-26-1
 OUT=/exp/sbnd/data/users/nrowe/sbn-rewgted-26-1
+
+### Rendered XMLs, one per -t template below and in the same order. Also the files
+### sent to Aurora at the end.
+XMLS=(
+    # Combined analysis
+    $OUT/MAPLEMP/Gumple1D$LABEL.xml
+    $OUT/MAPLEMP/Gumple$LABEL.xml
+    $OUT/GUMP/Gump$LABEL.xml
+    $OUT/MAPLENP/MapleNP$LABEL.xml
+    $OUT/MAPLEMP/GumpleAr25$LABEL.xml
+    $OUT/MAPLEMP/GumpleGIBUU$LABEL.xml
+    $OUT/MAPLEMP/GumpleNoCVWgt$LABEL.xml
+    # Run 2 only
+    $OUT/GUMP/GumpR2Only$LABEL.xml
+    $OUT/MAPLEMP/GumpleR2Only$LABEL.xml
+    $OUT/MAPLENP/MapleNPR2Only$LABEL.xml
+    # Run 4 only
+    $OUT/GUMP/GumpR4Only$LABEL.xml
+    $OUT/MAPLEMP/GumpleR4Only$LABEL.xml
+    $OUT/MAPLENP/MapleNPR4Only$LABEL.xml
+    # ANL copies
+    $OUT/MAPLEMP/GumpleANL$LABEL.xml
+    $OUT/GUMP/GumpANL$LABEL.xml
+    $OUT/MAPLENP/MapleNPANL$LABEL.xml
+    $OUT/MAPLEMP/GumpleANLR4Only$LABEL.xml
+    $OUT/MAPLEMP/GumpleANLAr25$LABEL.xml
+    $OUT/MAPLEMP/GumpleANLNoCVWgt$LABEL.xml
+    # Data/MC, GUMP
+    $OUT/GUMP/sbnd_bash_rwt_GUMP.xml
+    $OUT/GUMP/sbnd_data_bash_GUMP.xml
+    $OUT/GUMP/icarus2_bash_rwt_GUMP.xml
+    $OUT/GUMP/icarus_data2_bash_GUMP.xml
+    $OUT/GUMP/icarus4_bash_rwt_GUMP.xml
+    $OUT/GUMP/icarus4_data_bash_GUMP.xml
+    # Data/MC, MAPLEMP
+    $OUT/MAPLEMP/sbnd_bash_rwt_MAPLEMP.xml
+    $OUT/MAPLEMP/sbnd_data_bash_MAPLEMP.xml
+    $OUT/MAPLEMP/icarus2_bash_rwt_MAPLEMP.xml
+    $OUT/MAPLEMP/icarus_data2_bash_MAPLEMP.xml
+    $OUT/MAPLEMP/icarus4_bash_rwt_MAPLEMP.xml
+    $OUT/MAPLEMP/icarus4_data_bash_MAPLEMP.xml
+    # Data/MC, MAPLENP
+    $OUT/MAPLENP/sbnd_bash_rwt_MAPLENP.xml
+    $OUT/MAPLENP/sbnd_data_bash_MAPLENP.xml
+    $OUT/MAPLENP/icarus2_bash_rwt_MAPLENP.xml
+    $OUT/MAPLENP/icarus_data2_bash_MAPLENP.xml
+    $OUT/MAPLENP/icarus4_bash_rwt_MAPLENP.xml
+    $OUT/MAPLENP/icarus4_data_bash_MAPLENP.xml
+)
 
 ### One render_config.py call, so each sample's POT is read once. -t, -d and -o are
 ### paired by position: keep the three lists in the same order, group by group.
@@ -29,8 +78,13 @@ python3 render_config.py --hdf-dir $HDF \
        GumpR4Only_mc.xml.j2 \
        GumpleR4Only_mc.xml.j2 \
        MapleNPR4Only_mc.xml.j2 \
-       `# ANL copy of Gumple Run 4 only` \
+       `# ANL copies: same templates, paths under $ANL so they run on Aurora` \
+       GumpleTemplate.xml.j2 \
+       GumpTemplate.xml.j2 \
+       MapleNPTemplate.xml.j2 \
        GumpleR4Only_mc.xml.j2 \
+       GumpleAr25_data.xml.j2 \
+       GumpleNoCVWgtTemplate.xml.j2 \
        `# Data/MC, GUMP: SBND, ICARUS Run 2, Run 4 - MC then data` \
        DataMC/sbnd_bash_rwt_GUMP.xml.j2 \
        DataMC/sbnd_data_bash_GUMP.xml.j2 \
@@ -68,7 +122,12 @@ python3 render_config.py --hdf-dir $HDF \
        $EXP \
        $EXP \
        $EXP \
-       `# ANL copy of Gumple Run 4 only` \
+       `# ANL copies` \
+       $ANL \
+       $ANL \
+       $ANL \
+       $ANL \
+       $ANL \
        $ANL \
        `# Data/MC, GUMP` \
        $EXP \
@@ -91,45 +150,7 @@ python3 render_config.py --hdf-dir $HDF \
        $EXP \
        $EXP \
        $EXP \
-    -o `# Combined analysis` \
-       $OUT/MAPLEMP/Gumple1D$LABEL.xml \
-       $OUT/MAPLEMP/Gumple$LABEL.xml \
-       $OUT/GUMP/Gump$LABEL.xml \
-       $OUT/MAPLENP/MapleNP$LABEL.xml \
-       $OUT/MAPLEMP/GumpleAr25$LABEL.xml \
-       $OUT/MAPLEMP/GumpleGIBUU$LABEL.xml \
-       $OUT/MAPLEMP/GumpleNoCVWgt$LABEL.xml \
-       `# Run 2 only` \
-       $OUT/GUMP/GumpR2Only$LABEL.xml \
-       $OUT/MAPLEMP/GumpleR2Only$LABEL.xml \
-       $OUT/MAPLENP/MapleNPR2Only$LABEL.xml \
-       `# Run 4 only` \
-       $OUT/GUMP/GumpR4Only$LABEL.xml \
-       $OUT/MAPLEMP/GumpleR4Only$LABEL.xml \
-       $OUT/MAPLENP/MapleNPR4Only$LABEL.xml \
-       `# ANL copy of Gumple Run 4 only` \
-       $OUT/MAPLEMP/GumpleANLR4Only$LABEL.xml \
-       `# Data/MC, GUMP` \
-       $OUT/GUMP/sbnd_bash_rwt_GUMP.xml \
-       $OUT/GUMP/sbnd_data_bash_GUMP.xml \
-       $OUT/GUMP/icarus2_bash_rwt_GUMP.xml \
-       $OUT/GUMP/icarus_data2_bash_GUMP.xml \
-       $OUT/GUMP/icarus4_bash_rwt_GUMP.xml \
-       $OUT/GUMP/icarus4_data_bash_GUMP.xml \
-       `# Data/MC, MAPLEMP` \
-       $OUT/MAPLEMP/sbnd_bash_rwt_MAPLEMP.xml \
-       $OUT/MAPLEMP/sbnd_data_bash_MAPLEMP.xml \
-       $OUT/MAPLEMP/icarus2_bash_rwt_MAPLEMP.xml \
-       $OUT/MAPLEMP/icarus_data2_bash_MAPLEMP.xml \
-       $OUT/MAPLEMP/icarus4_bash_rwt_MAPLEMP.xml \
-       $OUT/MAPLEMP/icarus4_data_bash_MAPLEMP.xml \
-       `# Data/MC, MAPLENP` \
-       $OUT/MAPLENP/sbnd_bash_rwt_MAPLENP.xml \
-       $OUT/MAPLENP/sbnd_data_bash_MAPLENP.xml \
-       $OUT/MAPLENP/icarus2_bash_rwt_MAPLENP.xml \
-       $OUT/MAPLENP/icarus_data2_bash_MAPLENP.xml \
-       $OUT/MAPLENP/icarus4_bash_rwt_MAPLENP.xml \
-       $OUT/MAPLENP/icarus4_data_bash_MAPLENP.xml
+    -o "${XMLS[@]}"
 
 RENDER_RC=$?
 if [ $RENDER_RC -ne 0 ]; then
@@ -152,3 +173,10 @@ DATAMC=$OUT/plots/MAPLE_new_DATA_MC_comp_DQ/$LABEL
 ./slack_upload.sh "PROfit Data/MC comparisons for $LABEL" \
     $DATAMC/Pandora_sbnd_*_nu_E_calo_*_ErrorBand.pdf \
     $DATAMC/Pandora_*_del_p_*_ErrorBand.pdf
+
+### Copy all the sbruce files (top level, sbruce_trees/ and FD/) for each selection,
+### plus every rendered XML, to Aurora.
+### Asks before logging in, so the MobilePASS+ prompt only appears once you're ready.
+### To also submit the job on Aurora, set AURORA_JOB_SCRIPT (path on Aurora), e.g.
+###   AURORA_JOB_SCRIPT=$ANL/run_profit.pbs ./send_to_aurora.sh ...
+./send_to_aurora.sh $EXP $ANL $OUT "${XMLS[@]}"
