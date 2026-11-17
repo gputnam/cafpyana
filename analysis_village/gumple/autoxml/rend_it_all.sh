@@ -5,10 +5,10 @@
 ### Date label used in the ANL path, output names and plot tags
 LABEL=${LABEL:-$(date +%b%-d)}
 
-HDF=/exp/sbnd/data/users/gputnam/GUMPLE/sbn-rewgted-26/
-EXP=/exp/sbnd/data/users/nrowe/sbn-rewgted-26-1
-ANL=/flare/neutrinoGPU/SBN_PROfit/sBruce/$LABEL/sbn-rewgted-26-1
-OUT=/exp/sbnd/data/users/nrowe/sbn-rewgted-26-1
+HDF=/exp/sbnd/data/users/gputnam/GUMPLE/sbn-rewgted-27/
+EXP=/exp/sbnd/data/users/nrowe/sbn-rewgted-27
+ANL=/flare/neutrinoGPU/SBN_PROfit/sBruce/$LABEL/sbn-rewgted-27
+OUT=/exp/sbnd/data/users/nrowe/sbn-rewgted-27
 
 ### Rendered XMLs, one per -t template below and in the same order. Also the files
 ### sent to Aurora at the end.
